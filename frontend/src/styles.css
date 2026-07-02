@@ -814,3 +814,74 @@ textarea {
   background: rgba(0, 0, 0, 0.02);
   cursor: default;
 }
+
+/* ── Avatar stage (Phase 2 slot) ─────────────────────────────────────── */
+.avatar-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 220px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: rgba(244, 240, 231, 0.5);
+  overflow: hidden;
+}
+
+.avatar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.avatar-placeholder svg {
+  opacity: 0.3;
+}
+
+.avatar-speaking-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 2px solid var(--rust);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.avatar-stage.speaking .avatar-speaking-ring {
+  opacity: 1;
+  animation: pulse-ring 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(165, 79, 50, 0.28); }
+  70%  { box-shadow: 0 0 0 12px rgba(165, 79, 50, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(165, 79, 50, 0); }
+}
+
+.avatar-mood-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  background: rgba(32, 52, 58, 0.72);
+  color: #fffaf0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.avatar-stage.speaking .avatar-mood-badge {
+  opacity: 1;
+}
