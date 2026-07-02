@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent.parent
+for _p in (_ROOT / "core",):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from aibot_personal_memory import PersonalMemoryStore, extract_personal_memories
 

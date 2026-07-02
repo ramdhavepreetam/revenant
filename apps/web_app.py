@@ -15,6 +15,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
+_ROOT = Path(__file__).resolve().parent.parent
+for _p in (_ROOT / "core", _ROOT / "tts"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
 from aibot_companion_compiler import (
     COMPANION_COMPILER_VERSION,
     HARNESS_PROMPT_VERSION,
@@ -42,7 +47,7 @@ from aibot_context import assemble_context, rank_memories, format_memory_block, 
 from aibot_summary import maybe_summarize
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = _ROOT
 STATIC_DIR = ROOT / "web"
 DATA_DIR = default_data_dir()
 PROFILES_FILE = DATA_DIR / "profiles.json"
