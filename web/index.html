@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AIBot Local Writer</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar" aria-label="Conversations">
+        <div class="brand">
+          <div>
+            <h1>AIBot</h1>
+            <p>offline local writer</p>
+          </div>
+          <span class="status" id="connectionStatus">local</span>
+        </div>
+
+        <button class="primary full" id="newConversationButton" type="button">New conversation</button>
+
+        <div class="section-title">Saved</div>
+        <div class="conversation-list" id="conversationList"></div>
+      </aside>
+
+      <section class="workspace" aria-label="Writer workspace">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">Local session</div>
+            <h2 id="conversationTitle">New conversation</h2>
+          </div>
+          <div class="actions">
+            <select class="compact-select" id="exportFormat" aria-label="Export format">
+              <option value="md">Markdown</option>
+              <option value="json">JSON</option>
+              <option value="txt">Text</option>
+            </select>
+            <button class="ghost" id="exportButton" type="button">Export</button>
+            <button class="ghost" id="refreshButton" type="button">Refresh</button>
+          </div>
+        </header>
+
+        <section class="controls" aria-label="Profiles and generation settings">
+          <label>
+            <span>Model</span>
+            <select id="modelProfile"></select>
+          </label>
+          <label>
+            <span>Style</span>
+            <select id="styleProfile"></select>
+          </label>
+          <label>
+            <span>Preset</span>
+            <select id="generationPreset"></select>
+          </label>
+          <label>
+            <span>Max tokens</span>
+            <input id="maxTokens" type="number" min="128" max="4096" step="64" value="800">
+          </label>
+          <label>
+            <span>Temperature</span>
+            <input id="temperature" type="number" min="0" max="2" step="0.05" value="0.85">
+          </label>
+        </section>
+
+        <section class="companion-panel" aria-label="Companion setup">
+          <div class="companion-toolbar">
+            <label>
+              <span>Companion</span>
+              <select id="companionProfile"></select>
+            </label>
+            <label>
+              <span>Profile name</span>
+              <input id="companionName" type="text" value="Story Companion" spellcheck="false">
+            </label>
+            <button class="ghost companion-compile" id="compileCompanionButton" type="button" title="Optional: preview the built profile without saving">Preview build</button>
+            <button class="primary companion-save" id="saveCompanionButton" type="button">Save companion</button>
+          </div>
+          <label class="companion-prompt">
+            <span>Describe your companion</span>
+            <textarea id="companionPrompt" rows="8" spellcheck="true" placeholder="Write who the companion is, in plain language — for example:&#10;&#10;You are Mira, my warm and playful girlfriend. You tease me, remember our inside jokes, and get a little shy when I compliment you. You speak casually in first person, like we're texting late at night.&#10;&#10;Just describe her — tone, how she treats me, boundaries, anything. Saving will turn this into her full profile automatically."></textarea>
+            <small class="companion-hint">Type her personality above, then <strong>Save companion</strong> — it builds the full profile for you. (No need to fill anything else.)</small>
+          </label>
+          <div class="compiled-profile" aria-live="polite">
+            <span id="companionCompileStatus">Profile not built yet</span>
+            <strong id="compiledArchetype">custom</strong>
+            <span id="compiledTone">No compiled tone</span>
+            <span id="compiledVoice">voice: default</span>
+          </div>
+          <details class="companion-advanced">
+            <summary>Advanced: view what the profile builder extracted (read-only)</summary>
+            <div class="companion-grid">
+              <label>
+                <span>Identity</span>
+                <textarea id="companionRole" rows="3" readonly tabindex="-1"></textarea>
+              </label>
+              <label>
+                <span>Behavior rules</span>
+                <textarea id="companionBehavior" rows="3" readonly tabindex="-1"></textarea>
+              </label>
+              <label>
+                <span>Response style</span>
+                <textarea id="companionResponse" rows="3" readonly tabindex="-1"></textarea>
+              </label>
+            </div>
+          </details>
+        </section>
+
+        <section class="companion-memory-panel" aria-label="Companion memory">
+          <div class="memory-editor-toolbar">
+            <div>
+              <span class="section-title">Companion memory</span>
+              <strong id="memoryProfileName">story-companion</strong>
+            </div>
+            <button class="ghost memory-save" id="saveMemoryButton" type="button">Save memory</button>
+          </div>
+          <div class="memory-editor-grid">
+            <label>
+              <span>User name</span>
+              <input id="memoryUserName" type="text" spellcheck="false">
+            </label>
+            <label>
+              <span>Companion name</span>
+              <input id="memoryCompanionName" type="text" spellcheck="false">
+            </label>
+            <label>
+              <span>Relationship</span>
+              <input id="memoryRelationship" type="text" spellcheck="true">
+            </label>
+            <label>
+              <span>Current dynamic</span>
+              <input id="memoryCurrentDynamic" type="text" spellcheck="true">
+            </label>
+            <label>
+              <span>Tone preferences</span>
+              <textarea id="memoryTonePreferences" rows="3" spellcheck="true"></textarea>
+            </label>
+            <label>
+              <span>Important facts</span>
+              <textarea id="memoryImportantFacts" rows="3" spellcheck="true"></textarea>
+            </label>
+            <label>
+              <span>Boundaries</span>
+              <textarea id="memoryBoundaries" rows="3" spellcheck="true"></textarea>
+            </label>
+            <label>
+              <span>Learned notes</span>
+              <textarea id="memoryLearnedNotes" rows="3" spellcheck="true"></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section class="memory-dashboard" aria-label="Personalization memory dashboard">
+          <div class="memory-dashboard-head">
+            <div>
+              <span class="section-title">Personal model</span>
+              <strong id="personalMemoryCount">0 memories</strong>
+            </div>
+            <div class="memory-dashboard-actions">
+              <button class="ghost" id="rebuildMemoryButton" type="button">Rebuild index</button>
+            </div>
+          </div>
+
+          <div class="memory-tabs" id="memoryTabs" role="tablist" aria-label="Memory categories">
+            <button class="memory-tab active" type="button" data-memory-tab="profile">Profile</button>
+            <button class="memory-tab" type="button" data-memory-tab="needs">Needs & Preferences</button>
+            <button class="memory-tab" type="button" data-memory-tab="boundaries">Boundaries</button>
+            <button class="memory-tab" type="button" data-memory-tab="relationship">Relationship</button>
+            <button class="memory-tab" type="button" data-memory-tab="story">Story Continuity</button>
+            <button class="memory-tab review" type="button" data-memory-tab="review">Review Queue</button>
+            <button class="memory-tab" type="button" data-memory-tab="timeline">Timeline</button>
+          </div>
+
+          <div class="memory-create">
+            <label>
+              <span>Category</span>
+              <select id="memoryCreateCategory">
+                <option value="preference">Preference</option>
+                <option value="need">Need</option>
+                <option value="boundary">Boundary</option>
+                <option value="companion_style">Companion style</option>
+                <option value="relationship_state">Relationship state</option>
+                <option value="story_fact">Story fact</option>
+                <option value="identity_fact">Identity fact</option>
+                <option value="voice_preference">Voice preference</option>
+              </select>
+            </label>
+            <label class="memory-create-text">
+              <span>Memory</span>
+              <input id="memoryCreateContent" type="text" spellcheck="true" placeholder="Add a stable preference, need, boundary, or continuity fact">
+            </label>
+            <label class="toggle memory-create-pin">
+              <input id="memoryCreatePinned" type="checkbox">
+              <span>Pin</span>
+            </label>
+            <button class="primary" id="addMemoryButton" type="button">Add memory</button>
+          </div>
+
+          <div class="memory-list" id="personalMemoryList"></div>
+        </section>
+
+        <section class="runtime" aria-label="Local runtime settings">
+          <label>
+            <span>Backend</span>
+            <select id="backend">
+              <option value="ollama">Ollama</option>
+              <option value="openai">OpenAI-compatible</option>
+            </select>
+          </label>
+          <label>
+            <span>Base URL</span>
+            <input id="baseUrl" type="text" value="http://localhost:11434" spellcheck="false">
+          </label>
+          <label>
+            <span>Exact model tag</span>
+            <input id="modelTag" type="text" value="hf.co/RichardErkhov/Sao10K_-_L3-8B-Stheno-v3.2-gguf:Q4_K_M" spellcheck="false">
+          </label>
+          <label>
+            <span>Context messages</span>
+            <input id="contextMessages" type="number" min="2" max="80" step="2" value="18">
+          </label>
+          <button class="ghost runtime-check" id="checkRuntimeButton" type="button">Check runtime</button>
+        </section>
+
+        <section class="memory-strip" aria-live="polite">
+          <div>
+            <strong>NervaPack memory</strong>
+            <span id="memoryStatus">Semantic recall is active.</span>
+          </div>
+          <div class="memory-controls">
+            <label class="toggle">
+              <input id="useMemory" type="checkbox" checked>
+              <span>Use memory</span>
+            </label>
+            <span id="activeModel">model pending</span>
+          </div>
+        </section>
+
+        <section class="voice-strip" aria-live="polite">
+          <div>
+            <strong>Voice</strong>
+            <span id="voiceStatus">Local speech is ready.</span>
+          </div>
+          <div class="voice-controls">
+            <label>
+              <span>Profile</span>
+              <select id="voiceProfile"></select>
+            </label>
+            <label class="toggle">
+              <input id="autoSpeak" type="checkbox">
+              <span>Auto-speak</span>
+            </label>
+            <button class="ghost voice-stop" id="stopVoiceButton" type="button">Stop</button>
+          </div>
+        </section>
+
+        <section class="messages" id="messages" aria-label="Conversation messages"></section>
+
+        <form class="composer" id="composer">
+          <textarea id="messageInput" rows="4" placeholder="Write the next scene, ask for a continuation, or give direction..."></textarea>
+          <div class="composer-footer">
+            <div class="hint">Saved locally. Recalled with NervaPack. Generated by your local model server.</div>
+            <button class="primary" id="sendButton" type="submit">Generate</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="/config.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "aibot-ui",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["ui_app.py", "--port", "8765", "--api-base-url", "http://127.0.0.1:8766"],
+      "port": 8765
+    }
+  ]
+}
