@@ -383,9 +383,9 @@ class _PersistentWorker:
         self._lock = threading.Lock()
 
     def _start(self) -> subprocess.Popen:
-        project_dir = Path(__file__).resolve().parent
+        project_dir = Path(__file__).resolve().parent.parent
         python_path = project_dir / ".aibot" / self.venv_dir / "bin" / "python"
-        worker_path = project_dir / self.worker_script
+        worker_path = Path(__file__).resolve().parent / self.worker_script
         if not python_path.exists():
             raise ValueError(f"{self.name} venv was not found at .aibot/{self.venv_dir}.")
         if not worker_path.exists():
@@ -559,7 +559,7 @@ def prewarm_voice() -> None:
 
 def synthesize_chatterbox(raw_text: str, profile: dict[str, Any], audio_dir: Path) -> dict[str, Any]:
     audio_dir.mkdir(parents=True, exist_ok=True)
-    project_dir = Path(__file__).resolve().parent
+    project_dir = Path(__file__).resolve().parent.parent
     voice_ref = str(profile.get("voice_ref") or "").strip()
     voice_ref_abs = str((project_dir / voice_ref)) if voice_ref else None
     if voice_ref_abs and not Path(voice_ref_abs).exists():
@@ -632,7 +632,7 @@ def synthesize_kokoro_with_sfx(raw_text: str, profile: dict[str, Any], audio_dir
     import soundfile as sf
 
     audio_dir.mkdir(parents=True, exist_ok=True)
-    project_dir = Path(__file__).resolve().parent
+    project_dir = Path(__file__).resolve().parent.parent
     SR = 24000
     gap = np.zeros(int(SR * 0.04), dtype=np.float32)
 
@@ -750,7 +750,7 @@ def synthesize_qwen3_mlx(text: str, profile: dict[str, Any], audio_dir: Path, mo
         raise ValueError("Text is required for voice generation.")
     output_path = audio_dir / f"{uuid.uuid4().hex}.wav"
     instruct = qwen3_instruction(profile, mood, delivery)
-    project_dir = Path(__file__).resolve().parent
+    project_dir = Path(__file__).resolve().parent.parent
     ref_audio = str(profile.get("ref_audio") or "").strip()
     ref_audio_abs = str(project_dir / ref_audio) if ref_audio else ""
     if ref_audio_abs and not Path(ref_audio_abs).exists():
@@ -795,7 +795,7 @@ def synthesize_qwen3_mlx_with_sfx(raw_text: str, profile: dict[str, Any], audio_
     import soundfile as sf
 
     audio_dir.mkdir(parents=True, exist_ok=True)
-    project_dir = Path(__file__).resolve().parent
+    project_dir = Path(__file__).resolve().parent.parent
     SR = 24000
     gap = np.zeros(int(SR * 0.04), dtype=np.float32)
 

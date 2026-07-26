@@ -545,19 +545,26 @@ class LocalUIHandler(SimpleHTTPRequestHandler):
             preset=str(body.get("generation_preset") or ""),
         )
 
+        # Accept overrides both as a nested dict and as flat top-level keys so
+        # the React frontend (which sends them flat) and legacy callers both work.
         overrides = body.get("overrides") or {}
         for key in ("temperature", "top_p", "repeat_penalty"):
-            if key in overrides:
-                setattr(config, key, float(overrides[key]))
+            val = overrides.get(key) if key in overrides else body.get(key)
+            if val is not None:
+                setattr(config, key, float(val))
         for key in ("min_tokens", "max_tokens", "context_messages"):
-            if key in overrides:
-                setattr(config, key, int(overrides[key]))
-        if overrides.get("base_url"):
-            config.base_url = str(overrides["base_url"])
-        if overrides.get("model"):
-            config.model = str(overrides["model"])
-        if overrides.get("backend"):
-            config.backend = str(overrides["backend"])
+            val = overrides.get(key) if key in overrides else body.get(key)
+            if val is not None:
+                setattr(config, key, int(val))
+        base_url = overrides.get("base_url") or body.get("base_url")
+        if base_url:
+            config.base_url = str(base_url)
+        model = overrides.get("model") or body.get("model")
+        if model:
+            config.model = str(model)
+        backend = overrides.get("backend") or body.get("backend")
+        if backend:
+            config.backend = str(backend)
 
         return config
 
@@ -651,7 +658,7 @@ class LocalUIHandler(SimpleHTTPRequestHandler):
             ranked = rank_memories(active_mem, user_text, limit=3 if turn_shape["label"] == "greeting" else 10)
             memory_block = format_memory_block(ranked)
             memory_used = ranked
-        memories = STATE.memory.recall(user_text, limit=5) if use_memory and turn_shape["label"] != "greeting" else []
+        memories = STATE.memory.recall(user_text, limit=5, companion_id=companion_profile) if use_memory and turn_shape["label"] != "greeting" else []
         enriched_user = user_text
         if memories:
             recall_lines = ["(Quietly relevant background, do not quote):"]
@@ -697,10 +704,11 @@ class LocalUIHandler(SimpleHTTPRequestHandler):
             for memory in memory_suggestions:
                 if memory.get("status") == "active":
                     STATE.memory.remember_note(companion_profile, memory.get("category", "preference"), memory.get("content", ""))
+            companion_obj = STATE.profiles().get("companions", {}).get(companion_profile, {})
             threading.Thread(
                 target=maybe_summarize,
                 args=(STATE.store, conversation.id),
-                kwargs={"base_url": config.base_url, "companion_id": companion_profile},
+                kwargs={"base_url": config.base_url, "companion_id": companion_profile, "companion": companion_obj, "memory": STATE.memory},
                 daemon=True,
             ).start()
 

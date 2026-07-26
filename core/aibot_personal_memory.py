@@ -390,12 +390,114 @@ class PersonalMemoryStore:
                 return True
         return False
 
-    # Phase 5 safe auto-approval: only these low-risk categories may auto-activate
-    # without human review. Boundaries (and anything that conflicts or is low
-    # confidence) are ALWAYS held pending — a wrongly-admitted boundary in a 21+
-    # companion's context is a safety problem, so it stays human-gated.
-    AUTO_APPROVE_CATEGORIES = {"identity_fact", "preference", "voice_preference", "story_fact"}
+    # Safe auto-approval: only these low-risk categories may auto-activate without
+    # human review. Boundaries are ALWAYS held pending — a wrongly-admitted boundary
+    # in a 21+ companion context is a safety problem, so it stays human-gated.
+    AUTO_APPROVE_CATEGORIES = {"identity_fact", "preference", "voice_preference", "story_fact", "companion_style", "relationship_state"}
     AUTO_APPROVE_MIN_CONFIDENCE = 0.75
+    # Duplicate suppression: two pending memories in the same category are considered
+    # the same fact when their Jaccard overlap exceeds this, OR when one's key terms
+    # are a subset of the other's (catches "shorter replies" vs "shorter replies casually").
+    DEDUP_OVERLAP_THRESHOLD = 0.45
+
+    def auto_review_pending(self, companion_id: str) -> list[dict[str, Any]]:
+        """Scan all pending memories for a companion and auto-approve or deduplicate.
+
+        - Safe categories at sufficient confidence with no active conflict → approve
+        - Near-duplicate pendings (same category, high term overlap) → archive the
+          older one so the same fact doesn't stack up across turns
+        - boundary category → never touched; stays pending for human review
+
+        Returns the list of memories that were changed.
+        """
+        pending = self.list_memories(companion_id=companion_id, status="pending")
+        if not pending:
+            return []
+
+        # Build a map of active memories by category to check pending against them.
+        active_by_category: dict[str, list[dict[str, Any]]] = {}
+        for m in self.list_memories(companion_id=companion_id, status="active"):
+            active_by_category.setdefault(m["category"], []).append(m)
+
+        changed: list[dict[str, Any]] = []
+        seen_pending: dict[str, list[dict[str, Any]]] = {}
+
+        for memory in pending:
+            category = memory["category"]
+            if category == "boundary":
+                continue  # never auto-approve boundaries
+
+            terms = meaningful_terms(memory["content"])
+
+            def _is_near_dup(prior: dict[str, Any]) -> bool:
+                prior_terms = meaningful_terms(prior["content"])
+                union = prior_terms | terms
+                if not union:
+                    return False
+                intersection = prior_terms & terms
+                # Jaccard overlap over the full union
+                overlap = len(intersection) / len(union)
+                # Coverage over the smaller set: "shorter replies" covers 2/3 of
+                # {"shorter","replies","please"} and 2/4 of the other — catches
+                # paraphrases that share a common core phrase.
+                smaller = min(len(prior_terms), len(terms))
+                coverage = len(intersection) / smaller if smaller else 0
+                return overlap >= self.DEDUP_OVERLAP_THRESHOLD or coverage >= 0.65
+
+            # --- check against already-active memories first ---
+            is_dup = False
+            for active_mem in active_by_category.get(category, []):
+                if _is_near_dup(active_mem):
+                    # A near-duplicate is already active — archive this pending one
+                    try:
+                        self.archive(memory["id"])
+                        changed.append({**memory, "status": "archived", "_action": "deduped-vs-active"})
+                    except Exception:  # noqa: BLE001
+                        pass
+                    is_dup = True
+                    break
+
+            if is_dup:
+                continue
+
+            # --- check against other pending memories in same category ---
+            existing_pending = seen_pending.setdefault(category, [])
+            for prior in existing_pending:
+                if _is_near_dup(prior):
+                    if memory["confidence"] >= prior["confidence"]:
+                        try:
+                            self.archive(prior["id"])
+                            changed.append({**prior, "status": "archived", "_action": "deduped"})
+                            existing_pending.remove(prior)
+                            existing_pending.append(memory)
+                        except Exception:  # noqa: BLE001
+                            pass
+                    else:
+                        try:
+                            self.archive(memory["id"])
+                            changed.append({**memory, "status": "archived", "_action": "deduped"})
+                        except Exception:  # noqa: BLE001
+                            pass
+                    is_dup = True
+                    break
+
+            if is_dup:
+                continue
+            existing_pending.append(memory)
+
+            # --- auto-approve if safe ---
+            if (
+                category in self.AUTO_APPROVE_CATEGORIES
+                and memory["confidence"] >= self.AUTO_APPROVE_MIN_CONFIDENCE
+                and not self.has_conflict(companion_id, category, memory["content"])
+            ):
+                try:
+                    approved = self.approve(memory["id"])
+                    changed.append({**approved, "_action": "approved"})
+                except Exception:  # noqa: BLE001
+                    pass
+
+        return changed
 
     def learn(self, companion_id: str, user_text: str, conversation_id: str = "") -> list[dict[str, Any]]:
         suggestions = extract_personal_memories(user_text)
@@ -406,25 +508,26 @@ class PersonalMemoryStore:
             if not content:
                 continue
             confidence = float(item.get("confidence", 0.8))
-            # Decide status: default to pending; auto-activate only when safe.
-            conflict = self.has_conflict(companion_id, category, content)
-            safe_to_auto = (
-                not conflict
-                and category in self.AUTO_APPROVE_CATEGORIES
-                and confidence >= self.AUTO_APPROVE_MIN_CONFIDENCE
-            )
-            status = "active" if safe_to_auto else "pending"
+            # All newly extracted memories start as pending; auto_review_pending
+            # will promote safe ones in the same call below.
             memory = self.create_memory(
                 companion_id,
                 category,
                 content,
-                status=status,
+                status="pending",
                 confidence=confidence,
                 source=item.get("source", "chat-learner"),
                 source_conversation_id=conversation_id,
             )
             if memory:
                 saved.append(memory)
+
+        # Run the auto-review loop: approve safe pendings, deduplicate near-duplicates.
+        if saved:
+            self.auto_review_pending(companion_id)
+            # Refresh saved list to reflect updated statuses after review.
+            saved = [self.get_memory(m["id"]) or m for m in saved]
+
         return saved
 
     def prompt_memories(self, companion_id: str, limit_per_group: int = 8) -> tuple[str, list[dict[str, Any]]]:

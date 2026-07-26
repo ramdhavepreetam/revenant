@@ -82,8 +82,8 @@ export default function App() {
         const companions = Object.keys(profiles.companions || {});
         if (companions.length) setSelectedCompanion(companions[0]);
 
-        const vd = await api<{ voice_profiles: Record<string, unknown> }>('/api/voice-profiles');
-        const vp = (vd.voice_profiles ?? vd) as Record<string, unknown>;
+        const vd = await api<{ voices?: Record<string, unknown>; voice_profiles?: Record<string, unknown> }>('/api/voice-profiles');
+        const vp = (vd.voices ?? vd.voice_profiles ?? {}) as Record<string, unknown>;
         dispatch({ type: 'SET_VOICE_PROFILES', payload: vp });
         const vpKeys = Object.keys(vp);
         if (vpKeys.length) setVoiceProfileId(vpKeys[0]);
