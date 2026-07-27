@@ -11,3 +11,4 @@ build_bin/
 dist_pypi/
 dist_installers/
 *.egg-info/
+site_public/
