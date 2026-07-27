@@ -124,6 +124,70 @@ def call_model(config: ChatConfig, messages: list[dict[str, str]]) -> str:
     raise LocalLLMError(f"Unknown backend: {config.backend}")
 
 
+def call_ollama_message(
+    config: ChatConfig, messages: list[dict[str, Any]], tools: list[dict] | None = None
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "model": config.model,
+        "messages": messages,
+        "stream": False,
+        "options": {
+            "temperature": config.temperature,
+            "top_p": config.top_p,
+            "repeat_penalty": config.repeat_penalty,
+            "num_predict": config.max_tokens,
+        },
+    }
+    if tools:
+        payload["tools"] = tools
+    result = post_json(f"{config.base_url.rstrip('/')}/api/chat", payload, timeout=300)
+    message = result.get("message")
+    if not isinstance(message, dict):
+        raise LocalLLMError(f"Unexpected Ollama response: {result}")
+    return message
+
+
+def call_openai_message(
+    config: ChatConfig, messages: list[dict[str, Any]], tools: list[dict] | None = None
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "model": config.model,
+        "messages": messages,
+        "temperature": config.temperature,
+        "top_p": config.top_p,
+        "max_tokens": config.max_tokens,
+        "stream": False,
+    }
+    if tools:
+        payload["tools"] = tools
+    result = post_json(f"{config.base_url.rstrip('/')}/v1/chat/completions", payload, timeout=300)
+    try:
+        return result["choices"][0]["message"]
+    except (KeyError, IndexError) as exc:
+        raise LocalLLMError(f"Unexpected OpenAI-compatible response: {result}") from exc
+
+
+def call_model_message(
+    config: ChatConfig, messages: list[dict[str, Any]], tools: list[dict] | None = None
+) -> dict[str, Any]:
+    """Like `call_model` but returns the FULL assistant message dict.
+
+    Needed by the agent loop, which must read `message["tool_calls"]` for the
+    native tool-calling path (and `message["content"]` for the prompt-based path).
+    `call_model` intentionally returns only the stripped content string and stays
+    the path for plain chat/writing turns.
+
+    Passing `tools` opts into native tool calling; models without a tool template
+    simply ignore it and return normal content (the loop then falls back to the
+    prompt-based protocol).
+    """
+    if config.backend == "ollama":
+        return call_ollama_message(config, messages, tools)
+    if config.backend == "openai":
+        return call_openai_message(config, messages, tools)
+    raise LocalLLMError(f"Unknown backend: {config.backend}")
+
+
 def stream_model(config: ChatConfig, messages: list[dict[str, str]]):
     """Yield incremental text deltas as the model generates (Ollama + OpenAI-compat).
 

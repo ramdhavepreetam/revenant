@@ -45,6 +45,10 @@ from local_llm_writer import (
 )
 from aibot_context import assemble_context, rank_memories, format_memory_block, sentences_from_deltas
 from aibot_summary import maybe_summarize
+from agent_router import classify, config_for_role
+from agent_tools import ToolRegistry
+from agent_companion_tools import build_companion_tools
+from agent_loop import AgentLoop
 
 
 ROOT = _ROOT
@@ -434,6 +438,8 @@ class LocalUIHandler(SimpleHTTPRequestHandler):
                 return self.handle_chat(body)
             if path == "/api/chat/stream":
                 return self.handle_chat_stream(body)
+            if path == "/api/agent":
+                return self.handle_agent_turn(body)
             if path == "/api/companions/compile":
                 return self.handle_compile_companion(body)
             if path == "/api/companions":
@@ -613,6 +619,26 @@ class LocalUIHandler(SimpleHTTPRequestHandler):
         config.min_tokens = int(turn_shape["min_tokens"])
         config.max_tokens = int(turn_shape["max_tokens"])
         companion_chat = bool(companion) and turn_shape.get("mode") == "chat"
+
+        # --- Task-based role routing (overrides config.model for this turn) --------
+        # Auto-router: pick the best LOCAL model for the KIND of turn. Mutates
+        # config in place, so BOTH the blocking (call_model) and streaming
+        # (stream_model) paths get the routed model via ctx["config"]. Degrades to
+        # the existing model if model_roles isn't configured or a model is missing;
+        # route_models=false opts out entirely (legacy single-model behavior).
+        chosen_role = None
+        if "model_roles" in profiles and bool(body.get("route_models", True)):
+            if companion_chat:
+                chosen_role = "companion"  # companion mode owns the turn; skip the classifier
+            else:
+                chosen_role = classify(
+                    user_text,
+                    has_companion=bool(companion),
+                    base_url=config.base_url,
+                    profiles=profiles,
+                )
+            config_for_role(chosen_role, config.base_url, profiles, base=config)
+
         identity_anchor = companion_identity_anchor(companion) if companion else {}
         companion_prompt = build_companion_chat_prompt(companion) if companion_chat else build_companion_prompt(companion)
 
@@ -687,6 +713,7 @@ class LocalUIHandler(SimpleHTTPRequestHandler):
             "memory_used": memory_used,
             "turn_shape": turn_shape,
             "active_messages": active_messages,
+            "chosen_role": chosen_role,
         }
 
     def _finalize_turn(self, ctx: dict, reply: str) -> dict:
@@ -739,6 +766,8 @@ class LocalUIHandler(SimpleHTTPRequestHandler):
                 "companion_profile": companion_profile,
                 "response_shape": ctx["turn_shape"]["label"],
                 "response_mode": ctx["turn_shape"].get("mode"),
+                "role": ctx.get("chosen_role"),
+                "role_model": config.model,
             },
         }
 
@@ -821,6 +850,77 @@ class LocalUIHandler(SimpleHTTPRequestHandler):
                 if memory.get("status") == "active":
                     STATE.memory.remember_note(companion_id, memory.get("category", category), memory.get("content", content))
         return saved
+
+    def handle_agent_turn(self, body: dict) -> None:
+        """Agentic companion turn (/api/agent).
+
+        Runs the SAME AgentLoop as the coding CLI, but with the companion tool
+        subset (memory_search / memory_save / set_reminder — no fs/shell) and the
+        companion model (the 'companion' role -> Stheno, via the prompt-based
+        protocol since Stheno has no native tool template). Lets the companion take
+        real actions mid-chat: recall a fact, remember something, set a reminder.
+        """
+        user_text = str(body.get("message") or "").strip()
+        if not user_text:
+            return self.send_json({"error": "Message is required"}, HTTPStatus.BAD_REQUEST)
+
+        config = self.build_config(body)
+        profiles = STATE.profiles()
+        companion_profile, companion = self.companion_from_request(body, profiles)
+        # Force the companion model for this front-end (Stheno via the router).
+        config_for_role("companion", config.base_url, profiles, base=config)
+
+        persona = build_companion_chat_prompt(companion) if companion else ""
+        preamble = (
+            "You are a local companion in a back-and-forth conversation. Be present, "
+            "warm, and natural — reply as yourself in first person. You have a few "
+            "tools to manage your memory of this person: use memory_search to recall, "
+            "memory_save to remember something they told you, and set_reminder to note "
+            "something to bring up later. Use a tool only when it genuinely helps; "
+            "otherwise just reply. When you are done, give your normal reply with no "
+            "action block."
+        )
+        if persona:
+            preamble = f"{preamble}\n\n{persona}"
+
+        registry = ToolRegistry(
+            build_companion_tools(STATE.memory, STATE.personal_memory, STATE.store, companion_profile)
+        )
+
+        tool_activity: list[dict] = []
+
+        def on_event(ev) -> None:
+            if ev.kind == "action":
+                tool_activity.append({"tool": ev.tool, "args": ev.args})
+
+        loop = AgentLoop(
+            config, registry,
+            system_preamble=preamble,
+            max_steps=int(body.get("max_steps") or 5),
+            use_native_tools=False,  # Stheno has no tool template; prompt-based only.
+            on_event=on_event,
+            auto_approve=True,       # companion memory tools are low-risk; boundary
+                                     # writes are gated INSIDE memory_save (pending).
+            max_context_tokens=int(body.get("max_context_tokens") or 3072),
+        )
+        try:
+            result = loop.run(user_text)
+        except LocalLLMError as exc:
+            return self.send_model_error(exc)
+
+        reply = trim_to_last_sentence(result.answer)
+        return self.send_json({
+            "reply": reply,
+            "message": {"role": "assistant", "content": reply},
+            "tool_activity": tool_activity,
+            "steps": result.steps,
+            "stopped_reason": result.stopped_reason,
+            "config": {
+                "model": config.model,
+                "role": "companion",
+                "companion_profile": companion_profile,
+            },
+        })
 
     def handle_compile_companion(self, body: dict) -> None:
         raw_prompt = str(body.get("raw_prompt") or body.get("prompt") or "").strip()

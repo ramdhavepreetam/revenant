@@ -18,6 +18,42 @@ DEFAULT_PROFILES: dict[str, Any] = {
             "base_url": "http://localhost:11434",
             "model": "llama3.1:8b",
         },
+        "qwen2.5-7b": {
+            "backend": "ollama",
+            "base_url": "http://localhost:11434",
+            "model": "qwen2.5:7b",
+            "notes": "Native tool-calling; router role + fast/light coding.",
+        },
+        "qwen2.5-coder-14b": {
+            "backend": "ollama",
+            "base_url": "http://localhost:11434",
+            "model": "huihui_ai/qwen2.5-coder-abliterate:14b",
+            "notes": "Code-specialized, abliterated (uncensored) Qwen2.5-Coder. "
+                     "Native tool-calling. Primary coding model.",
+        },
+        "qwen2.5-14b": {
+            "backend": "ollama",
+            "base_url": "http://localhost:11434",
+            "model": "qwen2.5:14b",
+            "notes": "Language / reasoning role. Pull before use.",
+        },
+        "gemma": {
+            "backend": "ollama",
+            "base_url": "http://localhost:11434",
+            "model": "gemma:latest",
+            "notes": "Rolling-summary role.",
+        },
+    },
+    # Task -> model-profile-name. The router (core/agent_router.py) resolves a role
+    # to a model via this map + the "models" section above, so endpoint data is
+    # never duplicated. "fallback" names the role used when classification fails.
+    "model_roles": {
+        "code": "qwen2.5-coder-14b",
+        "language": "qwen2.5-14b",
+        "companion": "stheno-8b",
+        "summary": "gemma",
+        "router": "qwen2.5-7b",
+        "fallback": "language",
     },
     "story_styles": {
         "immersive-fiction": {

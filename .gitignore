@@ -3,3 +3,4 @@ __pycache__/
 .aibot/
 frontend/node_modules/
 frontend/dist/
+site/
