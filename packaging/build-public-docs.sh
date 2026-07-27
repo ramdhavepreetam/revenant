@@ -16,6 +16,7 @@ cp -r docs "$STAGE/docs"
 rm -f "$STAGE/docs/companion-agent.md" \
       "$STAGE/docs/companion-harness-plan.md" \
       "$STAGE/docs/knowledge-base.md" \
+      "$STAGE/docs/adr/0002-qwen3-tts-local-voice-engine.md" \
       "$STAGE/docs/api/aibot_companion_compiler.md" \
       "$STAGE/docs/api/aibot_companion_memory.md" \
       "$STAGE/docs/api/aibot_context.md" \
@@ -26,7 +27,7 @@ rm -f "$STAGE/docs/companion-agent.md" \
       "$STAGE/docs/api/agent_companion_tools.md"
 
 # 2. Strip lines that link to the removed pages (markdown links + table rows).
-COMPANION_RE='companion-agent|companion-harness|knowledge-base|aibot_companion|aibot_personal|aibot_context|aibot_summary|aibot_tts|web_app|agent_companion_tools'
+COMPANION_RE='companion-agent|companion-harness|knowledge-base|aibot_companion|aibot_personal|aibot_context|aibot_summary|aibot_tts|web_app|agent_companion_tools|adr/0002-qwen3-tts'
 for f in "$STAGE/docs/index.md" "$STAGE/docs/architecture.md" "$STAGE/docs/api/index.md"; do
   [ -f "$f" ] && grep -viE "\]\(($COMPANION_RE)" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
 done
@@ -39,9 +40,9 @@ mkdocs build -f "$STAGE/mkdocs.yml" -d "$(pwd)/site_public" --strict
 #    (Incidental prose mentions of the companion in kept design docs — e.g. explaining
 #    the harness's two front-ends — are acceptable; importable aibot_app.* paths and
 #    the private companion source pages are not.)
-if grep -rqiE 'aibot_app\.|api/aibot_companion|api/aibot_personal|api/web_app|companion-agent/' site_public/ 2>/dev/null; then
+if grep -rqiE 'aibot_app\.|api/aibot_companion|api/aibot_personal|api/web_app|companion-agent/|adr/0002-qwen3-tts' site_public/ 2>/dev/null; then
   echo "ERROR: companion code/paths leaked into the public site — aborting." >&2
-  grep -rliE 'aibot_app\.|api/aibot_companion|api/web_app|companion-agent/' site_public/ | head >&2
+  grep -rliE 'aibot_app\.|api/aibot_companion|api/web_app|companion-agent/|adr/0002-qwen3-tts' site_public/ | head >&2
   exit 1
 fi
 
