@@ -1,77 +1,93 @@
 site_name: Revenant
-site_description: Revenant — a local, offline coding-agent CLI, and the AIBot companion, built on a shared local-LLM core.
-site_url: https://ramdhavepreetam.github.io/revenant/
-docs_dir: docs
-# Repo-relative; the site is generated into ./site (gitignored) or served live.
+site_description: Revenant — a local, offline coding-agent CLI powered by your own Ollama models. No cloud, no telemetry, no API keys.
+site_url: https://ramdhavepreetam.github.io/revenant-docs/
+repo_url: https://github.com/ramdhavepreetam/revenant
+repo_name: ramdhavepreetam/revenant
+copyright: Copyright &copy; Preetam Ramdhave — Revenant is offline and on-prem by design.
+
+docs_dir: docs_site
 
 theme:
-  name: readthedocs
-  highlightjs: true
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
 
 plugins:
-  - search
-  - mkdocstrings:
-      handlers:
-        python:
-          # Modules live in the packages/*/src trees; add each to the import path
-          # so ::: <package.module> autodoc resolves.
-          paths:
-            - packages/nerva-core/src
-            - packages/nerva-agent/src
-            - packages/revenant-cli/src
-            - packages/aibot-app/src
-          options:
-            docstring_style: google
-            show_source: true
-            show_root_heading: true
-            heading_level: 2
-            members_order: source
-            separate_signature: true
-            show_signature_annotations: true
+  - search:
+      lang: en
 
 markdown_extensions:
   - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
   - toc:
       permalink: true
-  - fenced_code
-  - tables
+      title: On this page
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 nav:
-  - Home: index.md
-  - Install: install.md
-  - Architecture: architecture.md
+  - Overview: index.md
+  - Getting Started:
+      - Quickstart: getting-started.md
+      - Installation: installation.md
+      - Configuration: configuration.md
   - Guides:
-      - Model Routing: model-routing.md
-      - Revenant CLI: revenant-cli.md
-      - Companion Agent: companion-agent.md
-  - Design Records:
-      - Companion Harness Plan: companion-harness-plan.md
-      - Agent Harness Plan: agent-harness-plan.md
-      - Knowledge Base: knowledge-base.md
-      - "ADR 0001 — Offline Local LLM Interface": adr/0001-offline-local-llm-interface.md
-      - "ADR 0002 — Qwen3-TTS Local Voice Engine": adr/0002-qwen3-tts-local-voice-engine.md
-      - "ADR 0003 — Local Agent Harness": adr/0003-local-agent-harness.md
-  - API Reference:
-      - Overview: api/index.md
-      - "core: local_llm_writer": api/local_llm_writer.md
-      - "core: agent_router": api/agent_router.md
-      - "core: agent_tools": api/agent_tools.md
-      - "core: agent_protocol": api/agent_protocol.md
-      - "core: agent_fs_tools": api/agent_fs_tools.md
-      - "core: agent_edit_tools": api/agent_edit_tools.md
-      - "core: agent_bash_tool": api/agent_bash_tool.md
-      - "core: agent_companion_tools": api/agent_companion_tools.md
-      - "core: agent_capacity": api/agent_capacity.md
-      - "core: agent_native_tools": api/agent_native_tools.md
-      - "core: agent_loop": api/agent_loop.md
-      - "apps: agent_cli (revenant)": api/agent_cli.md
-      - "core: aibot_context": api/aibot_context.md
-      - "core: aibot_summary": api/aibot_summary.md
-      - "core: aibot_profiles": api/aibot_profiles.md
-      - "core: aibot_storage": api/aibot_storage.md
-      - "core: aibot_personal_memory": api/aibot_personal_memory.md
-      - "core: aibot_memory": api/aibot_memory.md
-      - "core: aibot_companion_memory": api/aibot_companion_memory.md
-      - "core: aibot_companion_compiler": api/aibot_companion_compiler.md
-      - "tts: aibot_tts": api/aibot_tts.md
-      - "apps: web_app": api/web_app.md
+      - Overview: guides/index.md
+      - Run your first coding task: guides/first-task.md
+      - Approve, edit, and run commands safely: guides/approvals-and-safety.md
+      - Configure model routing: guides/model-routing.md
+      - Work in read-only mode: guides/read-only.md
+  - Reference:
+      - CLI reference: reference/cli.md
+      - Tools reference: reference/tools.md
+      - Configuration reference: reference/config.md
+  - Architecture: architecture.md
+  - Deployment: deployment.md
+  - Troubleshooting: troubleshooting.md
+  - About:
+      - Changelog: about/changelog.md
+      - Contributing: about/contributing.md
