@@ -1,5 +1,6 @@
-site_name: AIBot
-site_description: Offline-first local LLM companion, writing tool, and agent harness.
+site_name: Revenant
+site_description: Revenant — a local, offline coding-agent CLI, and the AIBot companion, built on a shared local-LLM core.
+site_url: https://ramdhavepreetam.github.io/revenant/
 docs_dir: docs
 # Repo-relative; the site is generated into ./site (gitignored) or served live.
 
