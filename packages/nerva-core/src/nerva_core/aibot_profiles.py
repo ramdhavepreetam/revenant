@@ -7,17 +7,6 @@ from typing import Any
 
 DEFAULT_PROFILES: dict[str, Any] = {
     "models": {
-        "stheno-8b": {
-            "backend": "ollama",
-            "base_url": "http://localhost:11434",
-            "model": "hf.co/RichardErkhov/Sao10K_-_L3-8B-Stheno-v3.2-gguf:Q4_K_M",
-            "notes": "Sao10K L3-8B-Stheno v3.2 Q4_K_M GGUF pulled through Ollama.",
-        },
-        "llama3.1-8b": {
-            "backend": "ollama",
-            "base_url": "http://localhost:11434",
-            "model": "llama3.1:8b",
-        },
         "qwen2.5-7b": {
             "backend": "ollama",
             "base_url": "http://localhost:11434",
@@ -37,79 +26,24 @@ DEFAULT_PROFILES: dict[str, Any] = {
             "model": "qwen2.5:14b",
             "notes": "Language / reasoning role. Pull before use.",
         },
-        "gemma": {
-            "backend": "ollama",
-            "base_url": "http://localhost:11434",
-            "model": "gemma:latest",
-            "notes": "Rolling-summary role.",
-        },
     },
-    # Task -> model-profile-name. The router (core/agent_router.py) resolves a role
+    # Task -> model-profile-name. The router (agent_router.py) resolves a role
     # to a model via this map + the "models" section above, so endpoint data is
     # never duplicated. "fallback" names the role used when classification fails.
     "model_roles": {
         "code": "qwen2.5-coder-14b",
         "language": "qwen2.5-14b",
-        "companion": "stheno-8b",
-        "summary": "gemma",
         "router": "qwen2.5-7b",
         "fallback": "language",
     },
-    "story_styles": {
-        "immersive-fiction": {
-            "system_prompt": (
-                "You are a long-form interactive storytelling assistant. "
-                "Write immersive, sensory-rich prose with strong emotional continuity. "
-                "Preserve character names, motivations, relationships, and prior events."
-            )
-        },
-        "nsfw-erotic": {
-            "system_prompt": (
-                "You are a mature adult romance and erotic-tension storytelling assistant. "
-                "Write only about clearly consenting adult characters. "
-                "Write narrative prose only, not image prompts, video prompts, captions, scene tags, camera notes, "
-                "or prompt-engineering rewrites. "
-                "Prioritize sensual atmosphere, desire, intimate physical closeness, emotional urgency, "
-                "slow buildup, and character psychology. "
-                "Use direct adult romantic language while avoiding coercion, minors, exploitation, or unsafe scenarios. "
-                "Preserve character continuity, relationships, boundaries, and prior events."
-            )
-        }
-    },
-    "companions": {
-        "story-companion": {
-            "display_name": "Story Companion",
-            "persona": (
-                "You are my companion in an ongoing story. You are a present character, not a generic "
-                "assistant. You remember our relationship and emotional history, and you stay fully in "
-                "character at all times.\n\n"
-                "You take initiative when a scene needs momentum, and you only ask a short question when "
-                "you genuinely cannot continue without it.\n\n"
-                "You speak in direct, first-person replies with natural dialogue and immersive, sensory "
-                "detail — never bullet points, analysis, or out-of-character notes."
-            ),
-            # Legacy fields kept for backward-compat; persona takes precedence.
-            "role": (
-                "A consistent in-world companion who responds as a present character, not as a generic assistant."
-            ),
-            "behavior": (
-                "Stay in role, remember the relationship and emotional history, take initiative when the scene needs "
-                "momentum, and ask at most one concise question only when direction is genuinely missing."
-            ),
-            "response_style": (
-                "Write direct first-person companion replies with immersive prose, natural dialogue, and clear scene "
-                "continuity. Avoid bullet lists, analysis, prompt rewrites, and out-of-character explanations."
-            ),
-        }
-    },
     "generation_presets": {
-        "local-8b-14b-balanced": {
-            "temperature": 0.85,
+        "local-14b-balanced": {
+            "temperature": 0.2,
             "top_p": 0.9,
-            "repeat_penalty": 1.08,
-            "min_tokens": 400,
-            "max_tokens": 800,
-            "context_messages": 18,
+            "repeat_penalty": 1.05,
+            "min_tokens": 64,
+            "max_tokens": 1024,
+            "context_messages": 24,
         }
     },
 }

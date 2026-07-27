@@ -28,8 +28,7 @@ a = Analysis(
     hookspath=[],
     runtime_hooks=[],
     excludes=[
-        # Keep the private companion + heavy/unused libs out of the CLI bundle.
-        "aibot_app",
+        # Keep heavy/unused libs out of the CLI bundle.
         "tkinter",
         "test",
         "unittest",
