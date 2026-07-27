@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Overview - Revenant</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Overview";
+        var mkdocs_page_input_path = "api/index.md";
+        var mkdocs_page_url = "/revenant/api/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Overview</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#core-llm-routing-memory">core — LLM, routing, memory</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tts-voice">tts — voice</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#apps-servers">apps — servers</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">Overview</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
+<p>Module-level documentation generated from source docstrings via
+<a href="https://mkdocstrings.github.io/">mkdocstrings</a>. Modules live under <code>core/</code>, <code>tts/</code>, and
+<code>apps/</code> (flat, added to the import path in <code>mkdocs.yml</code>).</p>
+<h2 id="core-llm-routing-memory">core — LLM, routing, memory<a class="headerlink" href="#core-llm-routing-memory" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="local_llm_writer/"><code>local_llm_writer</code></a></td>
+<td><code>ChatConfig</code>, <code>call_model</code>, <code>stream_model</code> — the local LLM call layer (Ollama + OpenAI-compatible) and the CLI.</td>
+</tr>
+<tr>
+<td><a href="agent_router/"><code>agent_router</code></a></td>
+<td>Task-based multi-model routing: <code>classify</code>, <code>config_for_role</code>, <code>warm_role</code>. See <a href="../model-routing/">Model Routing</a>.</td>
+</tr>
+<tr>
+<td><a href="agent_tools/"><code>agent_tools</code></a></td>
+<td>Revenant harness: <code>Tool</code> + <code>ToolRegistry</code> (tool schema, prompt docs, dispatch).</td>
+</tr>
+<tr>
+<td><a href="agent_protocol/"><code>agent_protocol</code></a></td>
+<td>Revenant harness: dual tool-call protocol — <code>render_system_block</code>, <code>parse_action</code>.</td>
+</tr>
+<tr>
+<td><a href="agent_fs_tools/"><code>agent_fs_tools</code></a></td>
+<td>Revenant: read-only, path-confined fs tools (<code>read_file</code>, <code>list_dir</code>, <code>glob</code>, <code>grep</code>).</td>
+</tr>
+<tr>
+<td><a href="agent_edit_tools/"><code>agent_edit_tools</code></a></td>
+<td>Revenant: mutating, approval-gated <code>write_file</code> / <code>edit_file</code> (path-confined).</td>
+</tr>
+<tr>
+<td><a href="agent_bash_tool/"><code>agent_bash_tool</code></a></td>
+<td>Revenant: <code>run_bash</code> (approval-gated; destructive-command footgun block).</td>
+</tr>
+<tr>
+<td><a href="agent_companion_tools/"><code>agent_companion_tools</code></a></td>
+<td>Revenant companion front-end: <code>memory_search</code> / <code>memory_save</code> / <code>set_reminder</code> (boundary-gated).</td>
+</tr>
+<tr>
+<td><a href="agent_capacity/"><code>agent_capacity</code></a></td>
+<td>Hardware/model detection → loop-knob recommendations (<code>recommend</code>, <code>detect_machine</code>).</td>
+</tr>
+<tr>
+<td><a href="agent_native_tools/"><code>agent_native_tools</code></a></td>
+<td>Native tool-calling detection per model (<code>supports_native_tools</code>, probe-once cache).</td>
+</tr>
+<tr>
+<td><a href="agent_loop/"><code>agent_loop</code></a></td>
+<td>Revenant: the <code>AgentLoop</code> engine (call → parse → approve → dispatch → observe → repeat).</td>
+</tr>
+<tr>
+<td><a href="aibot_context/"><code>aibot_context</code></a></td>
+<td>Token-budgeted context assembly, memory ranking, sentence buffering.</td>
+</tr>
+<tr>
+<td><a href="aibot_summary/"><code>aibot_summary</code></a></td>
+<td>Rolling session summarization with a small factual model.</td>
+</tr>
+<tr>
+<td><a href="aibot_profiles/"><code>aibot_profiles</code></a></td>
+<td>Model/style/companion profiles + <code>model_roles</code>; profile resolution.</td>
+</tr>
+<tr>
+<td><a href="aibot_storage/"><code>aibot_storage</code></a></td>
+<td>SQLite conversation store (source of truth), summaries, episodes.</td>
+</tr>
+<tr>
+<td><a href="aibot_personal_memory/"><code>aibot_personal_memory</code></a></td>
+<td>Structured personal-memory learning + human-gated approval.</td>
+</tr>
+<tr>
+<td><a href="aibot_memory/"><code>aibot_memory</code></a></td>
+<td>Local semantic recall (vector index adapter).</td>
+</tr>
+<tr>
+<td><a href="aibot_companion_memory/"><code>aibot_companion_memory</code></a></td>
+<td>Per-companion memory store.</td>
+</tr>
+<tr>
+<td><a href="aibot_companion_compiler/"><code>aibot_companion_compiler</code></a></td>
+<td>Compiles a plain-language companion brief into a system block.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tts-voice">tts — voice<a class="headerlink" href="#tts-voice" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="aibot_tts/"><code>aibot_tts</code></a></td>
+<td>TTS dispatch layer behind <code>/api/tts</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="apps-servers">apps — servers<a class="headerlink" href="#apps-servers" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="web_app/"><code>web_app</code></a></td>
+<td>Core request handler (<code>LocalUIHandler</code>): the turn pipeline, routing integration, all API routes.</td>
+</tr>
+<tr>
+<td><a href="agent_cli/"><code>agent_cli</code></a></td>
+<td>The <code>revenant</code> coding-agent CLI entry point.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Some older modules still lack module-level docstrings; their public functions and
+classes are documented where docstrings exist. Docstrings are added opportunistically as
+modules are touched.</p>
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../adr/0003-local-agent-harness/" class="btn btn-neutral float-left" title="ADR 0003 — Local Agent Harness"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="local_llm_writer/" class="btn btn-neutral float-right" title="core: local_llm_writer">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../adr/0003-local-agent-harness/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="local_llm_writer/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

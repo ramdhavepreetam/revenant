@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/aibot_context/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>core: aibot_context - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "core: aibot_context";
+        var mkdocs_page_input_path = "api/aibot_context.md";
+        var mkdocs_page_url = "/revenant/api/aibot_context/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">core: aibot_context</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#aibot_app.aibot_context">aibot_context</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_context.rank_memories">rank_memories</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_context.format_memory_block">format_memory_block</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_context.sentences_from_deltas">sentences_from_deltas</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_context.assemble_context">assemble_context</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">core: aibot_context</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coreaibot_context">core.aibot_context<a class="headerlink" href="#coreaibot_context" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="aibot_app.aibot_context" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">aibot_app.aibot_context</span>
+
+
+<a href="#aibot_app.aibot_context" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Context assembly for the companion harness (Phase 2).</p>
+<p>Replaces "inject everything + keep last 18 turns" with a token-budgeted, priority-
+ranked assembler so the working context stays relevant and doesn't overflow as a
+conversation grows. Two jobs:</p>
+<ol>
+<li>rank_memories()  - score structured memories (recency x confidence x pin) and
+                        return the most valuable ones under a count cap.</li>
+<li>assemble_context() - fill the model's message list by PRIORITY under a token
+                        budget, dropping the lowest-priority content first on overflow.</li>
+</ol>
+<p>Priority (highest kept first):
+  system prompt  &gt;  pinned/structured memory  &gt;  session summary  &gt;  recent raw
+  turns (newest first)  &gt;  current user message (always kept).</p>
+<p>Everything here is local and deterministic; SQLite stays the source of truth.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_context.rank_memories" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">rank_memories</span>
+
+
+<a href="#aibot_app.aibot_context.rank_memories" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">rank_memories(memories: list[dict[str, Any]], query: str, limit: int = 10) -&gt; list[dict[str, Any]]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the top <code>limit</code> structured memories most worth injecting this turn.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_context.py</code></summary>
+              <pre class="highlight"><code class="language-python">def rank_memories(memories: list[dict[str, Any]], query: str, limit: int = 10) -&gt; list[dict[str, Any]]:
+    """Return the top `limit` structured memories most worth injecting this turn."""
+    scored = sorted(memories, key=lambda m: _memory_score(m, query), reverse=True)
+    return scored[:limit]</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_context.format_memory_block" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">format_memory_block</span>
+
+
+<a href="#aibot_app.aibot_context.format_memory_block" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">format_memory_block(memories: list[dict[str, Any]]) -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Render ranked structured memories as a compact, grouped block.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_context.py</code></summary>
+              <pre class="highlight"><code class="language-python">def format_memory_block(memories: list[dict[str, Any]]) -&gt; str:
+    """Render ranked structured memories as a compact, grouped block."""
+    if not memories:
+        return ""
+    # Keep boundaries visually distinct; everything else as continuity facts.
+    boundaries = [m for m in memories if m.get("category") == "boundary"]
+    others = [m for m in memories if m.get("category") != "boundary"]
+    lines: list[str] = []
+    if others:
+        lines.append("What you remember about this person (use as lived continuity, never recite):")
+        lines += [f"- {m.get('content','').strip()}" for m in others if m.get("content")]
+    if boundaries:
+        lines.append("Boundaries to always respect:")
+        lines += [f"- {m.get('content','').strip()}" for m in boundaries if m.get("content")]
+    return "\n".join(lines)</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_context.sentences_from_deltas" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">sentences_from_deltas</span>
+
+
+<a href="#aibot_app.aibot_context.sentences_from_deltas" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">sentences_from_deltas(deltas)</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Turn a stream of token deltas into a stream of complete sentences.</p>
+<p>The keystone of streaming: emitting whole sentences (not raw tokens) keeps the
+Phase-1 truncation guarantee intact (a partial trailing sentence is simply never
+emitted) and matches what the Kokoro voice wants. Yields (sentence, full_so_far).
+The final partial buffer is intentionally NOT emitted — the caller trims it.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_context.py</code></summary>
+              <pre class="highlight"><code class="language-python">def sentences_from_deltas(deltas):
+    """Turn a stream of token deltas into a stream of complete sentences.
+
+    The keystone of streaming: emitting whole sentences (not raw tokens) keeps the
+    Phase-1 truncation guarantee intact (a partial trailing sentence is simply never
+    emitted) and matches what the Kokoro voice wants. Yields (sentence, full_so_far).
+    The final partial buffer is intentionally NOT emitted — the caller trims it.
+    """
+    import re
+
+    buf = ""
+    full = ""
+    # Emit when we hit terminal punctuation followed by space/newline/end, but not
+    # mid-decimal or mid-ellipsis-that-keeps-going.
+    boundary = re.compile(r".+?[.!?…][\"'’)\*]*(?=\s|$)", re.DOTALL)
+    for delta in deltas:
+        buf += delta
+        full += delta
+        while True:
+            m = boundary.match(buf)
+            if not m:
+                break
+            sentence = m.group(0).strip()
+            buf = buf[m.end():].lstrip()
+            if sentence:
+                yield sentence, full</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_context.assemble_context" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">assemble_context</span>
+
+
+<a href="#aibot_app.aibot_context.assemble_context" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">assemble_context(*, system_prompt: str, memory_block: str, session_summary: str, history: list[dict[str, str]], user_message: str, max_context_tokens: int = 3072, min_recent_turns: int = 4) -&gt; list[dict[str, str]]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Build the model message list under a token budget, by priority.</p>
+<p><code>history</code> is the prior conversation (oldest-&gt;newest, excluding the current
+user message). <code>user_message</code> is this turn's text (already enriched if needed).
+Returns [{role, content}, ...] ready for call_model.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_context.py</code></summary>
+              <pre class="highlight"><code class="language-python">def assemble_context(
+    *,
+    system_prompt: str,
+    memory_block: str,
+    session_summary: str,
+    history: list[dict[str, str]],
+    user_message: str,
+    max_context_tokens: int = 3072,
+    min_recent_turns: int = 4,
+) -&gt; list[dict[str, str]]:
+    """Build the model message list under a token budget, by priority.
+
+    `history` is the prior conversation (oldest-&gt;newest, excluding the current
+    user message). `user_message` is this turn's text (already enriched if needed).
+    Returns [{role, content}, ...] ready for call_model.
+    """
+    # System message = persona + memory block + session summary (all high priority).
+    system_parts = [system_prompt.strip()] if system_prompt.strip() else []
+    if session_summary.strip():
+        system_parts.append(
+            "Story so far (summary of earlier conversation, treat as memory):\n"
+            f"{session_summary.strip()}"
+        )
+    if memory_block.strip():
+        system_parts.append(memory_block.strip())
+    system_content = "\n\n".join(system_parts)
+
+    user_turn = {"role": "user", "content": user_message}
+    # Reserve budget for the always-kept pieces.
+    used = estimate_tokens(system_content) + estimate_tokens(user_message)
+    budget = max(0, max_context_tokens - used)
+
+    # Add raw history newest-first until the budget runs out, but always keep at
+    # least the most recent `min_recent_turns` (a companion must remember the last
+    # few exchanges even under pressure).
+    kept_reversed: list[dict[str, str]] = []
+    for i, msg in enumerate(reversed(history)):
+        cost = estimate_tokens(msg.get("content", ""))
+        if i &lt; min_recent_turns or cost &lt;= budget:
+            kept_reversed.append(msg)
+            budget -= cost
+        else:
+            break
+    kept_history = list(reversed(kept_reversed))
+
+    messages: list[dict[str, str]] = []
+    if system_content:
+        messages.append({"role": "system", "content": system_content})
+    messages.extend(kept_history)
+    messages.append(user_turn)
+    return messages</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../agent_cli/" class="btn btn-neutral float-left" title="apps: agent_cli (revenant)"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../aibot_summary/" class="btn btn-neutral float-right" title="core: aibot_summary">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../agent_cli/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../aibot_summary/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

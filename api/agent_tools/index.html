@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/agent_tools/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>core: agent_tools - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "core: agent_tools";
+        var mkdocs_page_input_path = "api/agent_tools.md";
+        var mkdocs_page_url = "/revenant/api/agent_tools/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">core: agent_tools</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#nerva_agent.agent_tools">agent_tools</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_tools.ToolError">ToolError</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_tools.ToolParam">ToolParam</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_tools.Tool">Tool</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_agent.agent_tools.Tool.signature">signature</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_agent.agent_tools.Tool.doc_line">doc_line</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_agent.agent_tools.Tool.native_schema">native_schema</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_agent.agent_tools.Tool.validate_args">validate_args</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_tools.ToolRegistry">ToolRegistry</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_agent.agent_tools.ToolRegistry.render_docs">render_docs</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_agent.agent_tools.ToolRegistry.native_schema">native_schema</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_agent.agent_tools.ToolRegistry.dispatch">dispatch</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">core: agent_tools</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coreagent_tools">core.agent_tools<a class="headerlink" href="#coreagent_tools" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="nerva_agent.agent_tools" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">nerva_agent.agent_tools</span>
+
+
+<a href="#nerva_agent.agent_tools" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Tool registry for the Revenant agent harness.</p>
+<p>A <code>Tool</code> bundles a name, a human/model-readable description, a lightweight
+parameter schema (used both to document the tool in the prompt and to build the
+native Ollama <code>tools</code> array), and a <code>run</code> callable. Tools carry flags the loop
+and the approval layer care about:</p>
+<pre><code>parallel_safe      : read-only; multiple such calls may be batched/parallelized.
+requires_approval  : the human must confirm before this runs (mirrors Claude Code).
+mutating           : changes state (files, shell, memory) -&gt; implies approval by default.
+</code></pre>
+<p><code>ToolRegistry</code> holds a set of tools and knows how to (a) render them into a system
+prompt block for the prompt-based protocol, (b) emit the native <code>tools</code> schema for
+tool-capable models, and (c) dispatch a parsed call to the right tool with basic
+argument validation.</p>
+<p>Pure Python, no LLM dependency -- this module is the substrate the loop and both
+front-ends (coding CLI, companion) build their tool sets on.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_agent.agent_tools.ToolError" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">ToolError</span>
+
+
+<a href="#nerva_agent.agent_tools.ToolError" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="RuntimeError">RuntimeError</span></code></p>
+
+
+
+        <p>Raised for registry/dispatch problems (unknown tool, bad args). The loop
+turns these into an observation the model can recover from, not a crash.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+                <pre class="highlight"><code class="language-python">class ToolError(RuntimeError):
+    """Raised for registry/dispatch problems (unknown tool, bad args). The loop
+    turns these into an observation the model can recover from, not a crash."""</code></pre>
+              </details>
+
+    </div>
+
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_agent.agent_tools.ToolParam" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">ToolParam</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#nerva_agent.agent_tools.ToolParam" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>One parameter of a tool.</p>
+<p><code>type</code> is a JSON-schema scalar type name ("string", "integer", "boolean",
+"number"). Only a small set is needed for local tools; nested objects are
+intentionally out of scope for v1.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+                <pre class="highlight"><code class="language-python">@dataclass
+class ToolParam:
+    """One parameter of a tool.
+
+    `type` is a JSON-schema scalar type name ("string", "integer", "boolean",
+    "number"). Only a small set is needed for local tools; nested objects are
+    intentionally out of scope for v1.
+    """
+
+    name: str
+    type: str = "string"
+    description: str = ""
+    required: bool = True</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_agent.agent_tools.Tool" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">Tool</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#nerva_agent.agent_tools.Tool" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>A single callable capability exposed to the model.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+                <pre class="highlight"><code class="language-python">@dataclass
+class Tool:
+    """A single callable capability exposed to the model."""
+
+    name: str
+    description: str
+    params: list[ToolParam] = field(default_factory=list)
+    run: Callable[..., str] = None  # (**kwargs) -&gt; str  (the observation text)
+    parallel_safe: bool = False
+    requires_approval: bool = False
+    mutating: bool = False
+
+    def __post_init__(self) -&gt; None:
+        if self.mutating and not self.requires_approval:
+            # Mutating tools require approval unless a front-end explicitly clears it.
+            self.requires_approval = True
+
+    # --- Rendering ---------------------------------------------------------
+    def signature(self) -&gt; str:
+        """`name(arg1, arg2?)` -- `?` marks optional args."""
+        parts = [p.name + ("" if p.required else "?") for p in self.params]
+        return f"{self.name}({', '.join(parts)})"
+
+    def doc_line(self) -&gt; str:
+        """One line for the prompt's tool list, including arg docs and flags."""
+        flags = []
+        if self.requires_approval:
+            flags.append("asks approval")
+        if self.parallel_safe:
+            flags.append("parallel-safe")
+        flag_str = f"  [{'; '.join(flags)}]" if flags else ""
+        line = f"- {self.signature()}: {self.description.strip()}{flag_str}"
+        arg_docs = [
+            f"    - {p.name} ({p.type}{'' if p.required else ', optional'}): {p.description}".rstrip()
+            for p in self.params
+            if p.description
+        ]
+        return "\n".join([line, *arg_docs])
+
+    def native_schema(self) -&gt; dict[str, Any]:
+        """OpenAI/Ollama-style function-tool schema for tool-capable models."""
+        properties = {
+            p.name: {"type": p.type, **({"description": p.description} if p.description else {})}
+            for p in self.params
+        }
+        required = [p.name for p in self.params if p.required]
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description.strip(),
+                "parameters": {
+                    "type": "object",
+                    "properties": properties,
+                    "required": required,
+                },
+            },
+        }
+
+    # --- Invocation --------------------------------------------------------
+    def validate_args(self, args: dict[str, Any]) -&gt; dict[str, Any]:
+        """Check required args are present and drop unknown keys. Returns the
+        cleaned kwargs. Raises ToolError on a missing required arg."""
+        if not isinstance(args, dict):
+            raise ToolError(f"{self.name}: arguments must be an object, got {type(args).__name__}")
+        known = {p.name for p in self.params}
+        missing = [p.name for p in self.params if p.required and p.name not in args]
+        if missing:
+            raise ToolError(f"{self.name}: missing required argument(s): {', '.join(missing)}")
+        # Keep only declared params; silently ignore extras (weak models add noise).
+        return {k: v for k, v in args.items() if k in known}
+
+    def invoke(self, args: dict[str, Any]) -&gt; str:
+        if self.run is None:
+            raise ToolError(f"{self.name}: no run() implementation")
+        clean = self.validate_args(args)
+        result = self.run(**clean)
+        return result if isinstance(result, str) else str(result)</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_agent.agent_tools.Tool.signature" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">signature</span>
+
+
+<a href="#nerva_agent.agent_tools.Tool.signature" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">signature() -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p><code>name(arg1, arg2?)</code> -- <code>?</code> marks optional args.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+              <pre class="highlight"><code class="language-python">def signature(self) -&gt; str:
+    """`name(arg1, arg2?)` -- `?` marks optional args."""
+    parts = [p.name + ("" if p.required else "?") for p in self.params]
+    return f"{self.name}({', '.join(parts)})"</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_agent.agent_tools.Tool.doc_line" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">doc_line</span>
+
+
+<a href="#nerva_agent.agent_tools.Tool.doc_line" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">doc_line() -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>One line for the prompt's tool list, including arg docs and flags.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+              <pre class="highlight"><code class="language-python">def doc_line(self) -&gt; str:
+    """One line for the prompt's tool list, including arg docs and flags."""
+    flags = []
+    if self.requires_approval:
+        flags.append("asks approval")
+    if self.parallel_safe:
+        flags.append("parallel-safe")
+    flag_str = f"  [{'; '.join(flags)}]" if flags else ""
+    line = f"- {self.signature()}: {self.description.strip()}{flag_str}"
+    arg_docs = [
+        f"    - {p.name} ({p.type}{'' if p.required else ', optional'}): {p.description}".rstrip()
+        for p in self.params
+        if p.description
+    ]
+    return "\n".join([line, *arg_docs])</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_agent.agent_tools.Tool.native_schema" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">native_schema</span>
+
+
+<a href="#nerva_agent.agent_tools.Tool.native_schema" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">native_schema() -&gt; dict[str, Any]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>OpenAI/Ollama-style function-tool schema for tool-capable models.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+              <pre class="highlight"><code class="language-python">def native_schema(self) -&gt; dict[str, Any]:
+    """OpenAI/Ollama-style function-tool schema for tool-capable models."""
+    properties = {
+        p.name: {"type": p.type, **({"description": p.description} if p.description else {})}
+        for p in self.params
+    }
+    required = [p.name for p in self.params if p.required]
+    return {
+        "type": "function",
+        "function": {
+            "name": self.name,
+            "description": self.description.strip(),
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+                "required": required,
+            },
+        },
+    }</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_agent.agent_tools.Tool.validate_args" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">validate_args</span>
+
+
+<a href="#nerva_agent.agent_tools.Tool.validate_args" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">validate_args(args: dict[str, Any]) -&gt; dict[str, Any]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Check required args are present and drop unknown keys. Returns the
+cleaned kwargs. Raises ToolError on a missing required arg.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+              <pre class="highlight"><code class="language-python">def validate_args(self, args: dict[str, Any]) -&gt; dict[str, Any]:
+    """Check required args are present and drop unknown keys. Returns the
+    cleaned kwargs. Raises ToolError on a missing required arg."""
+    if not isinstance(args, dict):
+        raise ToolError(f"{self.name}: arguments must be an object, got {type(args).__name__}")
+    known = {p.name for p in self.params}
+    missing = [p.name for p in self.params if p.required and p.name not in args]
+    if missing:
+        raise ToolError(f"{self.name}: missing required argument(s): {', '.join(missing)}")
+    # Keep only declared params; silently ignore extras (weak models add noise).
+    return {k: v for k, v in args.items() if k in known}</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_agent.agent_tools.ToolRegistry" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">ToolRegistry</span>
+
+
+<a href="#nerva_agent.agent_tools.ToolRegistry" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>An ordered collection of tools for one front-end (coding, companion, ...).</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+                <pre class="highlight"><code class="language-python">class ToolRegistry:
+    """An ordered collection of tools for one front-end (coding, companion, ...)."""
+
+    def __init__(self, tools: list[Tool] | None = None) -&gt; None:
+        self._tools: dict[str, Tool] = {}
+        for tool in tools or []:
+            self.register(tool)
+
+    def register(self, tool: Tool) -&gt; Tool:
+        if tool.name in self._tools:
+            raise ToolError(f"duplicate tool name: {tool.name}")
+        self._tools[tool.name] = tool
+        return tool
+
+    def get(self, name: str) -&gt; Tool | None:
+        return self._tools.get(name)
+
+    def __contains__(self, name: object) -&gt; bool:
+        return name in self._tools
+
+    def __len__(self) -&gt; int:
+        return len(self._tools)
+
+    def names(self) -&gt; list[str]:
+        return list(self._tools)
+
+    def tools(self) -&gt; list[Tool]:
+        return list(self._tools.values())
+
+    def render_docs(self) -&gt; str:
+        """The tool catalogue for the prompt-based protocol's system block."""
+        return "\n".join(tool.doc_line() for tool in self._tools.values())
+
+    def native_schema(self) -&gt; list[dict[str, Any]]:
+        """The `tools` array for a native tool-calling request."""
+        return [tool.native_schema() for tool in self._tools.values()]
+
+    def dispatch(self, name: str, args: dict[str, Any]) -&gt; str:
+        """Run a tool by name. Raises ToolError for an unknown tool (the loop
+        surfaces that back to the model as a recoverable observation)."""
+        tool = self._tools.get(name)
+        if tool is None:
+            raise ToolError(
+                f"unknown tool: {name!r}. Available: {', '.join(self._tools) or '(none)'}"
+            )
+        return tool.invoke(args)</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_agent.agent_tools.ToolRegistry.render_docs" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">render_docs</span>
+
+
+<a href="#nerva_agent.agent_tools.ToolRegistry.render_docs" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">render_docs() -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>The tool catalogue for the prompt-based protocol's system block.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+              <pre class="highlight"><code class="language-python">def render_docs(self) -&gt; str:
+    """The tool catalogue for the prompt-based protocol's system block."""
+    return "\n".join(tool.doc_line() for tool in self._tools.values())</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_agent.agent_tools.ToolRegistry.native_schema" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">native_schema</span>
+
+
+<a href="#nerva_agent.agent_tools.ToolRegistry.native_schema" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">native_schema() -&gt; list[dict[str, Any]]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>The <code>tools</code> array for a native tool-calling request.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+              <pre class="highlight"><code class="language-python">def native_schema(self) -&gt; list[dict[str, Any]]:
+    """The `tools` array for a native tool-calling request."""
+    return [tool.native_schema() for tool in self._tools.values()]</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_agent.agent_tools.ToolRegistry.dispatch" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">dispatch</span>
+
+
+<a href="#nerva_agent.agent_tools.ToolRegistry.dispatch" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">dispatch(name: str, args: dict[str, Any]) -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Run a tool by name. Raises ToolError for an unknown tool (the loop
+surfaces that back to the model as a recoverable observation).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_tools.py</code></summary>
+              <pre class="highlight"><code class="language-python">def dispatch(self, name: str, args: dict[str, Any]) -&gt; str:
+    """Run a tool by name. Raises ToolError for an unknown tool (the loop
+    surfaces that back to the model as a recoverable observation)."""
+    tool = self._tools.get(name)
+    if tool is None:
+        raise ToolError(
+            f"unknown tool: {name!r}. Available: {', '.join(self._tools) or '(none)'}"
+        )
+    return tool.invoke(args)</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../agent_router/" class="btn btn-neutral float-left" title="core: agent_router"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../agent_protocol/" class="btn btn-neutral float-right" title="core: agent_protocol">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../agent_router/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../agent_protocol/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

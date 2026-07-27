@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/companion-agent/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Companion Agent - Revenant</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Companion Agent";
+        var mkdocs_page_input_path = "companion-agent.md";
+        var mkdocs_page_url = "/revenant/companion-agent/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Companion Agent</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#endpoint">Endpoint</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tools-agent_companion_tools">Tools (agent_companion_tools)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-boundary-safety-gate">The boundary safety gate</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#why-stheno-runs-prompt-based">Why Stheno runs prompt-based</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#reuse-no-web-dependency">Reuse (no web dependency)</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Guides</li>
+      <li class="breadcrumb-item active">Companion Agent</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="companion-agent-front-end">Companion Agent (front-end)<a class="headerlink" href="#companion-agent-front-end" title="Permanent link">&para;</a></h1>
+<p>The Revenant harness powers <strong>two front-ends from one loop</strong>: the
+<a href="../revenant-cli/">coding CLI</a> and the <strong>companion agent</strong>. Both use the same
+<a href="../api/agent_loop/"><code>AgentLoop</code></a>, protocol, and parser — only the <strong>tool set</strong> and
+<strong>model</strong> differ. That's the whole point of the shared harness.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Coding front-end (<code>revenant</code>)</th>
+<th>Companion front-end (<code>/api/agent</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td><code>qwen2.5:7b</code> (<code>code</code> role, native tools)</td>
+<td>Stheno-8B (<code>companion</code> role, prompt-based)</td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>read/glob/grep + write/edit/bash</td>
+<td>memory_search / memory_save / set_reminder</td>
+</tr>
+<tr>
+<td>Filesystem/shell</td>
+<td>yes (approval-gated)</td>
+<td><strong>no</strong></td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>y/N on mutating tools</td>
+<td>auto (memory tools are low-risk)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="endpoint">Endpoint<a class="headerlink" href="#endpoint" title="Permanent link">&para;</a></h2>
+<p><code>POST /api/agent</code> runs an agentic companion turn:</p>
+<pre><code class="language-jsonc">// request
+{ &quot;message&quot;: &quot;remember I love hiking in the mountains&quot;,
+  &quot;companion_profile&quot;: &quot;eros&quot;, &quot;max_steps&quot;: 5 }
+
+// response
+{ &quot;reply&quot;: &quot;Locked it in — I won't forget your mountain hikes.&quot;,
+  &quot;tool_activity&quot;: [ { &quot;tool&quot;: &quot;memory_save&quot;,
+                       &quot;args&quot;: { &quot;category&quot;: &quot;preference&quot;,
+                                 &quot;content&quot;: &quot;The user enjoys hiking in the mountains.&quot; } } ],
+  &quot;steps&quot;: 2, &quot;stopped_reason&quot;: &quot;final&quot;,
+  &quot;config&quot;: { &quot;role&quot;: &quot;companion&quot;, &quot;model&quot;: &quot;…Stheno…&quot;, &quot;companion_profile&quot;: &quot;eros&quot; } }
+</code></pre>
+<p>This lets the companion take real actions mid-conversation — recall a fact, remember
+something new, or set a reminder — instead of only producing prose.</p>
+<h2 id="tools-agent_companion_tools">Tools (<a href="../api/agent_companion_tools/"><code>agent_companion_tools</code></a>)<a class="headerlink" href="#tools-agent_companion_tools" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>memory_search(query)</code> — recall relevant remembered facts (read-only; reuses the
+  semantic recall index).</li>
+<li><code>memory_save(category, content)</code> — record a fact. Categories: <code>identity_fact</code>,
+  <code>preference</code>, <code>voice_preference</code>, <code>story_fact</code>, <code>companion_style</code>,
+  <code>relationship_state</code>, <code>need</code>, <code>boundary</code>.</li>
+<li><code>set_reminder(text)</code> — note something to bring up later (stored as an episode).</li>
+</ul>
+<p>There are <strong>no filesystem or shell tools</strong> — the companion registry is a strict subset.</p>
+<h2 id="the-boundary-safety-gate">The boundary safety gate<a class="headerlink" href="#the-boundary-safety-gate" title="Permanent link">&para;</a></h2>
+<p>A wrongly-admitted <strong>boundary</strong> in a companion is a real risk, so <code>memory_save</code>
+never auto-activates one. A <code>boundary</code> write is stored as <strong><code>pending</code></strong> (held for
+the user to confirm) and is <strong>not</strong> added to the recall index; every other category
+is written <strong>active</strong>. This mirrors the existing advisor rule in
+<code>aibot_personal_memory.learn</code> — the gate lives <em>inside</em> the tool, so it holds no
+matter how the loop reaches it.</p>
+<p>Verified live: asking the companion to remember a boundary results in a <code>pending</code>
+memory and a reply that explicitly waits for confirmation before treating it as real.</p>
+<h2 id="why-stheno-runs-prompt-based">Why Stheno runs prompt-based<a class="headerlink" href="#why-stheno-runs-prompt-based" title="Permanent link">&para;</a></h2>
+<p>Stheno-8B ships no tool template, so native <code>tool_calls</code> don't work on it (confirmed
+in <a href="../adr/0003-local-agent-harness/">ADR 0003</a>). The companion front-end therefore
+runs with <code>use_native_tools=False</code>, and the model emits <code>```action</code> blocks that
+<a href="../api/agent_protocol/"><code>parse_action</code></a> reads — the same universal fallback that makes
+the harness model-agnostic.</p>
+<h2 id="reuse-no-web-dependency">Reuse (no web dependency)<a class="headerlink" href="#reuse-no-web-dependency" title="Permanent link">&para;</a></h2>
+<p><code>build_companion_tools(memory, personal_memory, store, companion_id)</code> takes the
+already-constructed stores (from <code>web_app</code>'s <code>STATE</code>), so <code>agent_companion_tools</code>
+imports nothing from <code>web_app</code> and is unit-tested with fakes.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../revenant-cli/" class="btn btn-neutral float-left" title="Revenant CLI"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../companion-harness-plan/" class="btn btn-neutral float-right" title="Companion Harness Plan">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../revenant-cli/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../companion-harness-plan/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

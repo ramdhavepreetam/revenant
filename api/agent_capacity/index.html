@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/agent_capacity/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>core: agent_capacity - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "core: agent_capacity";
+        var mkdocs_page_input_path = "api/agent_capacity.md";
+        var mkdocs_page_url = "/revenant/api/agent_capacity/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">core: agent_capacity</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#nerva_agent.agent_capacity">agent_capacity</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_capacity.detect_machine">detect_machine</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_capacity.model_size_gb">model_size_gb</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_capacity.recommend">recommend</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">core: agent_capacity</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coreagent_capacity">core.agent_capacity<a class="headerlink" href="#coreagent_capacity" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="nerva_agent.agent_capacity" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">nerva_agent.agent_capacity</span>
+
+
+<a href="#nerva_agent.agent_capacity" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Hardware-aware capacity tuning for the Revenant harness (P6).</p>
+<p>Detects the machine (RAM, cores, platform) and the active model's size, then
+recommends loop knobs — <code>max_context_tokens</code>, <code>max_steps</code>, <code>keep_recent_steps</code> —
+and whether to keep multiple models resident or swap on demand.</p>
+<p>The goal is that <code>revenant</code> works sensibly out of the box on whatever box it's on:
+a 96 GB workstation gets a big context budget and can pin models resident; a 16 GB
+laptop gets a tighter budget and swap-on-demand.</p>
+<p>Everything degrades gracefully: if hardware/model probing fails, conservative
+defaults are returned. All values are advisory — the CLI and web layer may override.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="nerva_agent.agent_capacity.detect_machine" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">detect_machine</span>
+
+
+<a href="#nerva_agent.agent_capacity.detect_machine" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">detect_machine() -&gt; MachineInfo</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Best-effort hardware detection. Never raises.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_capacity.py</code></summary>
+              <pre class="highlight"><code class="language-python">def detect_machine() -&gt; MachineInfo:
+    """Best-effort hardware detection. Never raises."""
+    system = platform.system().lower()
+    arch = platform.machine().lower()
+    ram_gb = 8.0
+    cpu = os.cpu_count() or 4
+    try:
+        if system == "darwin":
+            out = subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True, timeout=3)
+            ram_gb = int(out.strip()) / 1024 ** 3
+        elif system == "linux":
+            with open("/proc/meminfo") as f:
+                for line in f:
+                    if line.startswith("MemTotal:"):
+                        ram_gb = int(line.split()[1]) / 1024 ** 2  # kB -&gt; GB
+                        break
+        else:  # windows / unknown
+            try:
+                import ctypes  # local import; only needed here
+
+                class _MS(ctypes.Structure):
+                    _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                                ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                                ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                                ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                                ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+                stat = _MS(); stat.dwLength = ctypes.sizeof(_MS)
+                ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))  # type: ignore[attr-defined]
+                ram_gb = stat.ullTotalPhys / 1024 ** 3
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception:  # noqa: BLE001
+        pass
+    apple_silicon = system == "darwin" and arch in ("arm64", "aarch64")
+    return MachineInfo(round(ram_gb, 1), int(cpu), system, arch, apple_silicon)</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="nerva_agent.agent_capacity.model_size_gb" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">model_size_gb</span>
+
+
+<a href="#nerva_agent.agent_capacity.model_size_gb" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">model_size_gb(model: str, base_url: str = 'http://localhost:11434', timeout: int = 3) -&gt; float</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Size of an Ollama model in GB, or 0.0 if unknown/unreachable. Never raises.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_capacity.py</code></summary>
+              <pre class="highlight"><code class="language-python">def model_size_gb(model: str, base_url: str = "http://localhost:11434", timeout: int = 3) -&gt; float:
+    """Size of an Ollama model in GB, or 0.0 if unknown/unreachable. Never raises."""
+    try:
+        with urllib.request.urlopen(f"{base_url.rstrip('/')}/api/tags", timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        for m in data.get("models", []):
+            if m.get("name") == model:
+                return round(int(m.get("size", 0)) / 1024 ** 3, 1)
+    except Exception:  # noqa: BLE001
+        pass
+    return 0.0</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="nerva_agent.agent_capacity.recommend" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">recommend</span>
+
+
+<a href="#nerva_agent.agent_capacity.recommend" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">recommend(model: str = '', *, base_url: str = 'http://localhost:11434', machine: MachineInfo | None = None, model_gb: float | None = None) -&gt; Recommendation</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Recommend loop knobs from RAM and model size.</p>
+<p>Heuristics (RAM tiers), tuned for local 7B-14B quantized models:
+  - context budget scales with RAM: enough headroom for the model + KV cache
+    + app, without pushing the machine into swap.
+  - keep_resident: true when there's room for the active model AND a second
+    model (router/companion) to stay loaded (~2.2x the active model's size).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_capacity.py</code></summary>
+              <pre class="highlight"><code class="language-python">def recommend(
+    model: str = "",
+    *,
+    base_url: str = "http://localhost:11434",
+    machine: MachineInfo | None = None,
+    model_gb: float | None = None,
+) -&gt; Recommendation:
+    """Recommend loop knobs from RAM and model size.
+
+    Heuristics (RAM tiers), tuned for local 7B-14B quantized models:
+      - context budget scales with RAM: enough headroom for the model + KV cache
+        + app, without pushing the machine into swap.
+      - keep_resident: true when there's room for the active model AND a second
+        model (router/companion) to stay loaded (~2.2x the active model's size).
+    """
+    machine = machine or detect_machine()
+    if model_gb is None:
+        model_gb = model_size_gb(model, base_url) if model else 0.0
+
+    ram = machine.ram_gb
+
+    # Context budget by RAM tier (tokens). Local models are the limiter, not RAM,
+    # but low-RAM boxes can't afford a huge KV cache alongside the app.
+    if ram &gt;= 64:
+        max_context = 16000
+    elif ram &gt;= 32:
+        max_context = 10000
+    elif ram &gt;= 16:
+        max_context = 6000
+    elif ram &gt;= 8:
+        max_context = 3500
+    else:
+        max_context = 2000
+
+    # Step cap: more headroom on bigger machines (they finish long tasks faster).
+    max_steps = 20 if ram &gt;= 32 else (15 if ram &gt;= 16 else 10)
+
+    # Keep the most recent N step-pairs verbatim; scale slightly with budget.
+    keep_recent_steps = 4 if max_context &gt;= 10000 else 3
+
+    # Resident vs swap: room for the active model + a second (~2.2x) with headroom
+    # for the app (~4 GB) and OS. If model size is unknown, be conservative.
+    effective_model = model_gb or 5.0
+    keep_resident = ram &gt;= (effective_model * 2.2 + 6.0)
+
+    note = (
+        f"{ram:.0f}GB RAM, {machine.cpu_count} cores"
+        + (", Apple Silicon" if machine.apple_silicon else "")
+        + (f", model {model_gb:.1f}GB" if model_gb else "")
+        + f" → context {max_context}, steps {max_steps}, "
+        + ("keep models resident" if keep_resident else "swap on demand")
+    )
+    return Recommendation(
+        max_context_tokens=max_context,
+        max_steps=max_steps,
+        keep_recent_steps=keep_recent_steps,
+        keep_resident=keep_resident,
+        model_gb=model_gb,
+        machine=machine,
+        note=note,
+    )</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../agent_companion_tools/" class="btn btn-neutral float-left" title="core: agent_companion_tools"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../agent_native_tools/" class="btn btn-neutral float-right" title="core: agent_native_tools">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../agent_companion_tools/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../agent_native_tools/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

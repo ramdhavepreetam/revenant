@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/adr/0003-local-agent-harness/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>ADR 0003 — Local Agent Harness - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "ADR 0003 \u2014 Local Agent Harness";
+        var mkdocs_page_input_path = "adr/0003-local-agent-harness.md";
+        var mkdocs_page_url = "/revenant/adr/0003-local-agent-harness/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">ADR 0003 — Local Agent Harness</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#context">Context</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#hardware-measured-2026-07-26">Hardware (measured 2026-07-26)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#models">Models</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#the-decisive-technical-finding">The decisive technical finding</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#decision">Decision</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#why-not-the-anthropic-sdk-cloud-api">Why not the Anthropic SDK / cloud API</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#component-layout">Component layout</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#reasoning-in-depth-thinking">Reasoning / "in-depth thinking"</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#safety-model-no-censorship-clarified">Safety model — "no censorship" clarified</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#consequences">Consequences</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#build-phases-all-complete-2026-07-26">Build phases — ALL COMPLETE (2026-07-26)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#status-harness-complete">Status: harness COMPLETE</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Design Records</li>
+      <li class="breadcrumb-item active">ADR 0003 — Local Agent Harness</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="adr-0003-local-agent-harness-offline-tool-using-on-prem-private">ADR 0003 — Local Agent Harness (offline, tool-using, on-prem private)<a class="headerlink" href="#adr-0003-local-agent-harness-offline-tool-using-on-prem-private" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status:</strong> Accepted (2026-07-26)</li>
+<li><strong>Deciders:</strong> Preetam (owner), pairing session</li>
+<li><strong>Supersedes / relates to:</strong> builds on <a href="../0001-offline-local-llm-interface/">ADR 0001</a>
+  (offline local LLM interface). Companion memory/context work: <code>docs/companion-harness-plan.md</code>.</li>
+<li><strong>Full build plan:</strong> <code>docs/agent-harness-plan.md</code> (read alongside this ADR).</li>
+</ul>
+<hr />
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>AIBot currently calls a local LLM (Ollama) and gets back <strong>prose only</strong> — it cannot read files,
+run commands, search its own memory, or take multi-step actions. The owner wants a "Claude Code
+for my private LLM": a reusable <strong>agentic tool-calling harness</strong> on top of the existing local
+model, capable of powering <strong>both</strong> a coding assistant and the companion, running <strong>fully
+offline / on-prem</strong> with <strong>no development-time content censorship</strong> (authorized private machine).</p>
+<h3 id="hardware-measured-2026-07-26">Hardware (measured 2026-07-26)<a class="headerlink" href="#hardware-measured-2026-07-26" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+<th>Implication for harness</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chip</td>
+<td>Apple M5 Pro (15 cores: 5 E + 10 P)</td>
+<td>Fast local inference; parallel-safe tools can fan out</td>
+</tr>
+<tr>
+<td>Unified memory</td>
+<td>24 GB</td>
+<td>Can hold <strong>two</strong> 7–8B Q4 models resident (~10 GB) + app; 14B Q4 (~9 GB) viable but slower</td>
+</tr>
+<tr>
+<td>Disk free</td>
+<td>~467 GB</td>
+<td>Ample for extra models</td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>0.32.0</td>
+<td>Supports native <code>tools=</code> <strong>for models with a tool template</strong></td>
+</tr>
+<tr>
+<td>ripgrep</td>
+<td>present (<code>/opt/homebrew/bin/rg</code>)</td>
+<td><code>grep</code> tool shells to <code>rg</code></td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.11.1</td>
+<td>matches project</td>
+</tr>
+</tbody>
+</table>
+<h3 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>hf.co/.../L3-8B-Stheno-v3.2-gguf:Q4_K_M</code> — companion/roleplay. <strong>No tool template.</strong></li>
+<li><code>gemma:latest</code> — 2yr old, summaries. <strong>Predates Ollama tool support.</strong></li>
+<li><code>qwen2.5:7b</code> — <strong>being pulled for the coding agent</strong> (native tool-calling, strong instruction-following).</li>
+</ul>
+<h3 id="the-decisive-technical-finding">The decisive technical finding<a class="headerlink" href="#the-decisive-technical-finding" title="Permanent link">&para;</a></h3>
+<p>Passing an OpenAI-style <code>tools</code> array to <code>/api/chat</code> on <strong>Stheno</strong> and <strong>this gemma</strong> returns
+<code>tool_calls: null</code> <strong>and empty content</strong> — they have no tool template. Native tool calling is
+therefore <strong>not usable on the companion model</strong>. qwen2.5 <em>does</em> ship a template, so native works there.</p>
+<hr />
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>Name:</strong> the agent harness / CLI is <strong><code>revenant</code></strong> (invoked as <code>revenant …</code>). Chosen for a
+persistent local mind that "returns" each session; verified clear in the AI-agent/CLI space
+(unlike <code>ghost</code>, which collides with several existing local-Ollama agents + the Ghost blog CLI).
+The coding front-end lives at <code>apps/agent_cli.py</code> and is exposed as the <code>revenant</code> command.</p>
+<p>Build a <strong>model-agnostic agent harness</strong> in <code>core/</code>, layered on the existing
+<code>call_model</code>/<code>stream_model</code> HTTP functions. It uses a <strong>dual tool-call protocol</strong>:</p>
+<ol>
+<li><strong>Native <code>tool_calls</code></strong> when the model supports it (qwen2.5 coding path) — preferred, most robust.</li>
+<li><strong>Prompt-based tagged-block protocol</strong> as the universal fallback (Stheno companion path, any model) —
+   the model emits a <code>```action {json} ```</code> block; the harness parses it out of the text.</li>
+</ol>
+<p>The harness auto-detects which to use per model (probe once, cache the result).</p>
+<h3 id="why-not-the-anthropic-sdk-cloud-api">Why not the Anthropic SDK / cloud API<a class="headerlink" href="#why-not-the-anthropic-sdk-cloud-api" title="Permanent link">&para;</a></h3>
+<p>The bundled <code>claude-api</code> skill produces <code>anthropic.Anthropic()</code> cloud code needing an API key.
+This project is <strong>offline-first by [ADR 0001]</strong> — no cloud, no telemetry. <strong>Rejected.</strong> Every LLM
+call stays on local Ollama via <code>call_model</code>/<code>stream_model</code>. (Native <code>tool_calls</code> detection is an
+Ollama feature, not an Anthropic one.)</p>
+<h3 id="component-layout">Component layout<a class="headerlink" href="#component-layout" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>core/agent_tools.py</code></td>
+<td><code>Tool</code> dataclass + <code>ToolRegistry</code>. Flags: <code>parallel_safe</code>, <code>requires_approval</code>, <code>mutating</code>.</td>
+</tr>
+<tr>
+<td><code>core/agent_protocol.py</code></td>
+<td>Render tool docs into system prompt; <code>parse_action(reply, raw_msg)</code> → <code>ToolCall | FinalAnswer</code>. Dual protocol + sloppy-8B tolerance.</td>
+</tr>
+<tr>
+<td><code>core/agent_loop.py</code></td>
+<td>The engine: build context → call model → parse → dispatch tool → append observation → repeat. Reuses <code>assemble_context</code> + <code>maybe_summarize</code>. Caps: <code>max_steps</code>, <code>max_bad_parses</code>.</td>
+</tr>
+<tr>
+<td><code>core/agent_capacity.py</code></td>
+<td>Detect hardware/model (RAM, cores, model size, native-tools?) → recommend context budget, whether to keep 2 models resident, step caps. Encodes the table above at runtime.</td>
+</tr>
+<tr>
+<td><code>apps/agent_cli.py</code></td>
+<td>Coding front-end (fs + shell + grep/glob registry, qwen2.5).</td>
+</tr>
+<tr>
+<td><code>web_app.py</code> <code>handle_agent_turn</code></td>
+<td>Companion front-end (memory/reminder registry subset, Stheno).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="reasoning-in-depth-thinking">Reasoning / "in-depth thinking"<a class="headerlink" href="#reasoning-in-depth-thinking" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The loop keeps a visible <strong>scratchpad</strong>: before each action the model is prompted to think
+  (<code>## Thinking</code> section) then act. Thinking is streamed to the UI/CLI but not persisted as a
+  final answer. For qwen2.5, optionally enable Ollama's think mode if available.</li>
+<li><code>max_steps</code> default <strong>15</strong> (coding) / <strong>6</strong> (companion); tunable via <code>agent_capacity</code>.</li>
+<li>Long runs roll old steps into <code>maybe_summarize()</code> (local analog of context compaction) so the
+  8B/7B context window doesn't overflow.</li>
+</ul>
+<h3 id="safety-model-no-censorship-clarified">Safety model — "no censorship" clarified<a class="headerlink" href="#safety-model-no-censorship-clarified" title="Permanent link">&para;</a></h3>
+<p><strong>No <em>content</em> refusals for development tasks</strong> (this is an authorized private box). BUT keep
+<strong>correctness/damage guardrails</strong>, which are NOT censorship:</p>
+<ul>
+<li>Mutating tools (<code>write_file</code>, <code>edit_file</code>, <code>run_bash</code>) pause for <strong>human approval</strong> unless a
+  per-session <code>--yolo</code> flag is set.</li>
+<li><strong>Path confinement</strong>: fs tools resolve under a fixed workspace root; reject <code>..</code>/symlink escape.</li>
+<li><code>run_bash</code>: block obvious footguns (<code>rm -rf /</code>, fork bombs) even in yolo; otherwise allow (private dev).</li>
+<li>Companion <code>memory_save</code> routes through existing <code>PersonalMemoryStore.learn</code> so the <code>boundary</code>
+  category stays human-gated (existing advisor safety rule — unrelated to dev censorship).</li>
+</ul>
+<hr />
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p><strong>Positive:</strong> reusable engine for coding + companion; fully offline; works on today's models via
+prompt protocol and gets more robust automatically when a tool-native model is used; hardware-aware.</p>
+<p><strong>Negative / risks:</strong> prompt-based protocol on an 8B roleplay model will mis-format sometimes
+(mitigated: lenient parser + 1 retry nudge + <code>max_bad_parses</code>). Running two models resident costs
+~10 GB (fine at 24 GB, but close if other heavy apps run — <code>agent_capacity</code> will warn).</p>
+<p><strong>Follow-ups:</strong> if coding needs more muscle, a 14B Q4 fits (slower). Consider a dedicated
+tool-native summary model to retire the 2yr gemma.</p>
+<hr />
+<h2 id="build-phases-all-complete-2026-07-26">Build phases — ALL COMPLETE (2026-07-26)<a class="headerlink" href="#build-phases-all-complete-2026-07-26" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>P1 ✅</strong> registry + protocol + parser (<code>agent_tools.py</code>, <code>agent_protocol.py</code>).</li>
+<li><strong>P2 ✅</strong> loop engine + read-only fs tools + the <code>revenant</code> CLI (<code>agent_loop.py</code>, <code>agent_fs_tools.py</code>, <code>agent_cli.py</code>).</li>
+<li><strong>P3 ✅</strong> mutating tools + approval gate + path confinement + bash footgun-block (<code>agent_edit_tools.py</code>, <code>agent_bash_tool.py</code>).</li>
+<li><strong>P4 ✅</strong> in-loop context compaction (token-budgeted; keeps system+goal+recent verbatim).</li>
+<li><strong>P5 ✅</strong> companion front-end (<code>agent_companion_tools.py</code>, <code>/api/agent</code> <code>handle_agent_turn</code>); boundary-gated.</li>
+<li><strong>P6 ✅</strong> hardware-aware tuning (<code>agent_capacity.py</code>) + native-<code>tool_calls</code> auto-detection (<code>agent_native_tools.py</code>).</li>
+</ul>
+<p>Note: P4 did NOT reuse <code>assemble_context</code>/<code>maybe_summarize</code> directly (SQLite-coupled + chat-shaped);
+built a purpose-fit in-loop compactor reusing <code>estimate_tokens</code>. See <code>docs/agent-harness-plan.md</code>.</p>
+<h2 id="status-harness-complete">Status: harness COMPLETE<a class="headerlink" href="#status-harness-complete" title="Permanent link">&para;</a></h2>
+<p>The Revenant harness is fully built and verified end-to-end. Coding front-end (<code>revenant</code>) and
+companion front-end (<code>/api/agent</code>) both run the shared <code>AgentLoop</code>. 158 tests pass; docs (MkDocs +
+RTD) strict-clean. Live-verified: coding read/edit/bash-with-approval, companion memory_save with the
+boundary safety gate, context compaction, hardware detection, and native-tool auto-detection.</p>
+<p><strong>Possible future work (not planned):</strong> stream companion turns; wire the coding CLI into a TUI; a
+dedicated tool-native summary model to retire the 2yr gemma; a <code>revenant chat</code> interactive REPL mode.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../0002-qwen3-tts-local-voice-engine/" class="btn btn-neutral float-left" title="ADR 0002 — Qwen3-TTS Local Voice Engine"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../api/" class="btn btn-neutral float-right" title="Overview">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../0002-qwen3-tts-local-voice-engine/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../api/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

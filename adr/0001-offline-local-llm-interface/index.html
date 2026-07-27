@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/adr/0001-offline-local-llm-interface/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>ADR 0001 — Offline Local LLM Interface - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "ADR 0001 \u2014 Offline Local LLM Interface";
+        var mkdocs_page_input_path = "adr/0001-offline-local-llm-interface.md";
+        var mkdocs_page_url = "/revenant/adr/0001-offline-local-llm-interface/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">ADR 0001 — Offline Local LLM Interface</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#status">Status</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#date">Date</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#context">Context</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#decision">Decision</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#architecture">Architecture</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#key-constraints">Key Constraints</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#interface-choice">Interface Choice</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#generation-defaults">Generation Defaults</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#privacy-and-data-handling">Privacy And Data Handling</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#memory-backend">Memory Backend</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#local-profiles-and-presets">Local Profiles And Presets</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#alternatives-considered">Alternatives Considered</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#cloud-llm-api">Cloud LLM API</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#full-desktop-app-first">Full Desktop App First</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#web-app-with-backend-server">Web App With Backend Server</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#direct-model-loading-in-the-app">Direct Model Loading In The App</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#consequences">Consequences</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#open-questions">Open Questions</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Design Records</li>
+      <li class="breadcrumb-item active">ADR 0001 — Offline Local LLM Interface</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="adr-0001-offline-local-llm-interface">ADR 0001: Offline Local LLM Interface<a class="headerlink" href="#adr-0001-offline-local-llm-interface" title="Permanent link">&para;</a></h1>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p>Accepted, revised after product direction clarification</p>
+<h2 id="date">Date<a class="headerlink" href="#date" title="Permanent link">&para;</a></h2>
+<p>2026-06-23</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The application is intended to help a user interact with a local LLM for long-form writing and interactive storytelling. The target runtime is Apple Silicon hardware using local 8B/14B quantized models, especially Q4_K_M and Q5 variants, where response coherence is best when generation is constrained to a moderate reply length.</p>
+<p>The current implementation is a Python CLI that connects to a locally running model server. It supports:</p>
+<ul>
+<li>Ollama through <code>http://localhost:11434/api/chat</code></li>
+<li>OpenAI-compatible local servers through <code>/v1/chat/completions</code></li>
+<li>A default 400-800 token reply target</li>
+<li>Recent conversation history</li>
+<li>Configurable sampling and model settings</li>
+<li>Custom system prompts from local files</li>
+</ul>
+<p>The user has explicitly clarified that the application should be an offline local interface with a strong local UI or desktop app experience. That means the product must work without cloud inference, hosted APIs, telemetry, account login, or remote storage.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>Build the application as an offline-first local interface around a user-managed local model server.</p>
+<p>The CLI remains a useful development and diagnostic tool, but the product interface is now a localhost browser UI because the desired output quality depends on better workflow support: saved conversations, profile switching, preset controls, editing, export, and readable long-form output.</p>
+<p>The application will treat local HTTP model endpoints as local infrastructure, not as external services. The default endpoint should be loopback-only through <code>localhost</code>. LAN endpoints may be supported later as an explicit advanced setting for users running the model server on another machine.</p>
+<p>The application will not include cloud provider integrations by default. Any future non-local provider support must be opt-in, visibly labeled, and separate from the offline mode.</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<pre><code class="language-mermaid">flowchart LR
+    User[&quot;User&quot;]
+    UI[&quot;Offline local UI&lt;br/&gt;Desktop or localhost browser app&quot;]
+    Config[&quot;Local profiles&lt;br/&gt;models + story styles + presets&quot;]
+    Store[&quot;SQLite storage&lt;br/&gt;saved conversations&quot;]
+    Memory[&quot;NervaPack memory&lt;br/&gt;ChromaDB semantic recall&quot;]
+    Runtime[&quot;Local model server&lt;br/&gt;Ollama / LM Studio / llama.cpp&quot;]
+    Model[&quot;Quantized model&lt;br/&gt;8B / 14B Q4_K_M or Q5&quot;]
+
+    User --&gt; UI
+    Config --&gt; UI
+    UI --&gt; Store
+    Store --&gt; UI
+    UI --&gt; Memory
+    Memory --&gt; UI
+    UI --&gt; Runtime
+    Runtime --&gt; Model
+    Model --&gt; Runtime
+    Runtime --&gt; UI
+    UI --&gt; User
+</code></pre>
+<h2 id="key-constraints">Key Constraints<a class="headerlink" href="#key-constraints" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The application must run offline once the model and runner are already installed.</li>
+<li>Conversation content must remain on the user's machine.</li>
+<li>No telemetry, analytics, remote logging, or remote prompt storage.</li>
+<li>No required Python dependencies beyond the standard library for the initial CLI.</li>
+<li>The reply target should default to 400-800 tokens for coherence on 8B/14B quantized models.</li>
+<li>Users must be able to override model, endpoint, temperature, top-p, repeat penalty, context length, and output length.</li>
+<li>Conversations must be saved locally.</li>
+<li>Model profiles, story style profiles, and generation presets must be reusable local objects.</li>
+</ul>
+<h2 id="interface-choice">Interface Choice<a class="headerlink" href="#interface-choice" title="Permanent link">&para;</a></h2>
+<p>The target interface is a local UI or desktop application. A good output experience needs more than a terminal:</p>
+<ul>
+<li>A conversation list with local search and resume.</li>
+<li>A focused writing/chat pane optimized for long replies.</li>
+<li>Model and preset controls that can be changed without restarting the app.</li>
+<li>Style/profile switching for different story modes.</li>
+<li>Local export actions for finished conversations or selected scenes.</li>
+<li>Clear status for model connection, generation progress, and failures.</li>
+</ul>
+<p>The CLI should remain available for testing, debugging, and automation. It should not be the main product experience.</p>
+<p>The implemented first GUI is a local browser UI served from <code>localhost</code>, backed by a small local API process. A desktop wrapper can follow once the app shape is stable.</p>
+<h2 id="generation-defaults">Generation Defaults<a class="headerlink" href="#generation-defaults" title="Permanent link">&para;</a></h2>
+<p>The app will default to:</p>
+<ul>
+<li><code>min_tokens</code>: <code>400</code></li>
+<li><code>max_tokens</code>: <code>800</code></li>
+<li><code>temperature</code>: <code>0.85</code></li>
+<li><code>top_p</code>: <code>0.9</code></li>
+<li><code>repeat_penalty</code>: <code>1.08</code></li>
+<li><code>context_messages</code>: <code>18</code></li>
+</ul>
+<p>The exact token count cannot be guaranteed by every backend. The application uses both API generation limits and prompt-level guidance to bias toward the target length.</p>
+<h2 id="privacy-and-data-handling">Privacy And Data Handling<a class="headerlink" href="#privacy-and-data-handling" title="Permanent link">&para;</a></h2>
+<p>The application should save conversations locally by default. Local persistence is part of the product, not an optional add-on.</p>
+<p>Recommended storage strategy:</p>
+<ul>
+<li>Store application data under a local app data directory.</li>
+<li>Store conversation metadata in SQLite for reliable search, sorting, and updates.</li>
+<li>Store message content either in SQLite or as JSON files referenced by SQLite.</li>
+<li>Store semantic recall memory in NervaPack's local ChromaDB vector store.</li>
+<li>Keep exports separate from the internal storage format.</li>
+<li>Never sync, upload, or transmit stored conversations unless the user explicitly chooses an external location themselves.</li>
+</ul>
+<p>Recommended export strategy:</p>
+<ul>
+<li><code>Markdown</code>: best default for readable story archives.</li>
+<li><code>JSON</code>: best for full-fidelity backup and re-import.</li>
+<li><code>TXT</code>: useful for simple copy/archive workflows.</li>
+<li><code>HTML</code>: useful later for styled reading output.</li>
+</ul>
+<p>Export should be explicit. Saving and exporting are different operations: saving supports app continuity, while export creates user-controlled portable artifacts.</p>
+<h2 id="memory-backend">Memory Backend<a class="headerlink" href="#memory-backend" title="Permanent link">&para;</a></h2>
+<p>Use NervaPack as the local semantic memory backend. NervaPack provides a ChromaDB-backed vector store that can index local text chunks and retrieve relevant memories for a future prompt.</p>
+<p>NervaPack should not be the canonical conversation database. The application still needs a durable source of truth for conversations, messages, titles, timestamps, profile selection, and exports. SQLite is better suited for that job.</p>
+<p>The memory design is therefore split:</p>
+<ul>
+<li>SQLite: exact saved conversations and app metadata.</li>
+<li>NervaPack/ChromaDB: approximate semantic recall for relevant prior details.</li>
+<li>Export files: portable user-facing artifacts.</li>
+</ul>
+<p>This split keeps local persistence reliable while still giving the LLM useful long-running memory.</p>
+<h2 id="local-profiles-and-presets">Local Profiles And Presets<a class="headerlink" href="#local-profiles-and-presets" title="Permanent link">&para;</a></h2>
+<p>The app should support reusable local profiles:</p>
+<ul>
+<li>Model profiles: backend, base URL, model name, context window, stop behavior, and backend-specific options.</li>
+<li>Story style profiles: system prompt, tone, pacing, point of view, genre, content boundaries, and formatting preferences.</li>
+<li>Generation presets: temperature, top-p, repeat penalty, max tokens, seed if supported, and response length target.</li>
+</ul>
+<p>Profiles should be stored locally as user-editable JSON or YAML. The UI can expose friendly controls, but the underlying format should remain inspectable and portable.</p>
+<p>The initial local model profiles include a Goonsai NSFW profile. The exact model tag is user-controlled because local runners expose model names differently.</p>
+<h2 id="alternatives-considered">Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
+<h3 id="cloud-llm-api">Cloud LLM API<a class="headerlink" href="#cloud-llm-api" title="Permanent link">&para;</a></h3>
+<p>Rejected for the default product. It conflicts with the offline local requirement and would send prompts outside the user's machine.</p>
+<h3 id="full-desktop-app-first">Full Desktop App First<a class="headerlink" href="#full-desktop-app-first" title="Permanent link">&para;</a></h3>
+<p>Deferred as the very first GUI step, not rejected. A desktop app may be the final preferred experience, but it adds packaging and update complexity. A localhost UI can validate the workflows first.</p>
+<h3 id="web-app-with-backend-server">Web App With Backend Server<a class="headerlink" href="#web-app-with-backend-server" title="Permanent link">&para;</a></h3>
+<p>Accepted as the likely next step if implemented as a local-only app bound to <code>localhost</code>. It can still be offline and provides the fastest route to a good interface.</p>
+<h3 id="direct-model-loading-in-the-app">Direct Model Loading In The App<a class="headerlink" href="#direct-model-loading-in-the-app" title="Permanent link">&para;</a></h3>
+<p>Deferred. Loading GGUF models directly through a Python library could remove the need for Ollama or LM Studio, but it would add native dependencies and platform-specific setup. The first version delegates model execution to mature local runners.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>Positive:</p>
+<ul>
+<li>Simple to run and inspect.</li>
+<li>Works with multiple local model runners.</li>
+<li>Keeps user data local.</li>
+<li>Avoids cloud costs and account setup.</li>
+<li>Keeps the initial codebase small.</li>
+</ul>
+<p>Negative:</p>
+<ul>
+<li>Requires the user to install and run a separate local model server.</li>
+<li>Backend-specific behavior may vary.</li>
+<li>A proper local UI requires more implementation work than the CLI.</li>
+<li>Token counts are approximate because local backends expose different tokenizer behavior.</li>
+<li>NervaPack/ChromaDB memory is semantic and approximate; it must not replace exact saved conversation history.</li>
+</ul>
+<h2 id="open-questions">Open Questions<a class="headerlink" href="#open-questions" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Should the first GUI be a localhost browser UI, or should it go directly to a packaged desktop app?</li>
+<li>Should saved conversations remain SQLite-only, or should message bodies move to JSON files while SQLite stores metadata?</li>
+<li>What should the default profile set include for model sizes, story styles, and generation presets?</li>
+<li>Should LAN endpoints remain hidden behind an advanced setting?</li>
+<li>Should the app add direct GGUF loading later, or continue relying on Ollama, LM Studio, and llama.cpp servers?</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../knowledge-base/" class="btn btn-neutral float-left" title="Knowledge Base"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../0002-qwen3-tts-local-voice-engine/" class="btn btn-neutral float-right" title="ADR 0002 — Qwen3-TTS Local Voice Engine">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../knowledge-base/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../0002-qwen3-tts-local-voice-engine/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

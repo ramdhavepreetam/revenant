@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/local_llm_writer/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>core: local_llm_writer - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "core: local_llm_writer";
+        var mkdocs_page_input_path = "api/local_llm_writer.md";
+        var mkdocs_page_url = "/revenant/api/local_llm_writer/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">core: local_llm_writer</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#nerva_core.local_llm_writer">local_llm_writer</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_core.local_llm_writer.call_model_message">call_model_message</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_core.local_llm_writer.stream_model">stream_model</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_core.local_llm_writer.trim_to_last_sentence">trim_to_last_sentence</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">core: local_llm_writer</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="corelocal_llm_writer">core.local_llm_writer<a class="headerlink" href="#corelocal_llm_writer" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="nerva_core.local_llm_writer" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">nerva_core.local_llm_writer</span>
+
+
+<a href="#nerva_core.local_llm_writer" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Local LLM writing/chat CLI tuned for 8B/14B quantized models.</p>
+<p>Supported backends:
+- Ollama: http://localhost:11434
+- OpenAI-compatible local servers: llama.cpp, LM Studio, vLLM, etc.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="nerva_core.local_llm_writer.call_model_message" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">call_model_message</span>
+
+
+<a href="#nerva_core.local_llm_writer.call_model_message" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">call_model_message(config: ChatConfig, messages: list[dict[str, Any]], tools: list[dict] | None = None) -&gt; dict[str, Any]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Like <code>call_model</code> but returns the FULL assistant message dict.</p>
+<p>Needed by the agent loop, which must read <code>message["tool_calls"]</code> for the
+native tool-calling path (and <code>message["content"]</code> for the prompt-based path).
+<code>call_model</code> intentionally returns only the stripped content string and stays
+the path for plain chat/writing turns.</p>
+<p>Passing <code>tools</code> opts into native tool calling; models without a tool template
+simply ignore it and return normal content (the loop then falls back to the
+prompt-based protocol).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/local_llm_writer.py</code></summary>
+              <pre class="highlight"><code class="language-python">def call_model_message(
+    config: ChatConfig, messages: list[dict[str, Any]], tools: list[dict] | None = None
+) -&gt; dict[str, Any]:
+    """Like `call_model` but returns the FULL assistant message dict.
+
+    Needed by the agent loop, which must read `message["tool_calls"]` for the
+    native tool-calling path (and `message["content"]` for the prompt-based path).
+    `call_model` intentionally returns only the stripped content string and stays
+    the path for plain chat/writing turns.
+
+    Passing `tools` opts into native tool calling; models without a tool template
+    simply ignore it and return normal content (the loop then falls back to the
+    prompt-based protocol).
+    """
+    if config.backend == "ollama":
+        return call_ollama_message(config, messages, tools)
+    if config.backend == "openai":
+        return call_openai_message(config, messages, tools)
+    raise LocalLLMError(f"Unknown backend: {config.backend}")</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="nerva_core.local_llm_writer.stream_model" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">stream_model</span>
+
+
+<a href="#nerva_core.local_llm_writer.stream_model" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">stream_model(config: ChatConfig, messages: list[dict[str, str]])</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Yield incremental text deltas as the model generates (Ollama + OpenAI-compat).</p>
+<p>Caller is responsible for buffering the full text and applying the same
+post-processing (trim_to_last_sentence, save, learn, summarize) as call_model.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/local_llm_writer.py</code></summary>
+              <pre class="highlight"><code class="language-python">def stream_model(config: ChatConfig, messages: list[dict[str, str]]):
+    """Yield incremental text deltas as the model generates (Ollama + OpenAI-compat).
+
+    Caller is responsible for buffering the full text and applying the same
+    post-processing (trim_to_last_sentence, save, learn, summarize) as call_model.
+    """
+    if config.backend == "ollama":
+        url = f"{config.base_url.rstrip('/')}/api/chat"
+        payload = {
+            "model": config.model,
+            "messages": messages,
+            "stream": True,
+            "options": {
+                "temperature": config.temperature,
+                "top_p": config.top_p,
+                "repeat_penalty": config.repeat_penalty,
+                "num_predict": config.max_tokens,
+            },
+        }
+        key_path = ("message", "content")
+    elif config.backend == "openai":
+        url = f"{config.base_url.rstrip('/')}/v1/chat/completions"
+        payload = {
+            "model": config.model,
+            "messages": messages,
+            "temperature": config.temperature,
+            "top_p": config.top_p,
+            "max_tokens": config.max_tokens,
+            "stream": True,
+        }
+        key_path = None  # SSE "data: {...}" with choices[0].delta.content
+    else:
+        raise LocalLLMError(f"Unknown backend: {config.backend}")
+
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            for raw in response:
+                line = raw.decode("utf-8").strip()
+                if not line:
+                    continue
+                if config.backend == "openai":
+                    if line.startswith("data:"):
+                        line = line[5:].strip()
+                    if line == "[DONE]":
+                        break
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if config.backend == "ollama":
+                    delta = (obj.get("message") or {}).get("content", "")
+                    if delta:
+                        yield delta
+                    if obj.get("done"):
+                        break
+                else:
+                    choices = obj.get("choices") or []
+                    if choices:
+                        delta = (choices[0].get("delta") or {}).get("content", "")
+                        if delta:
+                            yield delta
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise LocalLLMError(f"HTTP {exc.code} from {url}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise LocalLLMError(f"Could not connect to {url}: {exc.reason}") from exc</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="nerva_core.local_llm_writer.trim_to_last_sentence" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">trim_to_last_sentence</span>
+
+
+<a href="#nerva_core.local_llm_writer.trim_to_last_sentence" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">trim_to_last_sentence(text: str) -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Drop a trailing partial sentence so replies never end mid-thought.</p>
+<p>When generation stops because it hit max_tokens (not a natural end), the last
+sentence is usually cut off. If the text doesn't already end on terminal
+punctuation (optionally followed by a closing quote/asterisk), trim back to the
+last complete sentence. Only trims if a complete sentence remains, so short
+one-liners and deliberate cliffhangers ("...") are left intact.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/local_llm_writer.py</code></summary>
+              <pre class="highlight"><code class="language-python">def trim_to_last_sentence(text: str) -&gt; str:
+    """Drop a trailing partial sentence so replies never end mid-thought.
+
+    When generation stops because it hit max_tokens (not a natural end), the last
+    sentence is usually cut off. If the text doesn't already end on terminal
+    punctuation (optionally followed by a closing quote/asterisk), trim back to the
+    last complete sentence. Only trims if a complete sentence remains, so short
+    one-liners and deliberate cliffhangers ("...") are left intact.
+    """
+    import re
+
+    stripped = text.rstrip()
+    if not stripped:
+        return text
+    # Already ends cleanly (., !, ?, … possibly + closing " ' ) * ).
+    if re.search(r"[.!?…][\"'’)\*]*$", stripped):
+        return stripped
+    # Find the last sentence-ending punctuation and cut just after it.
+    matches = list(re.finditer(r"[.!?…][\"'’)\*]*", stripped))
+    if not matches:
+        return stripped  # no complete sentence to fall back to — leave as-is
+    end = matches[-1].end()
+    trimmed = stripped[:end].rstrip()
+    return trimmed or stripped</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../" class="btn btn-neutral float-left" title="Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../agent_router/" class="btn btn-neutral float-right" title="core: agent_router">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../agent_router/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

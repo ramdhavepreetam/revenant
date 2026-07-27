@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/model-routing/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Model Routing - Revenant</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Model Routing";
+        var mkdocs_page_input_path = "model-routing.md";
+        var mkdocs_page_url = "/revenant/model-routing/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Model Routing</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#roles">Roles</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#how-a-turn-is-routed">How a turn is routed</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#memory-footprint-model-swapping">Memory footprint &amp; model swapping</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-response-tells-you-which-brain-answered">The response tells you which brain answered</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#opting-out-legacy-single-model-behavior">Opting out (legacy single-model behavior)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#adding-a-new-role-or-changing-a-model">Adding a new role or changing a model</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#reuse-by-the-agent-harness">Reuse by the agent harness</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#api">API</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Guides</li>
+      <li class="breadcrumb-item active">Model Routing</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="model-routing">Model Routing<a class="headerlink" href="#model-routing" title="Permanent link">&para;</a></h1>
+<p>AIBot routes each turn to the <strong>best local model for the kind of work</strong>, instead of one
+model doing everything — a local "mixture-of-experts by role." Implemented in
+<a href="../api/agent_router/"><code>core/agent_router.py</code></a>; design record: <a href="../adr/0003-local-agent-harness/">ADR 0003</a>.</p>
+<h2 id="roles">Roles<a class="headerlink" href="#roles" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Model (default)</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>code</code></td>
+<td><code>qwen2.5-coder-abliterate:14b</code></td>
+<td>Writing, editing, debugging, reading code; tool use. Code-specialized, uncensored, native tool-calling.</td>
+</tr>
+<tr>
+<td><code>language</code></td>
+<td><code>qwen2.5:14b</code></td>
+<td>Discussion, explanation, reasoning, brainstorming, advice.</td>
+</tr>
+<tr>
+<td><code>companion</code></td>
+<td>Stheno-8B (GGUF)</td>
+<td>Persona / roleplay / emotional conversation.</td>
+</tr>
+<tr>
+<td><code>summary</code></td>
+<td><code>gemma:latest</code></td>
+<td>Rolling session summaries (see <code>core/aibot_summary.py</code>).</td>
+</tr>
+<tr>
+<td><code>router</code></td>
+<td><code>qwen2.5:7b</code></td>
+<td>The tiny classifier itself (constrained one-word output — kept small/fast).</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong><code>code</code></strong> role uses <code>huihui_ai/qwen2.5-coder-abliterate:14b</code> — Qwen's code-specialized
+line (much stronger at code than general <code>qwen2.5</code>), abliterated so it doesn't refuse
+development tasks. Note: this GGUF build does <strong>not</strong> carry a native tool template, so the agent
+loop auto-detects that (<a href="../api/agent_native_tools/"><code>agent_native_tools</code></a>) and drives it via the
+prompt-based <code>```action</code> protocol — which works reliably in practice. General <code>qwen2.5:7b</code>
+(which <em>does</em> have native tool-calling) remains available as a fast/light coding model via
+<code>revenant --model qwen2.5:7b</code>.</p>
+<p>Roles map to <strong>model-profile names</strong> in <code>profiles.json</code> → <code>model_roles</code>, which resolve to
+<code>{backend, base_url, model}</code> via the existing <code>models</code> section — so endpoint data is never
+duplicated.</p>
+<pre><code class="language-json">&quot;model_roles&quot;: {
+  &quot;code&quot;: &quot;qwen2.5-coder-14b&quot;,
+  &quot;language&quot;: &quot;qwen2.5-14b&quot;,
+  &quot;companion&quot;: &quot;stheno-8b&quot;,
+  &quot;summary&quot;: &quot;gemma&quot;,
+  &quot;router&quot;: &quot;qwen2.5-7b&quot;,
+  &quot;fallback&quot;: &quot;language&quot;
+}
+</code></pre>
+<h2 id="how-a-turn-is-routed">How a turn is routed<a class="headerlink" href="#how-a-turn-is-routed" title="Permanent link">&para;</a></h2>
+<p>The auto-router runs inside <code>_prepare_turn</code> (<code>apps/web_app.py</code>), right after the companion
+flag is known, and <strong>mutates the turn's <code>ChatConfig</code> in place</strong> — so both the blocking
+(<code>call_model</code>) and streaming (<code>stream_model</code>) paths use the routed model:</p>
+<ol>
+<li><strong>Companion turn?</strong> → force <code>role = "companion"</code> (Stheno). The classifier is skipped
+   entirely — companion mode owns its turn.</li>
+<li><strong>Otherwise → <code>classify(user_text)</code></strong>:<ul>
+<li><strong>Heuristic pre-filter</strong> (<code>_heuristic_role</code>) resolves obvious turns with <strong>zero LLM
+  cost</strong>: code fences / file paths / code keywords → <code>code</code>; "explain / why / discuss /
+  compare" → <code>language</code>.</li>
+<li><strong>Only genuinely ambiguous turns</strong> hit the <code>router</code> model — one constrained,
+  one-word classification call (~0.2s; on <code>qwen2.5:7b</code>, which is usually already resident
+  for the <code>code</code> role, so no model swap).</li>
+</ul>
+</li>
+<li><code>config_for_role(role, …, base=config)</code> swaps <code>model</code>/<code>backend</code>/<code>base_url</code> on the turn's
+   config, preserving the tokens/temperature/system-prompt the turn already computed.</li>
+</ol>
+<p>Any failure (router model missing, classification error) <strong>degrades to the <code>fallback</code> role
+and never breaks the turn.</strong></p>
+<h2 id="memory-footprint-model-swapping">Memory footprint &amp; model swapping<a class="headerlink" href="#memory-footprint-model-swapping" title="Permanent link">&para;</a></h2>
+<p>Models are <strong>swapped on demand</strong> — AIBot does not pin every model resident. Ollama's default
+<code>keep_alive</code> unloads idle models; switching to a not-resident model pays a one-time ~1–3s
+load. Because the <code>router</code> and <code>code</code> roles share <code>qwen2.5:7b</code>, coding sessions rarely swap.
+The expensive case is companion → language (Stheno → 14B). An optional <code>warm_role()</code> preflight
+can hide part of that latency (not enabled by default).</p>
+<p>Sized for a 24 GB machine (Apple M5 Pro): a 7B + a 14B + an 8B + gemma cannot all sit resident
+comfortably, so swap-on-demand is the deliberate default.</p>
+<h2 id="the-response-tells-you-which-brain-answered">The response tells you which brain answered<a class="headerlink" href="#the-response-tells-you-which-brain-answered" title="Permanent link">&para;</a></h2>
+<p><code>/api/chat</code> (and the streaming variant) return the chosen role and model in the response
+<code>config</code> block:</p>
+<pre><code class="language-json">&quot;config&quot;: {
+  &quot;model&quot;: &quot;qwen2.5:14b&quot;,
+  &quot;role&quot;: &quot;language&quot;,
+  &quot;role_model&quot;: &quot;qwen2.5:14b&quot;,
+  &quot;response_shape&quot;: &quot;balanced&quot;,
+  &quot;response_mode&quot;: &quot;chat&quot;
+}
+</code></pre>
+<h2 id="opting-out-legacy-single-model-behavior">Opting out (legacy single-model behavior)<a class="headerlink" href="#opting-out-legacy-single-model-behavior" title="Permanent link">&para;</a></h2>
+<p>Set <code>route_models: false</code> in the request body to disable routing entirely — the turn uses
+whatever model <code>build_config</code> resolved (request body / <code>model_profile</code> / default), exactly as
+before this feature existed. If <code>model_roles</code> is absent from <code>profiles.json</code>, or a role's model
+isn't pulled, routing also degrades to legacy behavior. <code>/api/chat</code> never breaks.</p>
+<h2 id="adding-a-new-role-or-changing-a-model">Adding a new role or changing a model<a class="headerlink" href="#adding-a-new-role-or-changing-a-model" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Add a model profile under <code>profiles.json</code> → <code>models</code> (or <code>DEFAULT_PROFILES["models"]</code> in
+   <code>core/aibot_profiles.py</code>): <code>{"backend", "base_url", "model", "notes"}</code>.</li>
+<li>Point a role at it under <code>model_roles</code>.</li>
+<li>Pull the model (<code>ollama pull &lt;name&gt;</code>).</li>
+</ol>
+<p>No code change is needed to re-point an existing role. To add a <em>new</em> classified role, extend
+<code>ROUTER_ROLES</code> and the classifier prompt in <code>core/agent_router.py</code>.</p>
+<h2 id="reuse-by-the-agent-harness">Reuse by the agent harness<a class="headerlink" href="#reuse-by-the-agent-harness" title="Permanent link">&para;</a></h2>
+<p><code>core/agent_router.py</code> imports only <code>local_llm_writer</code> (never <code>web_app</code>), so the coming
+<a href="../agent-harness-plan/">agent harness</a> reuses it directly: the coding front-end forces
+<code>role="code"</code>; a discussion/planning step can call <code>config_for_role("language", …)</code> to swap
+to the 14B for a single call.</p>
+<h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
+<p>See the full generated reference: <a href="../api/agent_router/"><code>core.agent_router</code></a>.</p>
+<p>Key entry points:</p>
+<ul>
+<li><code>classify(user_text, *, has_companion=False, base_url=…, profiles=…) -&gt; str</code></li>
+<li><code>config_for_role(role, base_url, profiles, *, base=None) -&gt; ChatConfig | None</code></li>
+<li><code>warm_role(role, base_url, profiles) -&gt; None</code> (optional preflight)</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../architecture/" class="btn btn-neutral float-left" title="Architecture"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../revenant-cli/" class="btn btn-neutral float-right" title="Revenant CLI">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../architecture/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../revenant-cli/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/aibot_tts/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>tts: aibot_tts - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "tts: aibot_tts";
+        var mkdocs_page_input_path = "api/aibot_tts.md";
+        var mkdocs_page_url = "/revenant/api/aibot_tts/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">tts: aibot_tts</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#aibot_app.aibot_tts">aibot_tts</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_tts.prepare_spoken_text">prepare_spoken_text</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_tts.map_span_to_sfx">map_span_to_sfx</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_tts.build_segments">build_segments</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_tts.orpheus_text_with_tags">orpheus_text_with_tags</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_tts.synthesize_orpheus">synthesize_orpheus</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_tts.prewarm_voice">prewarm_voice</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_tts.synthesize_kokoro_with_sfx">synthesize_kokoro_with_sfx</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_tts.synthesize_qwen3_mlx_with_sfx">synthesize_qwen3_mlx_with_sfx</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">tts: aibot_tts</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="ttsaibot_tts">tts.aibot_tts<a class="headerlink" href="#ttsaibot_tts" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="aibot_app.aibot_tts" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">aibot_app.aibot_tts</span>
+
+
+<a href="#aibot_app.aibot_tts" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_tts.prepare_spoken_text" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">prepare_spoken_text</span>
+
+
+<a href="#aibot_app.aibot_tts.prepare_spoken_text" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">prepare_spoken_text(text: str) -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Voice-only cleanup for model text that should not be spoken literally.</p>
+<p>Local RP models often emit phonetic reaction tokens like "mmh" or "ngh".
+TTS reads those as letters/syllables, which sounds artificial. Keep the chat
+transcript intact, but remove those tokens from speech.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_tts.py</code></summary>
+              <pre class="highlight"><code class="language-python">def prepare_spoken_text(text: str) -&gt; str:
+    """Voice-only cleanup for model text that should not be spoken literally.
+
+    Local RP models often emit phonetic reaction tokens like "mmh" or "ngh".
+    TTS reads those as letters/syllables, which sounds artificial. Keep the chat
+    transcript intact, but remove those tokens from speech.
+    """
+    text = re.sub(r"```.*?```", " ", text, flags=re.DOTALL)
+    text = re.sub(r"\[[^\]]+\]", " ", text)
+    text = re.sub(
+        r"\((?:[^)]*\b(?:sighs?|gasps?|laughs?|giggles?|moans?|breathes?|whispers?|pants?|shudders?)\b[^)]*)\)",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b[oO]h{2,}\b", "oh", text)
+    text = VOICE_FILLER_PATTERN.sub(" ", text)
+    text = clean_tts_text(text)
+    text = re.sub(r"\s+([,.!?;:])", r"\1", text)
+    text = re.sub(r"(?:\s*[,.!?;:]){2,}", ".", text)
+    text = re.sub(r"^\s*[,.!?;:]+\s*", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:5000]</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_tts.map_span_to_sfx" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">map_span_to_sfx</span>
+
+
+<a href="#aibot_app.aibot_tts.map_span_to_sfx" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">map_span_to_sfx(span_text: str) -&gt; str | None</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Return an SFX path if an <em>action beat</em> implies a sound, else None (drop it).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_tts.py</code></summary>
+              <pre class="highlight"><code class="language-python">def map_span_to_sfx(span_text: str) -&gt; str | None:
+    """Return an SFX path if an *action beat* implies a sound, else None (drop it)."""
+    lowered = span_text.lower()
+    for pattern, path in SFX_CUE_RULES:
+        if re.search(pattern, lowered):
+            return path
+    return None</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_tts.build_segments" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">build_segments</span>
+
+
+<a href="#aibot_app.aibot_tts.build_segments" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">build_segments(text: str, exaggeration: float, cfg_weight: float, sfx_enabled: bool) -&gt; list[dict]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Turn a raw reply into an ordered list of speech / sfx segments.</p>
+<p><em>...</em> spans become SFX (if cue-matched and enabled) or are dropped; the prose
+between them is spoken. Markdown/formatting is stripped from spoken spans only.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_tts.py</code></summary>
+              <pre class="highlight"><code class="language-python">def build_segments(text: str, exaggeration: float, cfg_weight: float, sfx_enabled: bool) -&gt; list[dict]:
+    """Turn a raw reply into an ordered list of speech / sfx segments.
+
+    *...* spans become SFX (if cue-matched and enabled) or are dropped; the prose
+    between them is spoken. Markdown/formatting is stripped from spoken spans only.
+    """
+    segments: list[dict] = []
+    last = 0
+    for match in re.finditer(r"\*([^*]+)\*", text):
+        spoken = text[last:match.start()]
+        _append_speech(segments, spoken, exaggeration, cfg_weight)
+        span = match.group(1).strip()
+        sfx = map_span_to_sfx(span) if sfx_enabled else None
+        if sfx:
+            # SFX assets are loudness-matched ~4 dB under speech; this gain trims
+            # them a little further so reaction sounds sit under the dialogue.
+            segments.append({"kind": "sfx", "path": sfx, "gain": 0.7})
+        # else: action beat with no sound -&gt; dropped from speech entirely
+        last = match.end()
+    _append_speech(segments, text[last:], exaggeration, cfg_weight)
+    return segments</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_tts.orpheus_text_with_tags" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">orpheus_text_with_tags</span>
+
+
+<a href="#aibot_app.aibot_tts.orpheus_text_with_tags" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">orpheus_text_with_tags(raw_text: str) -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Turn a reply into Orpheus input: dialogue kept, <em>action beats</em> converted to
+inline sound tags where they imply a sound, else dropped. Markdown stripped.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_tts.py</code></summary>
+              <pre class="highlight"><code class="language-python">def orpheus_text_with_tags(raw_text: str) -&gt; str:
+    """Turn a reply into Orpheus input: dialogue kept, *action beats* converted to
+    inline sound tags where they imply a sound, else dropped. Markdown stripped."""
+    out: list[str] = []
+    last = 0
+    for m in re.finditer(r"\*([^*]+)\*", raw_text):
+        spoken = raw_text[last:m.start()]
+        if spoken.strip():
+            out.append(clean_tts_text(spoken))
+        tag = map_span_to_orpheus_tag(m.group(1))
+        if tag:
+            out.append(tag)
+        last = m.end()
+    tail = raw_text[last:]
+    if tail.strip():
+        out.append(clean_tts_text(tail))
+    return re.sub(r"\s+", " ", " ".join(p for p in out if p)).strip()</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_tts.synthesize_orpheus" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">synthesize_orpheus</span>
+
+
+<a href="#aibot_app.aibot_tts.synthesize_orpheus" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">synthesize_orpheus(raw_text: str, profile: dict[str, Any], audio_dir: Path) -&gt; dict[str, Any]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Orpheus voice: emotional timbre + in-voice sounds from inline tags.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_tts.py</code></summary>
+              <pre class="highlight"><code class="language-python">def synthesize_orpheus(raw_text: str, profile: dict[str, Any], audio_dir: Path) -&gt; dict[str, Any]:
+    """Orpheus voice: emotional timbre + in-voice sounds from inline tags."""
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    text = orpheus_text_with_tags(raw_text)
+    if not text:
+        raise ValueError("Nothing speakable in the reply after cue parsing.")
+    output_path = audio_dir / f"{uuid.uuid4().hex}.wav"
+    result = _ORPHEUS.request(
+        {
+            "id": output_path.stem,
+            "text": text,
+            "output": str(output_path),
+            "voice": str(profile.get("voice") or "tara"),
+            "temperature": float(profile.get("temperature") or 0.6),
+            "top_p": float(profile.get("top_p") or 0.9),
+            "repeat_penalty": float(profile.get("repeat_penalty") or 1.1),
+        },
+        timeout=int(profile.get("timeout_seconds") or 300),
+    )
+    if not result.get("ok"):
+        raise ValueError(str(result.get("error") or "Orpheus synthesis failed."))
+    if not output_path.exists():
+        raise ValueError("Orpheus worker completed without creating audio.")
+    return {"path": output_path, "url": f"/audio/{output_path.name}", "mime_type": "audio/wav"}</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_tts.prewarm_voice" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">prewarm_voice</span>
+
+
+<a href="#aibot_app.aibot_tts.prewarm_voice" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">prewarm_voice() -&gt; None</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Warm the default-engine model ahead of first use. Orpheus is the default
+companion voice now (slow to load), so warm it; ignore failures (best-effort).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_tts.py</code></summary>
+              <pre class="highlight"><code class="language-python">def prewarm_voice() -&gt; None:
+    """Warm the default-engine model ahead of first use. Orpheus is the default
+    companion voice now (slow to load), so warm it; ignore failures (best-effort)."""
+    try:
+        _ORPHEUS.prewarm()
+    except Exception:  # noqa: BLE001 - prewarm is best-effort, never block boot
+        pass</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_tts.synthesize_kokoro_with_sfx" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">synthesize_kokoro_with_sfx</span>
+
+
+<a href="#aibot_app.aibot_tts.synthesize_kokoro_with_sfx" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">synthesize_kokoro_with_sfx(raw_text: str, profile: dict[str, Any], audio_dir: Path) -&gt; dict[str, Any]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Kokoro voice + cue-triggered SFX. Parses <em>action beats</em> (cue-&gt;SFX or drop),
+synthesizes the spoken runs with Kokoro, and splices SFX inline. One WAV out.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_tts.py</code></summary>
+              <pre class="highlight"><code class="language-python">def synthesize_kokoro_with_sfx(raw_text: str, profile: dict[str, Any], audio_dir: Path) -&gt; dict[str, Any]:
+    """Kokoro voice + cue-triggered SFX. Parses *action beats* (cue-&gt;SFX or drop),
+    synthesizes the spoken runs with Kokoro, and splices SFX inline. One WAV out."""
+    import numpy as np
+    import soundfile as sf
+
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    project_dir = Path.cwd()  # repo root (where the app is launched)
+    SR = 24000
+    gap = np.zeros(int(SR * 0.04), dtype=np.float32)
+
+    # Reuse the engine-agnostic cue parser (exaggeration/cfg unused for Kokoro).
+    segments = build_segments(raw_text, 0.0, 0.0, sfx_enabled=True)
+    if not segments:
+        raise ValueError("Nothing speakable in the reply after cue parsing.")
+
+    pieces: list = []
+    for seg in segments:
+        if seg.get("kind") == "sfx":
+            sfx_path = project_dir / seg["path"]
+            data, sr = sf.read(str(sfx_path))
+            if getattr(data, "ndim", 1) &gt; 1:
+                data = data.mean(axis=1)
+            pieces.append(data.astype(np.float32) * float(seg.get("gain", 0.7)))
+            continue
+        spoken = seg.get("text", "").strip()
+        if not spoken:
+            continue
+        # Synthesize this speech run with the fast Kokoro worker.
+        part = synthesize_kokoro(spoken, profile, audio_dir)
+        data, sr = sf.read(str(part["path"]))
+        if getattr(data, "ndim", 1) &gt; 1:
+            data = data.mean(axis=1)
+        pieces.append(data.astype(np.float32))
+        pieces.append(gap)
+        # clean up the per-run temp file; we re-stitch into one output
+        try:
+            Path(part["path"]).unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    if not pieces:
+        raise ValueError("Kokoro produced no audio.")
+    audio = np.concatenate([p for p in pieces if len(p)])
+    output_path = audio_dir / f"{uuid.uuid4().hex}.wav"
+    sf.write(str(output_path), audio, SR)
+    return {
+        "path": output_path,
+        "url": f"/audio/{output_path.name}",
+        "mime_type": "audio/wav",
+    }</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_tts.synthesize_qwen3_mlx_with_sfx" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">synthesize_qwen3_mlx_with_sfx</span>
+
+
+<a href="#aibot_app.aibot_tts.synthesize_qwen3_mlx_with_sfx" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">synthesize_qwen3_mlx_with_sfx(raw_text: str, profile: dict[str, Any], audio_dir: Path, mood: str, delivery: dict[str, Any] | None) -&gt; dict[str, Any]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Qwen3-TTS voice + cue-triggered SFX. Qwen3 has NO native non-verbal sounds,
+so we reuse the engine-agnostic cue parser: <em>action beats</em> become spliced SFX
+WAVs (gasp/moan/sigh) or are dropped, and the spoken runs are synthesized by
+Qwen3 (which keeps its instruct-based emotional tone). One WAV out. Qwen3 and the
+SFX assets are both 24 kHz, so no resampling is needed (with a safety guard).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_tts.py</code></summary>
+              <pre class="highlight"><code class="language-python">def synthesize_qwen3_mlx_with_sfx(raw_text: str, profile: dict[str, Any], audio_dir: Path,
+                                  mood: str, delivery: dict[str, Any] | None) -&gt; dict[str, Any]:
+    """Qwen3-TTS voice + cue-triggered SFX. Qwen3 has NO native non-verbal sounds,
+    so we reuse the engine-agnostic cue parser: *action beats* become spliced SFX
+    WAVs (gasp/moan/sigh) or are dropped, and the spoken runs are synthesized by
+    Qwen3 (which keeps its instruct-based emotional tone). One WAV out. Qwen3 and the
+    SFX assets are both 24 kHz, so no resampling is needed (with a safety guard)."""
+    import numpy as np
+    import soundfile as sf
+
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    project_dir = Path.cwd()  # repo root (where the app is launched)
+    SR = 24000
+    gap = np.zeros(int(SR * 0.04), dtype=np.float32)
+
+    segments = build_segments(raw_text, 0.0, 0.0, sfx_enabled=True)
+    if not segments:
+        raise ValueError("Nothing speakable in the reply after cue parsing.")
+
+    def _read_mono(path: str) -&gt; np.ndarray:
+        data, sr = sf.read(str(path))
+        if getattr(data, "ndim", 1) &gt; 1:
+            data = data.mean(axis=1)
+        data = data.astype(np.float32)
+        if sr != SR:  # safety: resample to match Qwen3 output if an asset differs
+            idx = np.round(np.linspace(0, len(data) - 1, int(len(data) * SR / sr))).astype(int)
+            data = data[idx]
+        return data
+
+    pieces: list = []
+    last_instruct = ""
+    for seg in segments:
+        if seg.get("kind") == "sfx":
+            audio = _read_mono(project_dir / seg["path"]) * float(seg.get("gain", 0.7))
+            pieces.append(audio)
+            continue
+        spoken = seg.get("text", "").strip()
+        if not spoken:
+            continue
+        # Synthesize this speech run with Qwen3 (keeps cloned voice + instruct tone).
+        part = synthesize_qwen3_mlx(spoken, profile, audio_dir, mood, delivery)
+        last_instruct = part.get("instruct", last_instruct)
+        pieces.append(_read_mono(part["path"]))
+        pieces.append(gap)
+        try:
+            Path(part["path"]).unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    if not pieces:
+        raise ValueError("Qwen3-TTS produced no audio.")
+    audio = np.concatenate([p for p in pieces if len(p)])
+    output_path = audio_dir / f"{uuid.uuid4().hex}.wav"
+    sf.write(str(output_path), audio, SR)
+    return {
+        "path": output_path,
+        "url": f"/audio/{output_path.name}",
+        "mime_type": "audio/wav",
+        "instruct": last_instruct,
+    }</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../aibot_companion_compiler/" class="btn btn-neutral float-left" title="core: aibot_companion_compiler"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../web_app/" class="btn btn-neutral float-right" title="apps: web_app">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../aibot_companion_compiler/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../web_app/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

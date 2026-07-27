@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/web_app/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>apps: web_app - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "apps: web_app";
+        var mkdocs_page_input_path = "api/web_app.md";
+        var mkdocs_page_url = "/revenant/api/web_app/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">apps: web_app</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#aibot_app.web_app">web_app</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.web_app.LocalUIHandler">LocalUIHandler</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#aibot_app.web_app.LocalUIHandler.handle_chat_stream">handle_chat_stream</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#aibot_app.web_app.LocalUIHandler.handle_agent_turn">handle_agent_turn</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.web_app.build_companion_chat_prompt">build_companion_chat_prompt</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">apps: web_app</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="appsweb_app">apps.web_app<a class="headerlink" href="#appsweb_app" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="aibot_app.web_app" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">aibot_app.web_app</span>
+
+
+<a href="#aibot_app.web_app" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="aibot_app.web_app.LocalUIHandler" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">LocalUIHandler</span>
+
+
+<a href="#aibot_app.web_app.LocalUIHandler" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="http.server.SimpleHTTPRequestHandler">SimpleHTTPRequestHandler</span></code></p>
+
+
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/aibot-app/src/aibot_app/web_app.py</code></summary>
+                <pre class="highlight"><code class="language-python">class LocalUIHandler(SimpleHTTPRequestHandler):
+    server_version = "AIBotLocalUI/0.1"
+
+    def log_message(self, fmt: str, *args: object) -&gt; None:
+        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+
+    def do_GET(self) -&gt; None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        try:
+            if path == "/api/profiles":
+                return self.send_json(STATE.profiles())
+            if path == "/api/voice-profiles":
+                return self.send_json(STATE.voice_profiles())
+            if path == "/api/conversations":
+                conversations = [c.__dict__ for c in STATE.store.list_conversations()]
+                return self.send_json({"conversations": conversations})
+            if path.startswith("/api/conversations/"):
+                conversation_id = unquote(path.rsplit("/", 1)[-1])
+                return self.send_conversation(conversation_id)
+            if path.startswith("/api/companion-memory/"):
+                companion_id = unquote(path.rsplit("/", 1)[-1])
+                return self.send_json({"memory": STATE.companion_memory.get(companion_id)})
+            if path == "/api/memories":
+                return self.handle_list_memories(parsed)
+            if path == "/api/episodes":
+                return self.handle_list_episodes(parsed)
+            if path.startswith("/audio/"):
+                return self.send_audio(unquote(path.rsplit("/", 1)[-1]))
+            return self.send_static(path)
+        except Exception as exc:
+            return self.send_error_json(exc)
+
+    def do_POST(self) -&gt; None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        try:
+            body = self.read_json()
+            if path == "/api/conversations":
+                title = str(body.get("title") or "New conversation")
+                conversation = STATE.store.create_conversation(title)
+                return self.send_json({"conversation": conversation.__dict__}, HTTPStatus.CREATED)
+            if path == "/api/chat":
+                return self.handle_chat(body)
+            if path == "/api/chat/stream":
+                return self.handle_chat_stream(body)
+            if path == "/api/agent":
+                return self.handle_agent_turn(body)
+            if path == "/api/companions/compile":
+                return self.handle_compile_companion(body)
+            if path == "/api/companions":
+                return self.handle_save_companion(body)
+            if path == "/api/companion-memory":
+                return self.handle_save_companion_memory(body)
+            if path == "/api/memories":
+                return self.handle_create_memory(body)
+            if path == "/api/memories/rebuild-index":
+                return self.handle_rebuild_memory_index()
+            if path.startswith("/api/memories/"):
+                return self.handle_memory_action(path, body)
+            if path == "/api/tts":
+                return self.handle_tts(body)
+            if path == "/api/export":
+                return self.handle_export(body)
+            if path == "/api/health":
+                return self.handle_health(body)
+            return self.send_json({"error": "Not found"}, HTTPStatus.NOT_FOUND)
+        except Exception as exc:
+            return self.send_error_json(exc)
+
+    def read_json(self) -&gt; dict:
+        length = int(self.headers.get("Content-Length", "0"))
+        if length &lt;= 0:
+            return {}
+        raw = self.rfile.read(length).decode("utf-8")
+        return json.loads(raw)
+
+    def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -&gt; None:
+        data = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def send_error_json(self, exc: Exception) -&gt; None:
+        traceback.print_exc()
+        self.send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def send_model_error(self, exc: Exception) -&gt; None:
+        self.send_json(
+            {
+                "error": str(exc),
+                "hint": "Check that your local model server is running and the selected model tag exists.",
+            },
+            HTTPStatus.BAD_GATEWAY,
+        )
+
+    def send_static(self, path: str) -&gt; None:
+        if path in {"", "/"}:
+            file_path = STATIC_DIR / "index.html"
+        else:
+            requested = path.lstrip("/")
+            file_path = (STATIC_DIR / requested).resolve()
+            if not str(file_path).startswith(str(STATIC_DIR.resolve())):
+                return self.send_json({"error": "Invalid path"}, HTTPStatus.BAD_REQUEST)
+            if not file_path.exists() or not file_path.is_file():
+                file_path = STATIC_DIR / "index.html"
+
+        content_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+        data = file_path.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def send_audio(self, filename: str) -&gt; None:
+        if "/" in filename or "\\" in filename:
+            return self.send_json({"error": "Invalid audio path"}, HTTPStatus.BAD_REQUEST)
+        file_path = (AUDIO_DIR / filename).resolve()
+        if not str(file_path).startswith(str(AUDIO_DIR.resolve())):
+            return self.send_json({"error": "Invalid audio path"}, HTTPStatus.BAD_REQUEST)
+        if not file_path.exists() or not file_path.is_file():
+            return self.send_json({"error": "Audio not found"}, HTTPStatus.NOT_FOUND)
+
+        content_type = mimetypes.guess_type(str(file_path))[0] or "audio/mp4"
+        # Some systems guess "audio/x-wav", which several browsers refuse to play
+        # in an &lt;audio&gt; element (silent failure). Normalize WAV to the canonical type.
+        if file_path.suffix.lower() == ".wav":
+            content_type = "audio/wav"
+        data = file_path.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def send_conversation(self, conversation_id: str) -&gt; None:
+        conversation = STATE.store.get_conversation(conversation_id)
+        if not conversation:
+            return self.send_json({"error": "Conversation not found"}, HTTPStatus.NOT_FOUND)
+        messages = STATE.store.get_messages(conversation_id)
+        return self.send_json({"conversation": conversation.__dict__, "messages": messages})
+
+    def build_config(self, body: dict) -&gt; ChatConfig:
+        config = default_config()
+        profiles = STATE.profiles()
+        config = apply_profile(
+            config,
+            profiles,
+            model_profile=str(body.get("model_profile") or ""),
+            style_profile=str(body.get("style_profile") or ""),
+            preset=str(body.get("generation_preset") or ""),
+        )
+
+        # Accept overrides both as a nested dict and as flat top-level keys so
+        # the React frontend (which sends them flat) and legacy callers both work.
+        overrides = body.get("overrides") or {}
+        for key in ("temperature", "top_p", "repeat_penalty"):
+            val = overrides.get(key) if key in overrides else body.get(key)
+            if val is not None:
+                setattr(config, key, float(val))
+        for key in ("min_tokens", "max_tokens", "context_messages"):
+            val = overrides.get(key) if key in overrides else body.get(key)
+            if val is not None:
+                setattr(config, key, int(val))
+        base_url = overrides.get("base_url") or body.get("base_url")
+        if base_url:
+            config.base_url = str(base_url)
+        model = overrides.get("model") or body.get("model")
+        if model:
+            config.model = str(model)
+        backend = overrides.get("backend") or body.get("backend")
+        if backend:
+            config.backend = str(backend)
+
+        return config
+
+    def companion_from_request(self, body: dict, profiles: dict) -&gt; tuple[str, dict]:
+        companion_profile = str(body.get("companion_profile") or "")
+        companion = profiles.get("companions", {}).get(companion_profile, {}) if companion_profile else {}
+        override = body.get("companion_override") or {}
+        if isinstance(override, dict) and any(str(override.get(key) or "").strip() for key in companion_override_fields()):
+            companion = dict(companion or {})
+            for key in companion_override_fields():
+                if key in override:
+                    companion[key] = str(override.get(key) or "").strip()
+            if companion.get("compiled_system_block") and not companion.get("persona"):
+                companion["persona"] = companion["compiled_system_block"]
+            elif companion.get("raw_prompt") and not companion.get("persona"):
+                companion["persona"] = companion["raw_prompt"]
+        if not companion_profile:
+            companion_profile = profile_id(str(companion.get("display_name") or "story-companion"))
+        return companion_profile, companion
+
+    def _prepare_turn(self, body: dict) -&gt; dict | None:
+        """Shared turn core: validate, assemble context, persist the user turn.
+
+        Returns a dict of everything both the blocking and streaming paths need, or
+        None after already sending an error response.
+        """
+        user_text = str(body.get("message") or "").strip()
+        if not user_text:
+            self.send_json({"error": "Message is required"}, HTTPStatus.BAD_REQUEST)
+            return None
+
+        config = self.build_config(body)
+        profiles = STATE.profiles()
+        style_profile = str(body.get("style_profile") or "")
+        style_prompt = profiles.get("story_styles", {}).get(style_profile, {}).get("system_prompt", "")
+        companion_profile, companion = self.companion_from_request(body, profiles)
+        use_memory = bool(body.get("use_memory", True))
+        companion_memory = STATE.companion_memory.get(companion_profile)
+        conversation_id = str(body.get("conversation_id") or "")
+        conversation = STATE.store.get_conversation(conversation_id) if conversation_id else None
+        if not conversation:
+            title = user_text[:80].strip() or f"{config.model} session"
+            conversation = STATE.store.create_conversation(title)
+
+        turn_shape = response_shape(user_text, config)
+        config.min_tokens = int(turn_shape["min_tokens"])
+        config.max_tokens = int(turn_shape["max_tokens"])
+        companion_chat = bool(companion) and turn_shape.get("mode") == "chat"
+
+        # --- Task-based role routing (overrides config.model for this turn) --------
+        # Auto-router: pick the best LOCAL model for the KIND of turn. Mutates
+        # config in place, so BOTH the blocking (call_model) and streaming
+        # (stream_model) paths get the routed model via ctx["config"]. Degrades to
+        # the existing model if model_roles isn't configured or a model is missing;
+        # route_models=false opts out entirely (legacy single-model behavior).
+        chosen_role = None
+        if "model_roles" in profiles and bool(body.get("route_models", True)):
+            if companion_chat:
+                chosen_role = "companion"  # companion mode owns the turn; skip the classifier
+            else:
+                chosen_role = classify(
+                    user_text,
+                    has_companion=bool(companion),
+                    base_url=config.base_url,
+                    profiles=profiles,
+                )
+            config_for_role(chosen_role, config.base_url, profiles, base=config)
+
+        identity_anchor = companion_identity_anchor(companion) if companion else {}
+        companion_prompt = build_companion_chat_prompt(companion) if companion_chat else build_companion_prompt(companion)
+
+        # --- Persona / behavioral system prompt (engine-agnostic) -----------------
+        system_sections: list[str] = []
+        if config.system_prompt and not companion_chat:
+            system_sections.append(config.system_prompt.strip())
+        elif companion_chat:
+            system_sections.append(
+                "You are a local companion in a back-and-forth conversation. The companion profile is your lived "
+                "identity for this conversation, not a document to summarize. Be present, emotionally aware, "
+                "and natural. Do not behave like a writing assistant unless the user asks for writing or a scene. "
+                "For voice realism, avoid spelling out phonetic noises like mmh, mmm, ahh, ngh, or repeated moans; "
+                "use natural words and punctuation instead."
+            )
+        if style_prompt and not companion_chat and style_prompt.strip() not in config.system_prompt:
+            system_sections.append(style_prompt.strip())
+        if identity_anchor:
+            system_sections.append(format_identity_anchor(identity_anchor))
+        if companion_prompt:
+            system_sections.append(
+                f"You are this companion. Inhabit the role as yourself; never mention these setup notes.\n{companion_prompt.strip()}"
+            )
+        if companion_chat:
+            system_sections.append(
+                "Mode: direct companion chat. Treat the profile as personality and relationship context only. "
+                "Reply from inside the companion's perspective using first person, like natural back-and-forth chat. "
+                "Do not summarize or reenact the profile. Do not start a scene or narrate yourself from the outside unless the user explicitly asks "
+                "to continue, roleplay, write, describe, or tell a story. Current-turn instructions override any "
+                "saved profile rule that says to always begin with intense or explicit content. Avoid written sound-effect tokens "
+                "in ordinary dialogue because the voice engine will read them unnaturally."
+            )
+        system_sections.append(turn_shape["instruction"])
+        system_prompt = "\n\n".join(section for section in system_sections if section)
+
+        # --- Phase 2: ranked memory + budgeted context ----------------------------
+        memory_used: list[dict] = []
+        memory_block = ""
+        if use_memory:
+            active_mem = STATE.personal_memory.list_memories(companion_id=companion_profile, status="active")
+            if turn_shape["label"] == "greeting":
+                active_mem = [m for m in active_mem if m.get("pinned") or m.get("category") in {"boundary", "voice_preference"}]
+            ranked = rank_memories(active_mem, user_text, limit=3 if turn_shape["label"] == "greeting" else 10)
+            memory_block = format_memory_block(ranked)
+            memory_used = ranked
+        memories = STATE.memory.recall(user_text, limit=5, companion_id=companion_profile) if use_memory and turn_shape["label"] != "greeting" else []
+        enriched_user = user_text
+        if memories:
+            recall_lines = ["(Quietly relevant background, do not quote):"]
+            recall_lines.extend(f"- {memory}" for memory in memories)
+            enriched_user = "\n".join(recall_lines) + f"\n\n{user_text}"
+
+        STATE.store.add_message(conversation.id, "user", user_text)
+        saved_messages = STATE.store.get_messages(conversation.id)
+        history = saved_messages[:-1]
+        session_summary = STATE.store.get_summary(conversation.id)
+        active_messages = assemble_context(
+            system_prompt=system_prompt,
+            memory_block=memory_block,
+            session_summary=session_summary,
+            history=history,
+            user_message=enriched_user,
+            max_context_tokens=int(body.get("max_context_tokens") or 3072),
+        )
+        return {
+            "config": config,
+            "conversation": conversation,
+            "companion_profile": companion_profile,
+            "companion_memory": companion_memory,
+            "use_memory": use_memory,
+            "memories": memories,
+            "memory_used": memory_used,
+            "turn_shape": turn_shape,
+            "active_messages": active_messages,
+            "chosen_role": chosen_role,
+        }
+
+    def _finalize_turn(self, ctx: dict, reply: str) -&gt; dict:
+        """Shared post-generation: trim, persist reply, learn, summarize. Returns
+        the response metadata both paths report back to the client."""
+        config = ctx["config"]
+        conversation = ctx["conversation"]
+        companion_profile = ctx["companion_profile"]
+        reply = trim_to_last_sentence(reply)
+
+        STATE.store.add_message(conversation.id, "assistant", reply)
+        memory_suggestions: list[dict] = []
+        if ctx["use_memory"]:
+            memory_suggestions = STATE.personal_memory.learn(companion_profile, ctx.get("user_text", ""), conversation.id)
+            for memory in memory_suggestions:
+                if memory.get("status") == "active":
+                    STATE.memory.remember_note(companion_profile, memory.get("category", "preference"), memory.get("content", ""))
+            companion_obj = STATE.profiles().get("companions", {}).get(companion_profile, {})
+            threading.Thread(
+                target=maybe_summarize,
+                args=(STATE.store, conversation.id),
+                kwargs={"base_url": config.base_url, "companion_id": companion_profile, "companion": companion_obj, "memory": STATE.memory},
+                daemon=True,
+            ).start()
+
+        memories = ctx["memories"]
+        memory_used = ctx["memory_used"]
+        default_delivery = delivery_for_sentence(reply, ctx["turn_shape"], 0) if reply else {}
+        return {
+            "reply": reply,
+            "conversation": conversation.__dict__,
+            "message": {"role": "assistant", "content": reply},
+            "memories": memories,
+            "learned_notes": memory_suggestions,
+            "memory_used": memory_used,
+            "memory_suggestions": memory_suggestions,
+            "delivery": default_delivery,
+            "memory_status": {
+                "used": len(memory_used),
+                "semantic_recalled": len(memories),
+                "suggested": len(memory_suggestions),
+                "pending": len([m for m in memory_suggestions if m.get("status") == "pending"]),
+            },
+            "companion_memory": ctx["companion_memory"],
+            "config": {
+                "backend": config.backend,
+                "base_url": config.base_url,
+                "model": config.model,
+                "max_tokens": config.max_tokens,
+                "companion_profile": companion_profile,
+                "response_shape": ctx["turn_shape"]["label"],
+                "response_mode": ctx["turn_shape"].get("mode"),
+                "role": ctx.get("chosen_role"),
+                "role_model": config.model,
+            },
+        }
+
+    def handle_chat(self, body: dict) -&gt; None:
+        ctx = self._prepare_turn(body)
+        if ctx is None:
+            return
+        ctx["user_text"] = str(body.get("message") or "").strip()
+        try:
+            reply = call_model(ctx["config"], ctx["active_messages"])
+        except LocalLLMError as exc:
+            return self.send_model_error(exc)
+        payload = self._finalize_turn(ctx, reply)
+        payload.pop("reply", None)
+        return self.send_json(payload)
+
+    def handle_chat_stream(self, body: dict) -&gt; None:
+        """Streaming turn: emit sentence events as the model generates, then a final
+        'done' event with the same metadata as /api/chat. Newline-delimited JSON over
+        a chunked response (we control both ends, so no SSE framing needed)."""
+        ctx = self._prepare_turn(body)
+        if ctx is None:
+            return
+        ctx["user_text"] = str(body.get("message") or "").strip()
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        # CORS headers are injected by BackendAPIHandler.end_headers().
+        self.end_headers()
+
+        def emit(obj: dict) -&gt; None:
+            self.wfile.write((json.dumps(obj) + "\n").encode("utf-8"))
+            self.wfile.flush()
+
+        full = ""
+        sentence_index = 0
+        try:
+            deltas = stream_model(ctx["config"], ctx["active_messages"])
+            for sentence, full_so_far in sentences_from_deltas(deltas):
+                full = full_so_far
+                delivery = delivery_for_sentence(sentence, ctx["turn_shape"], sentence_index)
+                sentence_index += 1
+                emit({"type": "sentence", "text": sentence, "delivery": delivery})
+        except LocalLLMError as exc:
+            # Headers already sent — surface the failure as an in-stream event.
+            emit({"type": "error", "error": str(exc)})
+            return
+        except (BrokenPipeError, ConnectionResetError):
+            return  # client disconnected; nothing more to do
+
+        payload = self._finalize_turn(ctx, full)
+        emit({"type": "done", **{k: v for k, v in payload.items() if k != "reply"}})
+
+    def _seed_companion_memories(self, companion_id: str, companion: dict) -&gt; list[dict]:
+        compiled = companion.get("compiled_profile") or {}
+        seeds = compiled.get("memory_seed") if isinstance(compiled, dict) else []
+        saved: list[dict] = []
+        if not isinstance(seeds, list):
+            return saved
+        for seed in seeds:
+            if isinstance(seed, dict):
+                category = normalize_category(str(seed.get("category") or "companion_style"))
+                content = str(seed.get("content") or "").strip()
+            else:
+                category = "companion_style"
+                content = str(seed or "").strip()
+            if not content:
+                continue
+            memory = STATE.personal_memory.create_memory(
+                companion_id,
+                category,
+                content,
+                status="active",
+                confidence=0.95,
+                source="companion-compiler",
+            )
+            if memory:
+                saved.append(memory)
+                if memory.get("status") == "active":
+                    STATE.memory.remember_note(companion_id, memory.get("category", category), memory.get("content", content))
+        return saved
+
+    def handle_agent_turn(self, body: dict) -&gt; None:
+        """Agentic companion turn (/api/agent).
+
+        Runs the SAME AgentLoop as the coding CLI, but with the companion tool
+        subset (memory_search / memory_save / set_reminder — no fs/shell) and the
+        companion model (the 'companion' role -&gt; Stheno, via the prompt-based
+        protocol since Stheno has no native tool template). Lets the companion take
+        real actions mid-chat: recall a fact, remember something, set a reminder.
+        """
+        user_text = str(body.get("message") or "").strip()
+        if not user_text:
+            return self.send_json({"error": "Message is required"}, HTTPStatus.BAD_REQUEST)
+
+        config = self.build_config(body)
+        profiles = STATE.profiles()
+        companion_profile, companion = self.companion_from_request(body, profiles)
+        # Force the companion model for this front-end (Stheno via the router).
+        config_for_role("companion", config.base_url, profiles, base=config)
+
+        persona = build_companion_chat_prompt(companion) if companion else ""
+        preamble = (
+            "You are a local companion in a back-and-forth conversation. Be present, "
+            "warm, and natural — reply as yourself in first person. You have a few "
+            "tools to manage your memory of this person: use memory_search to recall, "
+            "memory_save to remember something they told you, and set_reminder to note "
+            "something to bring up later. Use a tool only when it genuinely helps; "
+            "otherwise just reply. When you are done, give your normal reply with no "
+            "action block."
+        )
+        if persona:
+            preamble = f"{preamble}\n\n{persona}"
+
+        registry = ToolRegistry(
+            build_companion_tools(STATE.memory, STATE.personal_memory, STATE.store, companion_profile)
+        )
+
+        tool_activity: list[dict] = []
+
+        def on_event(ev) -&gt; None:
+            if ev.kind == "action":
+                tool_activity.append({"tool": ev.tool, "args": ev.args})
+
+        loop = AgentLoop(
+            config, registry,
+            system_preamble=preamble,
+            max_steps=int(body.get("max_steps") or 5),
+            use_native_tools=False,  # Stheno has no tool template; prompt-based only.
+            on_event=on_event,
+            auto_approve=True,       # companion memory tools are low-risk; boundary
+                                     # writes are gated INSIDE memory_save (pending).
+            max_context_tokens=int(body.get("max_context_tokens") or 3072),
+        )
+        try:
+            result = loop.run(user_text)
+        except LocalLLMError as exc:
+            return self.send_model_error(exc)
+
+        reply = trim_to_last_sentence(result.answer)
+        return self.send_json({
+            "reply": reply,
+            "message": {"role": "assistant", "content": reply},
+            "tool_activity": tool_activity,
+            "steps": result.steps,
+            "stopped_reason": result.stopped_reason,
+            "config": {
+                "model": config.model,
+                "role": "companion",
+                "companion_profile": companion_profile,
+            },
+        })
+
+    def handle_compile_companion(self, body: dict) -&gt; None:
+        raw_prompt = str(body.get("raw_prompt") or body.get("prompt") or "").strip()
+        display_name = str(body.get("display_name") or "").strip()
+        if not raw_prompt:
+            return self.send_json({"error": "Companion prompt is required."}, HTTPStatus.BAD_REQUEST)
+        bundle = compile_companion_profile(raw_prompt, config=self.build_config(body), display_name=display_name)
+        companion = merge_compiled_into_companion({"display_name": display_name}, bundle)
+        return self.send_json({"compiled": bundle, "companion": companion})
+
+    def handle_save_companion(self, body: dict) -&gt; None:
+        display_name = str(body.get("display_name") or "").strip()
+        if not display_name:
+            return self.send_json({"error": "Companion name is required"}, HTTPStatus.BAD_REQUEST)
+
+        raw_prompt = str(body.get("raw_prompt") or "").strip()
+        companion = {
+            "display_name": display_name,
+            "raw_prompt": raw_prompt,
+            "persona": str(body.get("persona") or body.get("compiled_system_block") or "").strip(),
+            "role": str(body.get("role") or "").strip(),
+            "behavior": str(body.get("behavior") or "").strip(),
+            "response_style": str(body.get("response_style") or "").strip(),
+        }
+        compiled_bundle = body.get("compiled") or body.get("compiled_bundle")
+        compiled_matches_prompt = (
+            isinstance(compiled_bundle, dict)
+            and compiled_bundle.get("compiled_profile")
+            and (not raw_prompt or compiled_bundle.get("profile_hash") == profile_hash(raw_prompt))
+            and compiled_bundle.get("compiler_version") == COMPANION_COMPILER_VERSION
+            and compiled_bundle.get("harness_version") == HARNESS_PROMPT_VERSION
+        )
+        if compiled_matches_prompt:
+            companion = merge_compiled_into_companion(companion, compiled_bundle)
+        elif raw_prompt:
+            companion = merge_compiled_into_companion(
+                companion,
+                compile_companion_profile(raw_prompt, config=self.build_config(body), display_name=display_name),
+            )
+        elif profile_needs_compile(companion):
+            companion = merge_compiled_into_companion(
+                companion,
+                compile_companion_profile(str(companion.get("raw_prompt") or ""), config=self.build_config(body), display_name=display_name),
+            )
+
+        if not any(str(companion.get(key) or "").strip() for key in ("raw_prompt", "persona", "role", "behavior", "response_style")):
+            return self.send_json({"error": "Add a companion prompt or structured profile first."}, HTTPStatus.BAD_REQUEST)
+
+        profiles = STATE.profiles()
+        companion_id = profile_id(str(body.get("id") or display_name))
+        profiles.setdefault("companions", {})[companion_id] = companion
+        save_profiles(PROFILES_FILE, profiles)
+        seeded = self._seed_companion_memories(companion_id, companion)
+        return self.send_json({"id": companion_id, "companion": companion, "profiles": profiles, "memory_seeded": seeded})
+
+    def handle_save_companion_memory(self, body: dict) -&gt; None:
+        companion_id = profile_id(str(body.get("companion_id") or "story-companion"))
+        memory = body.get("memory") or {}
+        if not isinstance(memory, dict):
+            return self.send_json({"error": "memory must be an object"}, HTTPStatus.BAD_REQUEST)
+        saved = STATE.companion_memory.save(companion_id, memory)
+        return self.send_json({"memory": saved})
+
+    def handle_list_memories(self, parsed) -&gt; None:
+        query = parse_qs(parsed.query)
+        companion_id = (query.get("companion_id", [""])[0] or "").strip()
+        status_raw = (query.get("status", [""])[0] or "").strip()
+        category_raw = (query.get("category", [""])[0] or "").strip()
+        status = normalize_status(status_raw) if status_raw else ""
+        category = normalize_category(category_raw) if category_raw else ""
+        memories = STATE.personal_memory.list_memories(
+            companion_id=companion_id,
+            status=status,
+            category=category,
+            include_archived=bool(query.get("include_archived")),
+        )
+        return self.send_json({"memories": memories, "categories": sorted(MEMORY_CATEGORIES)})
+
+    def handle_list_episodes(self, parsed) -&gt; None:
+        query = parse_qs(parsed.query)
+        companion_id = (query.get("companion_id", [""])[0] or "").strip() or "story-companion"
+        limit = int((query.get("limit", ["20"])[0] or "20"))
+        episodes = STATE.store.list_episodes(companion_id, limit=limit)
+        return self.send_json({"episodes": episodes})
+
+    def handle_create_memory(self, body: dict) -&gt; None:
+        companion_id = profile_id(str(body.get("companion_id") or "story-companion"))
+        content = str(body.get("content") or "").strip()
+        if not content:
+            return self.send_json({"error": "content is required"}, HTTPStatus.BAD_REQUEST)
+        memory = STATE.personal_memory.create_memory(
+            companion_id,
+            normalize_category(str(body.get("category") or "preference")),
+            content,
+            status=normalize_status(str(body.get("status") or "active")),
+            pinned=bool(body.get("pinned")),
+            confidence=float(body.get("confidence") or 1.0),
+            source=str(body.get("source") or "manual"),
+            source_conversation_id=str(body.get("source_conversation_id") or ""),
+        )
+        if memory and memory.get("status") == "active":
+            STATE.memory.remember_note(companion_id, memory.get("category", "preference"), memory.get("content", ""))
+        return self.send_json({"memory": memory}, HTTPStatus.CREATED)
+
+    def handle_memory_action(self, path: str, body: dict) -&gt; None:
+        parts = [unquote(part) for part in path.strip("/").split("/")]
+        if len(parts) &lt; 3:
+            return self.send_json({"error": "Memory action is required"}, HTTPStatus.BAD_REQUEST)
+        memory_id = parts[2]
+        action = parts[3] if len(parts) &gt; 3 else "update"
+        if action == "approve":
+            memory = STATE.personal_memory.approve(memory_id)
+            STATE.memory.remember_note(memory.get("companion_id", "companion"), memory.get("category", "preference"), memory.get("content", ""))
+            return self.send_json({"memory": memory})
+        if action == "archive":
+            return self.send_json({"memory": STATE.personal_memory.archive(memory_id)})
+        if action == "pin":
+            return self.send_json({"memory": STATE.personal_memory.update_memory(memory_id, {"pinned": True})})
+        if action == "unpin":
+            return self.send_json({"memory": STATE.personal_memory.update_memory(memory_id, {"pinned": False})})
+        if action == "update":
+            memory = STATE.personal_memory.update_memory(memory_id, body)
+            if memory.get("status") == "active":
+                STATE.memory.remember_note(memory.get("companion_id", "companion"), memory.get("category", "preference"), memory.get("content", ""))
+            return self.send_json({"memory": memory})
+        return self.send_json({"error": f"Unknown memory action: {action}"}, HTTPStatus.BAD_REQUEST)
+
+    def do_DELETE(self) -&gt; None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+        try:
+            if path.startswith("/api/memories/"):
+                memory_id = unquote(path.strip("/").split("/")[2])
+                STATE.personal_memory.delete_memory(memory_id)
+                return self.send_json({"ok": True})
+            return self.send_json({"error": "Not found"}, HTTPStatus.NOT_FOUND)
+        except Exception as exc:
+            return self.send_error_json(exc)
+
+    def handle_rebuild_memory_index(self) -&gt; None:
+        active = STATE.personal_memory.list_memories(status="active")
+        STATE.memory.rebuild_notes(active)
+        return self.send_json({"ok": True, "indexed": len(active)})
+
+    def handle_tts(self, body: dict) -&gt; None:
+        text = str(body.get("text") or "").strip()
+        if not text:
+            return self.send_json({"error": "Text is required"}, HTTPStatus.BAD_REQUEST)
+
+        voice_profile = str(body.get("voice_profile") or "orpheus-companion")
+        voices = STATE.voice_profiles().get("voices", {})
+        profile = voices.get(voice_profile)
+        if not profile:
+            return self.send_json({"error": f"Voice profile '{voice_profile}' was not found."}, HTTPStatus.BAD_REQUEST)
+
+        delivery_body = body.get("delivery") if isinstance(body.get("delivery"), dict) else {}
+        mood = str(body.get("mood") or delivery_body.get("mood") or "") or None
+        delivery = {
+            "mood": mood or "",
+            "pace": clamp_float(body.get("pace", delivery_body.get("pace")), 0.75, 1.25, 0.0),
+            "energy": clamp_float(body.get("energy", delivery_body.get("energy")), 0.0, 1.0, -1.0),
+            "pause_after_ms": int(clamp_float(body.get("pause_after_ms", delivery_body.get("pause_after_ms")), 0, 900, 0)),
+            "delivery": str(body.get("delivery_mode") or delivery_body.get("delivery") or ""),
+        }
+
+        try:
+            result = synthesize_tts(text, profile, AUDIO_DIR, mood=mood, delivery=delivery)
+        except Exception as exc:
+            return self.send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
+
+        return self.send_json(
+            {
+                "voice_profile": voice_profile,
+                "url": result["url"],
+                "mime_type": result["mime_type"],
+                "engine": result["engine"],
+                "mood": result["mood"],
+                "delivery": delivery,
+                # Engine-specific delivery fields; not every engine sets all of them.
+                "rate": result.get("rate"),
+                "speed": result.get("speed"),
+                "exaggeration": result.get("exaggeration"),
+                "cfg_weight": result.get("cfg_weight"),
+                "voice": result.get("voice", ""),
+                "qwen3_instruct": result.get("qwen3_instruct", ""),
+            }
+        )
+
+    def handle_export(self, body: dict) -&gt; None:
+        conversation_id = str(body.get("conversation_id") or "")
+        fmt = str(body.get("format") or "md")
+        if not conversation_id:
+            return self.send_json({"error": "conversation_id is required"}, HTTPStatus.BAD_REQUEST)
+
+        output = DATA_DIR / "exports" / f"{conversation_id}.{fmt}"
+        STATE.store.export_conversation(conversation_id, output, fmt)
+        return self.send_json({"path": str(output)})
+
+    def handle_health(self, body: dict) -&gt; None:
+        config = self.build_config(body)
+        if config.backend == "ollama":
+            url = f"{config.base_url.rstrip('/')}/api/tags"
+        else:
+            url = f"{config.base_url.rstrip('/')}/v1/models"
+
+        try:
+            with urllib.request.urlopen(url, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8") or "{}")
+                ok = 200 &lt;= response.status &lt; 300
+        except (urllib.error.URLError, TimeoutError) as exc:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "backend": config.backend,
+                    "base_url": config.base_url,
+                    "model": config.model,
+                    "error": str(exc),
+                },
+                HTTPStatus.BAD_GATEWAY,
+            )
+
+        available_models: list[str] = []
+        if config.backend == "ollama":
+            available_models = [
+                str(model.get("name") or model.get("model"))
+                for model in payload.get("models", [])
+                if model.get("name") or model.get("model")
+            ]
+        elif isinstance(payload.get("data"), list):
+            available_models = [str(model.get("id")) for model in payload["data"] if model.get("id")]
+
+        model_found = not available_models or config.model in available_models
+        return self.send_json(
+            {
+                "ok": ok and model_found,
+                "backend": config.backend,
+                "base_url": config.base_url,
+                "model": config.model,
+                "available_models": available_models,
+                "error": "" if model_found else f"Model '{config.model}' was not found in the local runtime.",
+            }
+        )</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="aibot_app.web_app.LocalUIHandler.handle_chat_stream" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">handle_chat_stream</span>
+
+
+<a href="#aibot_app.web_app.LocalUIHandler.handle_chat_stream" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">handle_chat_stream(body: dict) -&gt; None</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Streaming turn: emit sentence events as the model generates, then a final
+'done' event with the same metadata as /api/chat. Newline-delimited JSON over
+a chunked response (we control both ends, so no SSE framing needed).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/web_app.py</code></summary>
+              <pre class="highlight"><code class="language-python">def handle_chat_stream(self, body: dict) -&gt; None:
+    """Streaming turn: emit sentence events as the model generates, then a final
+    'done' event with the same metadata as /api/chat. Newline-delimited JSON over
+    a chunked response (we control both ends, so no SSE framing needed)."""
+    ctx = self._prepare_turn(body)
+    if ctx is None:
+        return
+    ctx["user_text"] = str(body.get("message") or "").strip()
+
+    self.send_response(HTTPStatus.OK)
+    self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+    self.send_header("Cache-Control", "no-store")
+    # CORS headers are injected by BackendAPIHandler.end_headers().
+    self.end_headers()
+
+    def emit(obj: dict) -&gt; None:
+        self.wfile.write((json.dumps(obj) + "\n").encode("utf-8"))
+        self.wfile.flush()
+
+    full = ""
+    sentence_index = 0
+    try:
+        deltas = stream_model(ctx["config"], ctx["active_messages"])
+        for sentence, full_so_far in sentences_from_deltas(deltas):
+            full = full_so_far
+            delivery = delivery_for_sentence(sentence, ctx["turn_shape"], sentence_index)
+            sentence_index += 1
+            emit({"type": "sentence", "text": sentence, "delivery": delivery})
+    except LocalLLMError as exc:
+        # Headers already sent — surface the failure as an in-stream event.
+        emit({"type": "error", "error": str(exc)})
+        return
+    except (BrokenPipeError, ConnectionResetError):
+        return  # client disconnected; nothing more to do
+
+    payload = self._finalize_turn(ctx, full)
+    emit({"type": "done", **{k: v for k, v in payload.items() if k != "reply"}})</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="aibot_app.web_app.LocalUIHandler.handle_agent_turn" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">handle_agent_turn</span>
+
+
+<a href="#aibot_app.web_app.LocalUIHandler.handle_agent_turn" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">handle_agent_turn(body: dict) -&gt; None</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Agentic companion turn (/api/agent).</p>
+<p>Runs the SAME AgentLoop as the coding CLI, but with the companion tool
+subset (memory_search / memory_save / set_reminder — no fs/shell) and the
+companion model (the 'companion' role -&gt; Stheno, via the prompt-based
+protocol since Stheno has no native tool template). Lets the companion take
+real actions mid-chat: recall a fact, remember something, set a reminder.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/web_app.py</code></summary>
+              <pre class="highlight"><code class="language-python">def handle_agent_turn(self, body: dict) -&gt; None:
+    """Agentic companion turn (/api/agent).
+
+    Runs the SAME AgentLoop as the coding CLI, but with the companion tool
+    subset (memory_search / memory_save / set_reminder — no fs/shell) and the
+    companion model (the 'companion' role -&gt; Stheno, via the prompt-based
+    protocol since Stheno has no native tool template). Lets the companion take
+    real actions mid-chat: recall a fact, remember something, set a reminder.
+    """
+    user_text = str(body.get("message") or "").strip()
+    if not user_text:
+        return self.send_json({"error": "Message is required"}, HTTPStatus.BAD_REQUEST)
+
+    config = self.build_config(body)
+    profiles = STATE.profiles()
+    companion_profile, companion = self.companion_from_request(body, profiles)
+    # Force the companion model for this front-end (Stheno via the router).
+    config_for_role("companion", config.base_url, profiles, base=config)
+
+    persona = build_companion_chat_prompt(companion) if companion else ""
+    preamble = (
+        "You are a local companion in a back-and-forth conversation. Be present, "
+        "warm, and natural — reply as yourself in first person. You have a few "
+        "tools to manage your memory of this person: use memory_search to recall, "
+        "memory_save to remember something they told you, and set_reminder to note "
+        "something to bring up later. Use a tool only when it genuinely helps; "
+        "otherwise just reply. When you are done, give your normal reply with no "
+        "action block."
+    )
+    if persona:
+        preamble = f"{preamble}\n\n{persona}"
+
+    registry = ToolRegistry(
+        build_companion_tools(STATE.memory, STATE.personal_memory, STATE.store, companion_profile)
+    )
+
+    tool_activity: list[dict] = []
+
+    def on_event(ev) -&gt; None:
+        if ev.kind == "action":
+            tool_activity.append({"tool": ev.tool, "args": ev.args})
+
+    loop = AgentLoop(
+        config, registry,
+        system_preamble=preamble,
+        max_steps=int(body.get("max_steps") or 5),
+        use_native_tools=False,  # Stheno has no tool template; prompt-based only.
+        on_event=on_event,
+        auto_approve=True,       # companion memory tools are low-risk; boundary
+                                 # writes are gated INSIDE memory_save (pending).
+        max_context_tokens=int(body.get("max_context_tokens") or 3072),
+    )
+    try:
+        result = loop.run(user_text)
+    except LocalLLMError as exc:
+        return self.send_model_error(exc)
+
+    reply = trim_to_last_sentence(result.answer)
+    return self.send_json({
+        "reply": reply,
+        "message": {"role": "assistant", "content": reply},
+        "tool_activity": tool_activity,
+        "steps": result.steps,
+        "stopped_reason": result.stopped_reason,
+        "config": {
+            "model": config.model,
+            "role": "companion",
+            "companion_profile": companion_profile,
+        },
+    })</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.web_app.build_companion_chat_prompt" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">build_companion_chat_prompt</span>
+
+
+<a href="#aibot_app.web_app.build_companion_chat_prompt" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">build_companion_chat_prompt(companion: dict) -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Compact persona for casual chat.</p>
+<p>Full companion profiles can contain scene-starting examples or "always" rules.
+Casual turns need identity and tone, not raw roleplay instructions.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/web_app.py</code></summary>
+              <pre class="highlight"><code class="language-python">def build_companion_chat_prompt(companion: dict) -&gt; str:
+    """Compact persona for casual chat.
+
+    Full companion profiles can contain scene-starting examples or "always" rules.
+    Casual turns need identity and tone, not raw roleplay instructions.
+    """
+    anchor = companion_identity_anchor(companion)
+    display_name = anchor["display_name"]
+    compiled = companion.get("compiled_profile") if isinstance(companion.get("compiled_profile"), dict) else {}
+    blob = "\n".join(
+        str(companion.get(key) or "")
+        for key in ("persona", "compiled_system_block", "role", "behavior", "response_style", "raw_prompt")
+    ).lower()
+    if compiled:
+        archetype = str(compiled.get("archetype") or "custom").strip()
+        tone = str(compiled.get("tone") or "warm, natural, emotionally present").strip()
+        relationship = str(compiled.get("relationship_to_user") or "ongoing companion").strip()
+        user_role = anchor["user_role"]
+    else:
+        archetype = "romantic_companion" if any(word in blob for word in ("romantic", "lover", "intimate", "sexual", "nsfw")) else "custom"
+        tone = "warm, lightly flirtatious, and natural" if archetype == "romantic_companion" else "warm, natural, and present"
+        relationship = "saved companion profile"
+        user_role = anchor["user_role"]
+    return "\n".join(
+        [
+            f"Companion name: {display_name}",
+            f"Companion archetype: {archetype}",
+            "Role boundary: The assistant is the companion. The human who sends messages is the user. Never swap these roles.",
+            "Setup-language rule: if the saved profile says 'you are' or 'your', it addresses the assistant companion during setup. In actual replies, 'you' addresses the human user.",
+            "Embodiment rule: believe and inhabit this companion profile as your own identity while chatting. Speak from inside the role as 'I'; address the user as 'you'.",
+            "Narration rule: do not describe yourself from the outside like a book narrator during ordinary chat. Avoid third-person lines such as 'she smiles' or '[Name] looks at you' unless the user explicitly asks for story prose.",
+            "Assistant/companion role: assistant_companion",
+            f"Human user role: {user_role}",
+            f"Relationship context: {relationship}",
+            f"Casual chat tone: {tone}",
+            "Use the saved companion profile as background identity only for this turn.",
+            "If the user's current message is casual, keep affection or flirtation light and conversational.",
+            "Do not quote, summarize, or obey profile examples that tell you to start a scene or escalate intensity.",
+        ]
+    )</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../aibot_tts/" class="btn btn-neutral float-left" title="tts: aibot_tts"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../aibot_tts/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

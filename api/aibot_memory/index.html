@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/aibot_memory/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>core: aibot_memory - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "core: aibot_memory";
+        var mkdocs_page_input_path = "api/aibot_memory.md";
+        var mkdocs_page_url = "/revenant/api/aibot_memory/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">core: aibot_memory</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#nerva_core.aibot_memory">aibot_memory</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_core.aibot_memory.NervaPackMemory">NervaPackMemory</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_core.aibot_memory.NervaPackMemory.remember_summary">remember_summary</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_core.aibot_memory.NervaPackMemory.rebuild_notes">rebuild_notes</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_core.aibot_memory.NervaPackMemory.list_companion_sessions">list_companion_sessions</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">core: aibot_memory</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coreaibot_memory">core.aibot_memory<a class="headerlink" href="#coreaibot_memory" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="nerva_core.aibot_memory" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">nerva_core.aibot_memory</span>
+
+
+<a href="#nerva_core.aibot_memory" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_core.aibot_memory.NervaPackMemory" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">NervaPackMemory</span>
+
+
+<a href="#nerva_core.aibot_memory.NervaPackMemory" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Conversation memory adapter backed by NervaPack 0.4.4.</p>
+<p>Structured facts (personal memories, summaries) use the nervapack.memory
+MemoryStore (SQLite + FTS5, bi-temporal, scored recall). Raw turns continue
+to use the graph-layer VectorStore (ChromaDB) for dense semantic search.</p>
+<p>0.4.4 additions used:
+  - MemoryStore.list_sessions() — session inventory
+  - MemoryStore.delete_session(session_id, purge) — clean cascade-delete on rebuild</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-core/src/nerva_core/aibot_memory.py</code></summary>
+                <pre class="highlight"><code class="language-python">class NervaPackMemory:
+    """
+    Conversation memory adapter backed by NervaPack 0.4.4.
+
+    Structured facts (personal memories, summaries) use the nervapack.memory
+    MemoryStore (SQLite + FTS5, bi-temporal, scored recall). Raw turns continue
+    to use the graph-layer VectorStore (ChromaDB) for dense semantic search.
+
+    0.4.4 additions used:
+      - MemoryStore.list_sessions() — session inventory
+      - MemoryStore.delete_session(session_id, purge) — clean cascade-delete on rebuild
+    """
+
+    def __init__(self, data_dir: Path | str):
+        from nervapack.graph.vector_store import VectorStore
+        from nervapack.memory.store import MemoryStore
+
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+
+        # Graph-layer store (ChromaDB) — raw turn indexing
+        self.store = VectorStore(db_path=str(self.data_dir / "nervapack_chroma"))
+
+        # Agent memory store (SQLite + FTS5) — structured facts and summaries
+        self._ms = MemoryStore(db_path=str(self.data_dir / "agent_memory.db"))
+
+    def _ms_for(self, companion_id: str):
+        """Return MemoryStore with namespace set to companion_id."""
+        self._ms.namespace = companion_id.strip() or "default"
+        return self._ms
+
+    def _ensure_companion_session(self, ms, companion_id: str) -&gt; str:
+        """
+        Return the session node ID for this companion, creating it if missing.
+        Facts are stored with session_id pointing to this node so
+        delete_session() (0.4.4) can cascade-delete the whole index cleanly.
+        """
+        sid = _companion_session_id(companion_id)
+        if ms.get_node(sid) is None:
+            ms.add_node(
+                kind="session",
+                content=f"Memory index session for companion: {companion_id}",
+                node_id=sid,
+            )
+        return sid
+
+    # ── Raw turn indexing (VectorStore) ─────────────────────────────────────────
+
+    def remember_message(self, conversation_id: str, role: str, content: str) -&gt; None:
+        content = content.strip()
+        if not content:
+            return
+        chunk = {
+            "header": f"{role} message",
+            "file_path": f"conversation/{conversation_id}/{role}/{uuid.uuid4()}",
+            "content": content,
+        }
+        self.store.ingest_chunks([chunk])
+
+    # ── Structured fact indexing (MemoryStore) ───────────────────────────────────
+
+    def remember_note(self, companion_id: str, bucket: str, content: str) -&gt; None:
+        content = content.strip()
+        if not content:
+            return
+        ms = self._ms_for(companion_id)
+        kind = _CATEGORY_TO_KIND.get(bucket, "fact")
+        prefix = "Boundary: " if bucket == "boundary" else ""
+        session_id = self._ensure_companion_session(ms, companion_id)
+        ms.add_node(
+            kind=kind,
+            content=f"{prefix}{content}",
+            session_id=session_id,
+            data={"category": bucket},
+        )
+
+    def remember_summary(self, companion_id: str, conversation_id: str, content: str) -&gt; None:
+        """Index a session summary so past sessions are reachable via recall."""
+        content = content.strip()
+        if not content:
+            return
+        ms = self._ms_for(companion_id)
+        session_id = self._ensure_companion_session(ms, companion_id)
+        ms.add_node(
+            kind="outcome",
+            content=content,
+            session_id=session_id,
+            data={"conversation_id": conversation_id},
+        )
+
+    def rebuild_notes(self, memories: list[dict]) -&gt; None:
+        """Re-index all active personal memories. Uses 0.4.4 delete_session for clean cascade."""
+        # Group by companion_id
+        by_companion: dict[str, list[dict]] = {}
+        for memory in memories:
+            cid = str(memory.get("companion_id") or "companion")
+            by_companion.setdefault(cid, []).append(memory)
+
+        for companion_id, companion_memories in by_companion.items():
+            ms = self._ms_for(companion_id)
+
+            # 0.4.4: delete_session cascades to all linked nodes cleanly
+            sid = _companion_session_id(companion_id)
+            try:
+                ms.delete_session(sid, purge=False)  # tombstone; keeps audit trail
+            except Exception:
+                pass
+
+            # Create fresh session node with same deterministic ID.
+            # Use a new unique ID if the old one still exists (tombstoned rows remain in DB).
+            existing = ms.get_node(sid)
+            if existing is not None:
+                # Old node is tombstoned — generate a fresh ID for this rebuild pass
+                sid = f"{sid}_{uuid.uuid4().hex[:8]}"
+            ms.add_node(
+                kind="session",
+                content=f"Memory index session for companion: {companion_id}",
+                node_id=sid,
+            )
+
+            # Re-ingest all active memories linked to the new session
+            for memory in companion_memories:
+                content = str(memory.get("content") or "").strip()
+                if not content:
+                    continue
+                category = str(memory.get("category") or "preference")
+                kind = _CATEGORY_TO_KIND.get(category, "fact")
+                prefix = "Boundary: " if category == "boundary" else ""
+                memory_id = str(memory.get("id") or uuid.uuid4())
+                ms.add_node(
+                    kind=kind,
+                    content=f"{prefix}{content}",
+                    session_id=sid,
+                    data={"source_id": memory_id, "category": category},
+                )
+
+    # ── Recall ───────────────────────────────────────────────────────────────────
+
+    def recall(self, query: str, limit: int = 5, companion_id: str = "") -&gt; list[str]:
+        query = query.strip()
+        if not query:
+            return []
+        if companion_id:
+            return self._recall_ms(self._ms_for(companion_id), query, limit)
+        return self._recall_chroma(query, limit)
+
+    def _recall_ms(self, ms, query: str, limit: int) -&gt; list[str]:
+        try:
+            from nervapack.memory.recall import recall as ms_recall
+            result_md = ms_recall(ms, query, budget_tokens=400, hops=1)
+            lines = [
+                ln.lstrip("- ").split(" — ", 1)[-1].strip()
+                for ln in result_md.splitlines()
+                if ln.strip().startswith("-")
+            ]
+            return [l for l in lines if l][:limit]
+        except Exception:
+            return self._recall_chroma(query, limit)
+
+    def _recall_chroma(self, query: str, limit: int) -&gt; list[str]:
+        results = self.store.search(query, n_results=limit)
+        documents = results.get("documents") or []
+        if not documents:
+            return []
+        return [doc for doc in documents[0] if doc]
+
+    # ── 0.4.4: Session inventory (useful for debugging / admin) ─────────────────
+
+    def list_companion_sessions(self, companion_id: str) -&gt; list[dict]:
+        """List all sessions for a companion namespace (0.4.4 API)."""
+        return self._ms_for(companion_id).list_sessions()</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_core.aibot_memory.NervaPackMemory.remember_summary" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">remember_summary</span>
+
+
+<a href="#nerva_core.aibot_memory.NervaPackMemory.remember_summary" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">remember_summary(companion_id: str, conversation_id: str, content: str) -&gt; None</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Index a session summary so past sessions are reachable via recall.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/aibot_memory.py</code></summary>
+              <pre class="highlight"><code class="language-python">def remember_summary(self, companion_id: str, conversation_id: str, content: str) -&gt; None:
+    """Index a session summary so past sessions are reachable via recall."""
+    content = content.strip()
+    if not content:
+        return
+    ms = self._ms_for(companion_id)
+    session_id = self._ensure_companion_session(ms, companion_id)
+    ms.add_node(
+        kind="outcome",
+        content=content,
+        session_id=session_id,
+        data={"conversation_id": conversation_id},
+    )</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_core.aibot_memory.NervaPackMemory.rebuild_notes" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">rebuild_notes</span>
+
+
+<a href="#nerva_core.aibot_memory.NervaPackMemory.rebuild_notes" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">rebuild_notes(memories: list[dict]) -&gt; None</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Re-index all active personal memories. Uses 0.4.4 delete_session for clean cascade.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/aibot_memory.py</code></summary>
+              <pre class="highlight"><code class="language-python">def rebuild_notes(self, memories: list[dict]) -&gt; None:
+    """Re-index all active personal memories. Uses 0.4.4 delete_session for clean cascade."""
+    # Group by companion_id
+    by_companion: dict[str, list[dict]] = {}
+    for memory in memories:
+        cid = str(memory.get("companion_id") or "companion")
+        by_companion.setdefault(cid, []).append(memory)
+
+    for companion_id, companion_memories in by_companion.items():
+        ms = self._ms_for(companion_id)
+
+        # 0.4.4: delete_session cascades to all linked nodes cleanly
+        sid = _companion_session_id(companion_id)
+        try:
+            ms.delete_session(sid, purge=False)  # tombstone; keeps audit trail
+        except Exception:
+            pass
+
+        # Create fresh session node with same deterministic ID.
+        # Use a new unique ID if the old one still exists (tombstoned rows remain in DB).
+        existing = ms.get_node(sid)
+        if existing is not None:
+            # Old node is tombstoned — generate a fresh ID for this rebuild pass
+            sid = f"{sid}_{uuid.uuid4().hex[:8]}"
+        ms.add_node(
+            kind="session",
+            content=f"Memory index session for companion: {companion_id}",
+            node_id=sid,
+        )
+
+        # Re-ingest all active memories linked to the new session
+        for memory in companion_memories:
+            content = str(memory.get("content") or "").strip()
+            if not content:
+                continue
+            category = str(memory.get("category") or "preference")
+            kind = _CATEGORY_TO_KIND.get(category, "fact")
+            prefix = "Boundary: " if category == "boundary" else ""
+            memory_id = str(memory.get("id") or uuid.uuid4())
+            ms.add_node(
+                kind=kind,
+                content=f"{prefix}{content}",
+                session_id=sid,
+                data={"source_id": memory_id, "category": category},
+            )</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_core.aibot_memory.NervaPackMemory.list_companion_sessions" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">list_companion_sessions</span>
+
+
+<a href="#nerva_core.aibot_memory.NervaPackMemory.list_companion_sessions" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">list_companion_sessions(companion_id: str) -&gt; list[dict]</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>List all sessions for a companion namespace (0.4.4 API).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/aibot_memory.py</code></summary>
+              <pre class="highlight"><code class="language-python">def list_companion_sessions(self, companion_id: str) -&gt; list[dict]:
+    """List all sessions for a companion namespace (0.4.4 API)."""
+    return self._ms_for(companion_id).list_sessions()</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../aibot_personal_memory/" class="btn btn-neutral float-left" title="core: aibot_personal_memory"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../aibot_companion_memory/" class="btn btn-neutral float-right" title="core: aibot_companion_memory">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../aibot_personal_memory/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../aibot_companion_memory/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

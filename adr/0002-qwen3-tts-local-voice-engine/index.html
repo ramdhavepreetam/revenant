@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/adr/0002-qwen3-tts-local-voice-engine/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>ADR 0002 — Qwen3-TTS Local Voice Engine - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "ADR 0002 \u2014 Qwen3-TTS Local Voice Engine";
+        var mkdocs_page_input_path = "adr/0002-qwen3-tts-local-voice-engine.md";
+        var mkdocs_page_url = "/revenant/adr/0002-qwen3-tts-local-voice-engine/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#status">Status</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#context">Context</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#decision">Decision</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#consequences">Consequences</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#local-probe-result">Local Probe Result</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#implementation-notes">Implementation Notes</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Design Records</li>
+      <li class="breadcrumb-item active">ADR 0002 — Qwen3-TTS Local Voice Engine</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="adr-0002-qwen3-tts-local-voice-engine">ADR 0002: Qwen3-TTS Local Voice Engine<a class="headerlink" href="#adr-0002-qwen3-tts-local-voice-engine" title="Permanent link">&para;</a></h1>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p>Accepted for experimental implementation.</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The current app uses Kokoro as the default low-latency local voice engine and
+Chatterbox as a reference-voice option. The companion needs more natural
+prosody than simple speed/rate changes can provide: mood, energy, intimacy,
+and conversational pacing should affect the synthesis itself.</p>
+<p>Qwen3-TTS is now available as local model weights and as an installable
+<code>qwen-tts</code> package. The official model cards describe:</p>
+<ul>
+<li><code>Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice</code></li>
+<li><code>Qwen/Qwen3-TTS-12Hz-0.6B-Base</code></li>
+<li><code>Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice</code></li>
+<li><code>Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign</code></li>
+</ul>
+<p>Relevant references:</p>
+<ul>
+<li>https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice</li>
+<li>https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base</li>
+<li>https://github.com/QwenLM/Qwen3-TTS</li>
+<li>https://huggingface.co/mlx-community/Qwen3-TTS-12Hz-0.6B-Base-4bit</li>
+</ul>
+<p>The official examples target CUDA first, but MLX community conversions exist
+for Apple Silicon. The Qwen3-TTS API exposes a natural-language instruction
+field for CustomVoice generation, which maps well to the app's existing
+sentence-level delivery metadata.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>Add Qwen3-TTS as separate experimental engines:</p>
+<ul>
+<li><code>qwen3_mlx</code> for Apple Silicon using <code>mlx-audio</code></li>
+<li><code>qwen3_tts</code> for the official Qwen/Torch API</li>
+</ul>
+<p>The default experimental profile, <code>qwen3-serena-local</code>, uses the MLX engine and
+<code>mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16</code>. The official Qwen/Torch
+path remains available through a separate persistent worker:</p>
+<ul>
+<li><code>tts_qwen3_mlx_worker.py</code> with <code>.aibot/qwen3-mlx-venv</code></li>
+<li><code>tts_qwen3_worker.py</code> with <code>.aibot/qwen3-torch-venv</code></li>
+</ul>
+<p>The backend keeps the same public API:</p>
+<ul>
+<li>UI/native clients still call <code>POST /api/tts</code></li>
+<li>Voice selection still uses reusable local voice profiles</li>
+<li>The default voice remains Kokoro until Qwen3 is benchmarked locally</li>
+</ul>
+<p>Delivery metadata is translated into Qwen3's natural-language <code>instruct</code>
+field instead of only numeric speed:</p>
+<ul>
+<li>mood -&gt; tone instruction</li>
+<li>pace -&gt; conversational tempo instruction</li>
+<li>energy -&gt; expressiveness instruction</li>
+</ul>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>Positive:</p>
+<ul>
+<li>Keeps the app offline/local once dependencies and weights are downloaded.</li>
+<li>Preserves the backend/UI split.</li>
+<li>Avoids breaking the existing Kokoro and Chatterbox paths.</li>
+<li>Gives the synthesizer stronger mood/prosody information than Kokoro can use.</li>
+<li>Keeps the large model loaded in a persistent worker.</li>
+</ul>
+<p>Negative:</p>
+<ul>
+<li>First setup requires a separate venv and model download.</li>
+<li>Official Qwen examples are CUDA-oriented; Apple Silicon performance must be
+  measured before making this the default.</li>
+<li>The 0.6B CustomVoice profile may still be slower than Kokoro for short live
+  sentence streaming.</li>
+<li>MLX may become the preferred runtime later if it proves faster/stabler on
+  this Mac.</li>
+</ul>
+<h2 id="local-probe-result">Local Probe Result<a class="headerlink" href="#local-probe-result" title="Permanent link">&para;</a></h2>
+<p>On this machine, the official <code>qwen-tts</code> Torch path installed successfully, but
+the first MPS synthesis probe failed with:</p>
+<pre><code class="language-text">probability tensor contains either `inf`, `nan` or element &lt; 0
+</code></pre>
+<p>The MLX path installed successfully and generated audio through <code>POST /api/tts</code>
+with <code>engine: qwen3_mlx</code>.</p>
+<p>Observed behavior:</p>
+<ul>
+<li>first Qwen3 MLX request: slow cold start because the model had to
+  download/load</li>
+<li>second warm request: completed in under 1 second through the backend</li>
+<li>current default experimental profile: <code>qwen3-serena-local</code></li>
+</ul>
+<h2 id="implementation-notes">Implementation Notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
+<p>Initial Apple Silicon MLX setup:</p>
+<pre><code class="language-bash">python3 -m venv .aibot/qwen3-mlx-venv
+.aibot/qwen3-mlx-venv/bin/python -m pip install -U pip mlx-audio
+</code></pre>
+<p>Select the <code>qwen3-serena-local</code> voice profile in the UI or API.</p>
+<p>Official Qwen/Torch setup, kept separate because <code>qwen-tts</code> pins
+<code>transformers==4.57.3</code> while <code>mlx-audio</code> currently needs a newer major
+<code>transformers</code> release:</p>
+<pre><code class="language-bash">python3 -m venv .aibot/qwen3-torch-venv
+.aibot/qwen3-torch-venv/bin/python -m pip install -U pip qwen-tts soundfile
+</code></pre>
+<p>Benchmark before promoting:</p>
+<ul>
+<li>cold worker startup time</li>
+<li>first sentence latency</li>
+<li>steady-state sentence latency</li>
+<li>real-time factor</li>
+<li>memory pressure on Apple Silicon</li>
+<li>quality versus <code>luna-companion</code> and <code>aria-companion</code></li>
+</ul>
+<p>If Apple Silicon performance is weak, add a second engine branch using
+<code>mlx-audio</code> with <code>mlx-community</code> Qwen3-TTS models and keep the official
+<code>qwen-tts</code> engine for CUDA/Linux.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../0001-offline-local-llm-interface/" class="btn btn-neutral float-left" title="ADR 0001 — Offline Local LLM Interface"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../0003-local-agent-harness/" class="btn btn-neutral float-right" title="ADR 0003 — Local Agent Harness">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../0001-offline-local-llm-interface/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../0003-local-agent-harness/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

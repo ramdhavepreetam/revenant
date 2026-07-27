@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/aibot_storage/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>core: aibot_storage - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "core: aibot_storage";
+        var mkdocs_page_input_path = "api/aibot_storage.md";
+        var mkdocs_page_url = "/revenant/api/aibot_storage/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">core: aibot_storage</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#nerva_core.aibot_storage">aibot_storage</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_core.aibot_storage.ConversationStore">ConversationStore</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_core.aibot_storage.ConversationStore.get_summary">get_summary</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_core.aibot_storage.ConversationStore.get_summarized_count">get_summarized_count</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nerva_core.aibot_storage.ConversationStore.add_episode">add_episode</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">core: aibot_storage</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coreaibot_storage">core.aibot_storage<a class="headerlink" href="#coreaibot_storage" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="nerva_core.aibot_storage" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">nerva_core.aibot_storage</span>
+
+
+<a href="#nerva_core.aibot_storage" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_core.aibot_storage.ConversationStore" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">ConversationStore</span>
+
+
+<a href="#nerva_core.aibot_storage.ConversationStore" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-core/src/nerva_core/aibot_storage.py</code></summary>
+                <pre class="highlight"><code class="language-python">class ConversationStore:
+    def __init__(self, data_dir: Path | str = default_data_dir()):
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.db_path = self.data_dir / "conversations.sqlite3"
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
+        self.lock = threading.Lock()
+        self._init_schema()
+
+    def _init_schema(self) -&gt; None:
+        with self.lock:
+            self.conn.executescript(
+                """
+                create table if not exists conversations (
+                    id text primary key,
+                    title text not null,
+                    created_at text not null,
+                    updated_at text not null
+                );
+
+                create table if not exists messages (
+                    id text primary key,
+                    conversation_id text not null references conversations(id) on delete cascade,
+                    role text not null,
+                    content text not null,
+                    created_at text not null
+                );
+
+                create index if not exists idx_messages_conversation_created
+                    on messages(conversation_id, created_at);
+
+                create table if not exists episodes (
+                    id text primary key,
+                    companion_id text not null,
+                    conversation_id text,
+                    summary text not null,
+                    created_at text not null
+                );
+
+                create index if not exists idx_episodes_companion_created
+                    on episodes(companion_id, created_at);
+                """
+            )
+            # Phase 3 support: rolling session summary + how many turns it covers.
+            # Added via migration so existing databases pick the columns up safely.
+            existing = {row["name"] for row in self.conn.execute("pragma table_info(conversations)")}
+            if "summary" not in existing:
+                self.conn.execute("alter table conversations add column summary text not null default ''")
+            if "summarized_count" not in existing:
+                self.conn.execute("alter table conversations add column summarized_count integer not null default 0")
+            self.conn.commit()
+
+    def create_conversation(self, title: str) -&gt; Conversation:
+        now = utc_now()
+        conversation = Conversation(
+            id=str(uuid.uuid4()),
+            title=title[:120] or "Untitled conversation",
+            created_at=now,
+            updated_at=now,
+        )
+        with self.lock:
+            self.conn.execute(
+                "insert into conversations (id, title, created_at, updated_at) values (?, ?, ?, ?)",
+                (conversation.id, conversation.title, conversation.created_at, conversation.updated_at),
+            )
+            self.conn.commit()
+        return conversation
+
+    def get_conversation(self, conversation_id: str) -&gt; Conversation | None:
+        with self.lock:
+            row = self.conn.execute(
+                "select id, title, created_at, updated_at from conversations where id = ?",
+                (conversation_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return Conversation(**dict(row))
+
+    def list_conversations(self) -&gt; list[Conversation]:
+        with self.lock:
+            rows = self.conn.execute(
+                "select id, title, created_at, updated_at from conversations order by updated_at desc"
+            ).fetchall()
+        return [Conversation(**dict(row)) for row in rows]
+
+    def get_summary(self, conversation_id: str) -&gt; str:
+        """Rolling session summary for the conversation (empty if none yet)."""
+        with self.lock:
+            row = self.conn.execute(
+                "select summary from conversations where id = ?",
+                (conversation_id,),
+            ).fetchone()
+        return str(row["summary"]) if row and row["summary"] else ""
+
+    def get_summarized_count(self, conversation_id: str) -&gt; int:
+        """How many of the oldest messages are already folded into the summary."""
+        with self.lock:
+            row = self.conn.execute(
+                "select summarized_count from conversations where id = ?",
+                (conversation_id,),
+            ).fetchone()
+        return int(row["summarized_count"]) if row and row["summarized_count"] is not None else 0
+
+    def set_summary(self, conversation_id: str, summary: str, summarized_count: int) -&gt; None:
+        with self.lock:
+            self.conn.execute(
+                "update conversations set summary = ?, summarized_count = ? where id = ?",
+                (summary, int(summarized_count), conversation_id),
+            )
+            self.conn.commit()
+
+    def add_episode(self, companion_id: str, summary: str, conversation_id: str = "") -&gt; str:
+        """Record an episodic memory ('what happened when') for later time/topic recall."""
+        episode_id = str(uuid.uuid4())
+        with self.lock:
+            self.conn.execute(
+                "insert into episodes (id, companion_id, conversation_id, summary, created_at) "
+                "values (?, ?, ?, ?, ?)",
+                (episode_id, companion_id, conversation_id or None, summary.strip(), utc_now()),
+            )
+            self.conn.commit()
+        return episode_id
+
+    def list_episodes(self, companion_id: str, limit: int = 20) -&gt; list[dict]:
+        with self.lock:
+            rows = self.conn.execute(
+                "select id, conversation_id, summary, created_at from episodes "
+                "where companion_id = ? order by created_at desc limit ?",
+                (companion_id, int(limit)),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def add_message(self, conversation_id: str, role: str, content: str) -&gt; str:
+        message_id = str(uuid.uuid4())
+        now = utc_now()
+        with self.lock:
+            self.conn.execute(
+                "insert into messages (id, conversation_id, role, content, created_at) values (?, ?, ?, ?, ?)",
+                (message_id, conversation_id, role, content, now),
+            )
+            self.conn.execute(
+                "update conversations set updated_at = ? where id = ?",
+                (now, conversation_id),
+            )
+            self.conn.commit()
+        return message_id
+
+    def get_messages(self, conversation_id: str) -&gt; list[dict[str, str]]:
+        with self.lock:
+            rows = self.conn.execute(
+                "select role, content from messages where conversation_id = ? order by created_at asc",
+                (conversation_id,),
+            ).fetchall()
+        return [{"role": row["role"], "content": row["content"]} for row in rows]
+
+    def export_conversation(self, conversation_id: str, output_path: Path | str, fmt: str) -&gt; Path:
+        conversation = self.get_conversation(conversation_id)
+        if not conversation:
+            raise ValueError(f"Unknown conversation: {conversation_id}")
+
+        messages = self.get_messages(conversation_id)
+        output = Path(output_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fmt = fmt.lower()
+
+        if fmt == "json":
+            payload: dict[str, Any] = {
+                "conversation": conversation.__dict__,
+                "messages": messages,
+            }
+            output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        elif fmt == "txt":
+            output.write_text(self._plain_text(conversation, messages), encoding="utf-8")
+        elif fmt == "md":
+            output.write_text(self._markdown(conversation, messages), encoding="utf-8")
+        else:
+            raise ValueError(f"Unsupported export format: {fmt}")
+
+        return output
+
+    def _plain_text(self, conversation: Conversation, messages: list[dict[str, str]]) -&gt; str:
+        lines = [conversation.title, f"Conversation ID: {conversation.id}", ""]
+        for message in messages:
+            lines.extend([message["role"].upper(), message["content"], ""])
+        return "\n".join(lines)
+
+    def _markdown(self, conversation: Conversation, messages: list[dict[str, str]]) -&gt; str:
+        lines = [f"# {conversation.title}", "", f"`{conversation.id}`", ""]
+        for message in messages:
+            lines.extend([f"## {message['role'].title()}", "", message["content"], ""])
+        return "\n".join(lines)</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_core.aibot_storage.ConversationStore.get_summary" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">get_summary</span>
+
+
+<a href="#nerva_core.aibot_storage.ConversationStore.get_summary" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">get_summary(conversation_id: str) -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Rolling session summary for the conversation (empty if none yet).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/aibot_storage.py</code></summary>
+              <pre class="highlight"><code class="language-python">def get_summary(self, conversation_id: str) -&gt; str:
+    """Rolling session summary for the conversation (empty if none yet)."""
+    with self.lock:
+        row = self.conn.execute(
+            "select summary from conversations where id = ?",
+            (conversation_id,),
+        ).fetchone()
+    return str(row["summary"]) if row and row["summary"] else ""</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_core.aibot_storage.ConversationStore.get_summarized_count" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">get_summarized_count</span>
+
+
+<a href="#nerva_core.aibot_storage.ConversationStore.get_summarized_count" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">get_summarized_count(conversation_id: str) -&gt; int</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>How many of the oldest messages are already folded into the summary.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/aibot_storage.py</code></summary>
+              <pre class="highlight"><code class="language-python">def get_summarized_count(self, conversation_id: str) -&gt; int:
+    """How many of the oldest messages are already folded into the summary."""
+    with self.lock:
+        row = self.conn.execute(
+            "select summarized_count from conversations where id = ?",
+            (conversation_id,),
+        ).fetchone()
+    return int(row["summarized_count"]) if row and row["summarized_count"] is not None else 0</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="nerva_core.aibot_storage.ConversationStore.add_episode" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">add_episode</span>
+
+
+<a href="#nerva_core.aibot_storage.ConversationStore.add_episode" class="headerlink" title="Permanent link">&para;</a></h4>
+<pre class="highlight"><code class="language-python doc-signature">add_episode(companion_id: str, summary: str, conversation_id: str = '') -&gt; str</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>Record an episodic memory ('what happened when') for later time/topic recall.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/nerva-core/src/nerva_core/aibot_storage.py</code></summary>
+              <pre class="highlight"><code class="language-python">def add_episode(self, companion_id: str, summary: str, conversation_id: str = "") -&gt; str:
+    """Record an episodic memory ('what happened when') for later time/topic recall."""
+    episode_id = str(uuid.uuid4())
+    with self.lock:
+        self.conn.execute(
+            "insert into episodes (id, companion_id, conversation_id, summary, created_at) "
+            "values (?, ?, ?, ?, ?)",
+            (episode_id, companion_id, conversation_id or None, summary.strip(), utc_now()),
+        )
+        self.conn.commit()
+    return episode_id</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../aibot_profiles/" class="btn btn-neutral float-left" title="core: aibot_profiles"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../aibot_personal_memory/" class="btn btn-neutral float-right" title="core: aibot_personal_memory">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../aibot_profiles/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../aibot_personal_memory/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

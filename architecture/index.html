@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/architecture/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Architecture - Revenant</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Architecture";
+        var mkdocs_page_input_path = "architecture.md";
+        var mkdocs_page_url = "/revenant/architecture/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Architecture</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#processes">Processes</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-turn-pipeline-appsweb_apppy">The turn pipeline (apps/web_app.py)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#layered-memory">Layered memory</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#model-routing">Model routing</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#agent-harness-revenant">Agent harness (Revenant)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#voice-tts">Voice (TTS)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#design-records">Design records</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Architecture</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
+<p>AIBot is split into a <strong>backend API</strong>, a <strong>static UI</strong>, a <strong>local LLM call layer</strong>, a
+<strong>layered memory system</strong>, and <strong>pluggable TTS workers</strong> — all offline.</p>
+<h2 id="processes">Processes<a class="headerlink" href="#processes" title="Permanent link">&para;</a></h2>
+<pre><code>┌────────────────────┐        HTTP         ┌──────────────────────────┐
+│ apps/ui_app.py     │ ─────────────────▶  │ apps/backend_app.py      │
+│ static UI  :8765   │                     │ API server :8766         │
+│ (serves frontend/) │                     │ subclasses LocalUIHandler│
+└────────────────────┘                     │ in apps/web_app.py       │
+                                           └────────────┬─────────────┘
+                                                        │
+                    ┌───────────────────────────────────┼───────────────────────────────┐
+                    ▼                                    ▼                                ▼
+          core/local_llm_writer.py            core/ memory + context            tts/ workers
+          call_model / stream_model           (SQLite + vector recall)          (Chatterbox/Kokoro/…)
+                    │                                                                     
+                    ▼                                                                     
+              Ollama :11434  (or any OpenAI-compatible local server)
+</code></pre>
+<h2 id="the-turn-pipeline-appsweb_apppy">The turn pipeline (<code>apps/web_app.py</code>)<a class="headerlink" href="#the-turn-pipeline-appsweb_apppy" title="Permanent link">&para;</a></h2>
+<p>A chat turn flows through two shared helpers so the blocking and streaming paths never fork:</p>
+<ol>
+<li><strong><code>_prepare_turn(body)</code></strong> — validate → build <code>ChatConfig</code> → resolve companion/persona →
+   compute <code>response_shape</code> (length/register) → <strong>route to the best model per role</strong>
+   (<a href="../model-routing/">Model Routing</a>) → rank memories + fold in semantic recall →
+   <code>assemble_context()</code> (token-budgeted message list).</li>
+<li><strong><code>call_model</code> / <code>stream_model</code></strong> — generate (both consume the same <code>ctx["config"]</code>).</li>
+<li><strong><code>_finalize_turn(ctx, reply)</code></strong> — trim to last sentence → persist → learn personal
+   memories → kick off rolling summarization on a daemon thread.</li>
+</ol>
+<h2 id="layered-memory">Layered memory<a class="headerlink" href="#layered-memory" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Where</th>
+<th>Module</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Working context (budgeted recent turns)</td>
+<td>in-memory per turn</td>
+<td><code>core/aibot_context.py</code></td>
+</tr>
+<tr>
+<td>Session summary (rolling)</td>
+<td>SQLite conversation row</td>
+<td><code>core/aibot_summary.py</code></td>
+</tr>
+<tr>
+<td>Long-term structured (personal facts, boundaries)</td>
+<td>SQLite</td>
+<td><code>core/aibot_personal_memory.py</code></td>
+</tr>
+<tr>
+<td>Long-term semantic (recall)</td>
+<td>local vector index</td>
+<td><code>core/aibot_memory.py</code></td>
+</tr>
+<tr>
+<td>Durable conversation history (source of truth)</td>
+<td><code>.aibot/conversations.sqlite3</code></td>
+<td><code>core/aibot_storage.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="model-routing">Model routing<a class="headerlink" href="#model-routing" title="Permanent link">&para;</a></h2>
+<p>Each turn is auto-routed to the best local model for its <strong>role</strong> (<code>code</code>, <code>language</code>,
+<code>companion</code>, <code>summary</code>) via <code>core/agent_router.py</code> and the <code>model_roles</code> map in
+<code>profiles.json</code>. This generalizes the pre-existing pattern where summarization already used
+a separate model. Full detail: <a href="../model-routing/">Model Routing</a>.</p>
+<h2 id="agent-harness-revenant">Agent harness (Revenant)<a class="headerlink" href="#agent-harness-revenant" title="Permanent link">&para;</a></h2>
+<p>A reusable tool-calling loop (<code>core/agent_loop.py</code>) drives a local model to take actions:
+call → parse action → (approve) → dispatch tool → feed observation back → repeat. One loop
+powers <strong>two front-ends</strong> with different tool sets: the <a href="../revenant-cli/">coding CLI</a>
+(<code>revenant</code>; fs + shell tools, qwen2.5) and the <a href="../companion-agent/">companion agent</a>
+(<code>/api/agent</code>; memory/reminder tools, Stheno). See <a href="../adr/0003-local-agent-harness/">ADR 0003</a>.</p>
+<h2 id="voice-tts">Voice (TTS)<a class="headerlink" href="#voice-tts" title="Permanent link">&para;</a></h2>
+<p>Multiple local neural voice engines live under <code>tts/</code> (Chatterbox, Kokoro, Orpheus,
+Qwen3-MLX), each a persistent worker, all behind a single <code>/api/tts</code> endpoint so the UI and
+native apps never care which engine is active. Engine decisions: <a href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002</a>.</p>
+<h2 id="design-records">Design records<a class="headerlink" href="#design-records" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a></li>
+<li><a href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a></li>
+<li><a href="../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a></li>
+<li><a href="../companion-harness-plan/">Companion Harness Plan</a> · <a href="../agent-harness-plan/">Agent Harness Plan</a></li>
+<li><a href="../knowledge-base/">Knowledge Base</a> — long-form reference.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../install/" class="btn btn-neutral float-left" title="Install"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../model-routing/" class="btn btn-neutral float-right" title="Model Routing">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../install/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../model-routing/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

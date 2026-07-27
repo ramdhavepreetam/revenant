@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/agent_loop/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>core: agent_loop - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "core: agent_loop";
+        var mkdocs_page_input_path = "api/agent_loop.md";
+        var mkdocs_page_url = "/revenant/api/agent_loop/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">core: agent_loop</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#nerva_agent.agent_loop">agent_loop</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_loop.AgentEvent">AgentEvent</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_loop.AgentResult">AgentResult</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nerva_agent.agent_loop.AgentLoop">AgentLoop</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">core: agent_loop</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coreagent_loop">core.agent_loop<a class="headerlink" href="#coreagent_loop" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="nerva_agent.agent_loop" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">nerva_agent.agent_loop</span>
+
+
+<a href="#nerva_agent.agent_loop" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>The Revenant agent loop.</p>
+<p>A model-agnostic tool-calling loop over the local LLM:</p>
+<pre><code>build system + messages
+repeat up to max_steps:
+    msg = call_model_message(config, messages, tools=native_schema)
+    action = parse_action(msg.content, msg)          # native OR prompt-based
+    if action is FinalAnswer: done
+    else: observation = registry.dispatch(action)     # (approval gate: P3)
+          append assistant turn + observation, continue
+</code></pre>
+<p>Reuses the existing local LLM layer (<code>call_model_message</code>) -- no cloud. Works on
+tool-capable models (qwen2.5, via native tool_calls) AND plain models (via the
+prompt-based <code>``action protocol), because</code>parse_action<code>handles both and we pass
+the native</code>tools` schema opportunistically.</p>
+<p>Step events are emitted through an optional <code>on_event</code> callback so a CLI/UI can
+stream the trace (thinking -&gt; action -&gt; observation) live.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_agent.agent_loop.AgentEvent" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">AgentEvent</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#nerva_agent.agent_loop.AgentEvent" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>One thing that happened in the loop, for streaming/logging.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_loop.py</code></summary>
+                <pre class="highlight"><code class="language-python">@dataclass
+class AgentEvent:
+    """One thing that happened in the loop, for streaming/logging."""
+
+    kind: str  # "assistant" | "action" | "observation" | "final" | "error" | "limit"
+    text: str = ""
+    tool: str = ""
+    args: dict[str, Any] = field(default_factory=dict)
+    step: int = 0</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_agent.agent_loop.AgentResult" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">AgentResult</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#nerva_agent.agent_loop.AgentResult" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>The outcome of a run.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_loop.py</code></summary>
+                <pre class="highlight"><code class="language-python">@dataclass
+class AgentResult:
+    """The outcome of a run."""
+
+    answer: str
+    steps: int
+    stopped_reason: str  # "final" | "max_steps" | "error"
+    events: list[AgentEvent] = field(default_factory=list)</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="nerva_agent.agent_loop.AgentLoop" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">AgentLoop</span>
+
+
+<a href="#nerva_agent.agent_loop.AgentLoop" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Drives one goal to completion (or a step cap) using a tool registry.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>packages/nerva-agent/src/nerva_agent/agent_loop.py</code></summary>
+                <pre class="highlight"><code class="language-python">class AgentLoop:
+    """Drives one goal to completion (or a step cap) using a tool registry."""
+
+    def __init__(
+        self,
+        config: ChatConfig,
+        registry: ToolRegistry,
+        *,
+        system_preamble: str = "",
+        max_steps: int = 15,
+        max_bad_parses: int = 3,
+        use_native_tools: bool | None = None,
+        on_event: EventSink | None = None,
+        approve: "ApproveHook | None" = None,
+        auto_approve: bool = False,
+        max_context_tokens: int = 6000,
+        keep_recent_steps: int = 3,
+    ) -&gt; None:
+        self.config = config
+        self.registry = registry
+        self.system_preamble = system_preamble
+        self.max_steps = max_steps
+        self.max_bad_parses = max_bad_parses
+        # None = auto-detect per model on first run (probe once, cached); True/False
+        # force the choice. Auto keeps native for tool-capable models (qwen2.5) and
+        # falls back to the prompt-based protocol otherwise (Stheno).
+        self.use_native_tools = use_native_tools
+        self.on_event = on_event
+        # Context management: when the running transcript exceeds max_context_tokens,
+        # the oldest step pairs (assistant + observation) are folded into a short
+        # summary so long runs don't overflow the local model's window. The system
+        # prompt, the goal, and the most recent keep_recent_steps step-pairs are
+        # always retained verbatim. This is the loop's local analog of compaction.
+        self.max_context_tokens = max_context_tokens
+        self.keep_recent_steps = keep_recent_steps
+        # approve(tool_name, args) -&gt; bool. Called before any tool whose
+        # requires_approval flag is set. auto_approve (yolo) skips the prompt but
+        # NOT the damage guards inside the tools themselves (e.g. bash footgun block).
+        self.approve = approve
+        self.auto_approve = auto_approve
+
+    # --- helpers -----------------------------------------------------------
+    def _emit(self, event: AgentEvent, sink_events: list[AgentEvent]) -&gt; None:
+        sink_events.append(event)
+        if self.on_event is not None:
+            self.on_event(event)
+
+    def _system_prompt(self) -&gt; str:
+        parts = []
+        if self.system_preamble.strip():
+            parts.append(self.system_preamble.strip())
+        # Always include the prompt-based protocol block: it documents the tools
+        # and gives non-native models a way to act. Native models ignore the
+        # format hint and use tool_calls instead.
+        parts.append(render_system_block(self.registry))
+        return "\n\n".join(parts)
+
+    # --- context management ------------------------------------------------
+    @staticmethod
+    def _total_tokens(messages: list[dict[str, Any]]) -&gt; int:
+        return sum(estimate_tokens(m.get("content", "")) for m in messages)
+
+    def _compact_messages(self, messages: list[dict[str, Any]]) -&gt; list[dict[str, Any]]:
+        """Fold the oldest step-pairs into a summary when over the token budget.
+
+        Layout is always [system, goal, (assistant, observation)*]. We keep
+        `messages[0]` (system) and `messages[1]` (goal) verbatim, keep the last
+        `keep_recent_steps` pairs verbatim, and replace everything in between with
+        one compact summary user-turn listing what was already done. Returns the
+        (possibly unchanged) message list; emits a "compact" event when it acts.
+        """
+        if self._total_tokens(messages) &lt;= self.max_context_tokens:
+            return messages
+        head = messages[:2]                       # system + goal
+        middle = messages[2:]
+        keep_tail = self.keep_recent_steps * 2    # each step = assistant + observation
+        if len(middle) &lt;= keep_tail:
+            return messages                       # nothing old enough to fold
+        old, recent = middle[:-keep_tail], middle[-keep_tail:]
+
+        # Summarize the folded portion: pull the tool actions/observations into a
+        # terse recap so the model keeps situational awareness without the bulk.
+        lines: list[str] = []
+        for msg in old:
+            content = (msg.get("content") or "").strip()
+            if not content:
+                continue
+            # Observation turns are prefixed "Result of &lt;tool&gt;:"; keep a one-line gist.
+            first = content.splitlines()[0]
+            lines.append(first[:200])
+        recap = "\n".join(lines[-40:]) or "(earlier steps)"
+        summary_turn = {
+            "role": "user",
+            "content": (
+                "[Earlier progress compacted to save context — do not repeat work "
+                "already done below:]\n" + recap
+            ),
+        }
+        return head + [summary_turn] + recent
+
+    # --- main loop ---------------------------------------------------------
+    def run(self, goal: str) -&gt; AgentResult:
+        events: list[AgentEvent] = []
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": self._system_prompt()},
+            {"role": "user", "content": goal},
+        ]
+        # Resolve native-tool use: explicit flag, else auto-detect once per model.
+        use_native = self.use_native_tools
+        if use_native is None:
+            from nerva_agent.agent_native_tools import supports_native_tools
+            try:
+                use_native = supports_native_tools(self.config)
+            except Exception:  # noqa: BLE001 - detection failure -&gt; prompt-based
+                use_native = False
+        native_tools = self.registry.native_schema() if use_native else None
+        bad_parses = 0
+
+        for step in range(1, self.max_steps + 1):
+            before = len(messages)
+            messages = self._compact_messages(messages)
+            if len(messages) &lt; before:
+                self._emit(
+                    AgentEvent("compact", text=f"compacted {before - len(messages)} old turns", step=step),
+                    events,
+                )
+            try:
+                message = call_model_message(self.config, messages, tools=native_tools)
+            except LocalLLMError as exc:
+                self._emit(AgentEvent("error", text=str(exc), step=step), events)
+                return AgentResult("", step - 1, "error", events)
+
+            content = (message.get("content") or "").strip()
+            action = parse_action(content, message)
+
+            # --- Final answer -------------------------------------------------
+            if isinstance(action, FinalAnswer):
+                # A reply that LOOKED like a failed action gets one nudge, then
+                # we accept it as final to avoid looping on a weak model.
+                if (
+                    action.text
+                    and bad_parses &lt; self.max_bad_parses
+                    and looks_like_attempted_action(action.text, self.registry)
+                    and not _has_valid_json_action(content)
+                ):
+                    bad_parses += 1
+                    self._emit(AgentEvent("assistant", text=action.text, step=step), events)
+                    messages.append({"role": "assistant", "content": content})
+                    messages.append({"role": "user", "content": MALFORMED_ACTION_NUDGE})
+                    continue
+                self._emit(AgentEvent("final", text=action.text, step=step), events)
+                return AgentResult(action.text, step, "final", events)
+
+            # --- Tool call ----------------------------------------------------
+            assert isinstance(action, ToolCall)
+            if content:
+                self._emit(AgentEvent("assistant", text=content, step=step), events)
+            self._emit(
+                AgentEvent("action", tool=action.tool, args=action.args, step=step), events
+            )
+
+            # --- Approval gate (mutating / requires_approval tools) -----------
+            tool = self.registry.get(action.tool)
+            if tool is not None and tool.requires_approval and not self.auto_approve:
+                allowed = True
+                if self.approve is not None:
+                    self._emit(
+                        AgentEvent("approval", tool=action.tool, args=action.args, step=step), events
+                    )
+                    try:
+                        allowed = bool(self.approve(action.tool, action.args))
+                    except Exception:  # noqa: BLE001 - a hook error denies, never crashes
+                        allowed = False
+                if not allowed:
+                    observation = (
+                        f"The user DECLINED to run {action.tool}. Do not retry it; "
+                        "adjust your approach or ask what to do instead."
+                    )
+                    self._emit(
+                        AgentEvent("observation", text=observation, tool=action.tool, step=step), events
+                    )
+                    messages.append({"role": "assistant", "content": content or f"(calling {action.tool})"})
+                    messages.append({"role": "user", "content": f"Result of {action.tool}:\n{observation}"})
+                    continue
+
+            try:
+                observation = self.registry.dispatch(action.tool, action.args)
+            except ToolError as exc:
+                observation = f"ERROR: {exc}"
+            self._emit(
+                AgentEvent("observation", text=observation, tool=action.tool, step=step), events
+            )
+
+            # Record the turn. Keep the assistant's raw content, then feed the
+            # observation back as a user turn (uniform across native + prompt paths).
+            messages.append({"role": "assistant", "content": content or f"(calling {action.tool})"})
+            messages.append(
+                {"role": "user", "content": f"Result of {action.tool}:\n{observation}"}
+            )
+
+        self._emit(AgentEvent("limit", text=f"hit max_steps={self.max_steps}", step=self.max_steps), events)
+        return AgentResult("", self.max_steps, "max_steps", events)</code></pre>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../agent_native_tools/" class="btn btn-neutral float-left" title="core: agent_native_tools"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../agent_cli/" class="btn btn-neutral float-right" title="apps: agent_cli (revenant)">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../agent_native_tools/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../agent_cli/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

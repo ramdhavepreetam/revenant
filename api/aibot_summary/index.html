@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/api/aibot_summary/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>core: aibot_summary - Revenant</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "core: aibot_summary";
+        var mkdocs_page_input_path = "api/aibot_summary.md";
+        var mkdocs_page_url = "/revenant/api/aibot_summary/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">core: aibot_summary</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#aibot_app.aibot_summary">aibot_summary</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#aibot_app.aibot_summary.maybe_summarize">maybe_summarize</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API Reference</li>
+      <li class="breadcrumb-item active">core: aibot_summary</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coreaibot_summary">core.aibot_summary<a class="headerlink" href="#coreaibot_summary" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="aibot_app.aibot_summary" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">aibot_app.aibot_summary</span>
+
+
+<a href="#aibot_app.aibot_summary" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Rolling session summarization for the companion harness (Phase 3).</p>
+<p>Keeps long conversations coherent without bloating the context window: every N
+turns, the oldest not-yet-summarized messages are folded into a compact running
+summary by a SMALL, factual model (gemma) — kept separate from the RP-tuned
+companion model so summaries stay clean. The summary is stored on the conversation
+row (SQLite, source of truth) and injected as "story so far" each turn; the
+summarized raw turns then drop out of the live window via the context budgeter.</p>
+<p>Companion-aware: when a companion profile is supplied, the summarizer is told the
+companion's name, archetype, and relationship so it preserves character voice and
+relationship facts rather than writing generic third-person notes.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="aibot_app.aibot_summary.maybe_summarize" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">maybe_summarize</span>
+
+
+<a href="#aibot_app.aibot_summary.maybe_summarize" class="headerlink" title="Permanent link">&para;</a></h3>
+<pre class="highlight"><code class="language-python doc-signature">maybe_summarize(store, conversation_id: str, *, companion_id: str = '', companion: dict | None = None, summary_model: str = 'gemma:latest', base_url: str = 'http://localhost:11434', memory=None) -&gt; bool</code></pre>
+
+    <div class="doc doc-contents ">
+
+        <p>If enough new turns have accumulated, fold the oldest into the rolling summary.</p>
+<p>Returns True if a summary pass ran. Best-effort: any failure is swallowed so a
+summary hiccup never breaks the chat turn (the raw turns simply stay in context).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/aibot-app/src/aibot_app/aibot_summary.py</code></summary>
+              <pre class="highlight"><code class="language-python">def maybe_summarize(
+    store,
+    conversation_id: str,
+    *,
+    companion_id: str = "",
+    companion: dict | None = None,
+    summary_model: str = "gemma:latest",
+    base_url: str = "http://localhost:11434",
+    memory=None,
+) -&gt; bool:
+    """If enough new turns have accumulated, fold the oldest into the rolling summary.
+
+    Returns True if a summary pass ran. Best-effort: any failure is swallowed so a
+    summary hiccup never breaks the chat turn (the raw turns simply stay in context).
+    """
+    try:
+        messages = store.get_messages(conversation_id)
+        already = store.get_summarized_count(conversation_id)
+        # Unsummarized messages, excluding the raw tail we always keep verbatim.
+        summarizable = len(messages) - already - KEEP_RAW_TAIL
+        if summarizable &lt; SUMMARY_TRIGGER:
+            return False
+
+        batch = messages[already: already + SUMMARY_BATCH]
+        if not batch:
+            return False
+
+        prior = store.get_summary(conversation_id)
+        config = _summary_config(summary_model, base_url)
+        prompt = _build_summary_prompt(prior, batch, companion)
+        new_summary = call_model(config, prompt).strip()
+        # Strip a leading "Summary:"/"Updated memory note:" label the small model
+        # sometimes prepends, and any surrounding markdown emphasis.
+        import re
+        new_summary = re.sub(
+            r"^[\*\s]*(updated memory note|memory note|summary)\s*:?\s*[\*\s]*",
+            "", new_summary, flags=re.IGNORECASE,
+        ).strip()
+        if not new_summary:
+            return False
+
+        store.set_summary(conversation_id, new_summary, already + len(batch))
+        # Index summary into agent memory so past sessions are reachable via recall.
+        if companion_id and memory is not None:
+            try:
+                memory.remember_summary(companion_id, conversation_id, new_summary)
+            except Exception:  # noqa: BLE001
+                pass
+        return True
+    except (LocalLLMError, Exception):  # noqa: BLE001 - never break the chat turn
+        return False</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../aibot_context/" class="btn btn-neutral float-left" title="core: aibot_context"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../aibot_profiles/" class="btn btn-neutral float-right" title="core: aibot_profiles">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../aibot_context/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../aibot_profiles/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

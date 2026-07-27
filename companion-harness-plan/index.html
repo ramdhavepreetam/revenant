@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/companion-harness-plan/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Companion Harness Plan - Revenant</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Companion Harness Plan";
+        var mkdocs_page_input_path = "companion-harness-plan.md";
+        var mkdocs_page_url = "/revenant/companion-harness-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Companion Harness Plan</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#0-the-two-problems-you-named-separated">0. The two problems you named, separated</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#1-fix-first-mid-sentence-truncation-the-half-sentence-bug">1. FIX FIRST: mid-sentence truncation (the "half sentence" bug)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-target-architecture-tiered-companion-memory">2. Target architecture: tiered companion memory</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-the-conversation-loop-target">3. The conversation loop (target)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4-build-phases-each-shippable-testable-on-its-own">4. Build phases (each shippable + testable on its own)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#5-principles-from-2026-practice">5. Principles (from 2026 practice)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#6-recommended-order">6. Recommended order</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Design Records</li>
+      <li class="breadcrumb-item active">Companion Harness Plan</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="companion-harness-plan">Companion Harness Plan<a class="headerlink" href="#companion-harness-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Turning AIBot from "a chat box with a voice" into a <strong>companion</strong> with a robust
+conversation loop, context management, and memory. Grounded in the existing code
+(SQLite source of truth, <code>PersonalMemoryStore</code>, NervaPack recall) and 2026
+companion-architecture practice (tiered memory à la MemGPT / Mem0, compaction).</p>
+</blockquote>
+<hr />
+<h2 id="0-the-two-problems-you-named-separated">0. The two problems you named, separated<a class="headerlink" href="#0-the-two-problems-you-named-separated" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>"Shows half a sentence while spitting the value"</strong> — a real <strong>truncation bug</strong>,
+   not a memory issue. Fix first; it's small and high-impact.</li>
+<li><strong>"Manage the context and the memory"</strong> — the <strong>harness</strong> work. Bigger, staged below.</li>
+</ol>
+<hr />
+<h2 id="1-fix-first-mid-sentence-truncation-the-half-sentence-bug">1. FIX FIRST: mid-sentence truncation (the "half sentence" bug)<a class="headerlink" href="#1-fix-first-mid-sentence-truncation-the-half-sentence-bug" title="Permanent link">&para;</a></h2>
+<p><strong>Cause (found in code):</strong> <code>response_shape()</code> (<code>web_app.py:79-105</code>) hard-caps
+<code>max_tokens</code> per turn — casual/brief replies at <strong>160 tokens</strong>, balanced at <strong>320-360</strong>.
+The model hits <code>num_predict</code>/<code>max_tokens</code> and is <strong>chopped mid-sentence</strong>. With
+<code>stream:False</code> (<code>local_llm_writer.py:88,110</code>) the user sees the whole truncated blob
+at once, and the TTS then voices a half-thought.</p>
+<p><strong>Three layered fixes:</strong>
+- <strong>(a) Don't cut mid-sentence — trim back to the last complete sentence.</strong> After
+  generation, if the reply doesn't end in terminal punctuation, drop the trailing
+  partial sentence before saving/displaying/voicing. Cheap, immediate, removes the
+  visible "half sentence" entirely.
+- <strong>(b) Raise the brittle caps.</strong> 160 tokens is ~120 words — too tight for a
+  companion. Loosen the brief/balanced ceilings and let the <em>instruction</em> (not a hard
+  token wall) shape length. Pair with a stop-aware finish.
+- <strong>(c) Stream the LLM</strong> (<code>stream:true</code>) so text appears token-by-token and we can
+  detect a natural stop. Also unlocks streaming TTS later. (Bigger change — Phase 3.)</p>
+<p>Ship (a) now, (b) with it, (c) later.</p>
+<hr />
+<h2 id="2-target-architecture-tiered-companion-memory">2. Target architecture: tiered companion memory<a class="headerlink" href="#2-target-architecture-tiered-companion-memory" title="Permanent link">&para;</a></h2>
+<p>Map the standard MemGPT/Mem0 tiers onto what AIBot already has:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Role</th>
+<th>AIBot today</th>
+<th>Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Working context</strong></td>
+<td>system prompt + recent turns sent to the model each turn</td>
+<td><code>trim_messages(..., 18)</code> last-N window</td>
+<td>No summary of older turns → they fall off a cliff</td>
+</tr>
+<tr>
+<td><strong>Short-term / session</strong></td>
+<td>running summary of the current conversation</td>
+<td>— none</td>
+<td><strong>Missing</strong> — add rolling summary</td>
+</tr>
+<tr>
+<td><strong>Long-term structured</strong></td>
+<td>durable facts: identity, prefs, boundaries, relationship</td>
+<td><code>PersonalMemoryStore</code> (SQLite, 8 categories, approve flow)</td>
+<td>Solid. Needs better recall ranking</td>
+</tr>
+<tr>
+<td><strong>Long-term semantic</strong></td>
+<td>fuzzy recall of past moments by similarity</td>
+<td><code>NervaPackMemory.recall</code> (Chroma)</td>
+<td>Works; recall is whole-reply, unranked</td>
+</tr>
+<tr>
+<td><strong>Episodic</strong></td>
+<td>"what happened when" — events/scenes over time</td>
+<td>— none</td>
+<td>Optional later</td>
+</tr>
+</tbody>
+</table>
+<p>The two real gaps: <strong>(A) session summarization</strong> (so long chats don't lose the
+thread when the 18-message window slides), and <strong>(B) smarter recall assembly</strong> (rank
++ budget what gets injected, instead of "top-5 + all active memories").</p>
+<hr />
+<h2 id="3-the-conversation-loop-target">3. The conversation loop (target)<a class="headerlink" href="#3-the-conversation-loop-target" title="Permanent link">&para;</a></h2>
+<p>Each turn, in order:</p>
+<pre><code>1. Receive user message.
+2. Retrieve context:
+   a. Pinned + high-confidence structured memories (always).
+   b. Semantic recall: top-K past moments relevant to THIS message.
+   c. Rolling session summary (everything older than the live window).
+3. Assemble working context under a token BUDGET:
+   system(persona + style + companion)
+   + memory block (ranked, capped)
+   + session summary
+   + last-N raw turns
+   + user message
+   -&gt; if over budget, drop lowest-priority first (raw turns &gt; summary &gt; pinned).
+4. Generate (streamed), finishing on a natural sentence boundary.
+5. Persist turn to SQLite (source of truth).
+6. Learn: extract new structured memories (existing `learn()`); queue conflicts as pending.
+7. Maybe-summarize: every N turns (or when window would overflow), fold the
+   oldest turns into the rolling session summary, then drop them from the live window.
+8. Voice the (sentence-complete) reply.
+</code></pre>
+<p>Steps 2c, 3 (budget), 4 (stop-aware), and 7 (summarize) are the new harness pieces.</p>
+<hr />
+<h2 id="4-build-phases-each-shippable-testable-on-its-own">4. Build phases (each shippable + testable on its own)<a class="headerlink" href="#4-build-phases-each-shippable-testable-on-its-own" title="Permanent link">&para;</a></h2>
+<p><strong>Phase 1 — Stop the bleeding (small, do now)</strong>
+- Sentence-boundary trim on every reply (fix §1a).
+- Loosen <code>response_shape</code> caps (§1b).
+- Verify: long + short replies through <code>/api/chat</code>, confirm no mid-sentence cut.</p>
+<p><strong>Phase 2 — Context budgeting + ranked memory assembly</strong>
+- Add a token-budget assembler: estimate tokens, fill by priority, drop low-priority
+  on overflow (replaces the blind <code>trim_messages(18)</code> + "inject everything").
+- Rank recall: score memories by recency × confidence × pin × similarity; cap the
+  injected block. Stops context pollution (the 2026 failure mode).</p>
+<p><strong>Phase 3 — Session summarization (the real memory upgrade)</strong>
+- <strong>Summary model: <code>gemma:latest</code></strong> (already in Ollama) — keeps clean, factual
+  summaries separate from the RP-tuned Stheno companion model.
+- Rolling summary: every N turns, summarize the oldest turns with the local LLM into
+  a compact "what's happened / current dynamic" note; store on the conversation row;
+  inject it; drop summarized raw turns from the live window.
+- This is what lets a long companion conversation <em>stay coherent</em> instead of
+  forgetting the start.</p>
+<p><strong>Phase 4 — Streaming loop (smoothness + unlocks streaming TTS)</strong>
+- <code>stream:true</code> from Ollama; emit tokens to the UI; finish on natural stop.
+- Feed completed sentences to the (already fast) Kokoro voice as they land.</p>
+<p><strong>Phase 5 (optional) — Episodic memory + auto-approval tuning</strong>
+- Lightweight event log ("we talked about X on date Y"); recall by time/topic.
+- Tune the pending/approve flow so good memories don't need manual approval.</p>
+<hr />
+<h2 id="5-principles-from-2026-practice">5. Principles (from 2026 practice)<a class="headerlink" href="#5-principles-from-2026-practice" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>SQLite stays the source of truth.</strong> Summaries/recall are derived + rebuildable.</li>
+<li><strong>Budget, don't dump.</strong> Filter, rank, prune, summarize — never inject everything.</li>
+<li><strong>Summarize old, keep recent raw.</strong> Recent turns verbatim; older turns compressed.</li>
+<li><strong>Finish thoughts.</strong> Never voice or show a half sentence.</li>
+<li><strong>Everything local.</strong> No cloud — consistent with <a href="../adr/0001-offline-local-llm-interface/">ADR 0001</a>.</li>
+</ul>
+<hr />
+<h2 id="6-recommended-order">6. Recommended order<a class="headerlink" href="#6-recommended-order" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Phase 1</strong> (truncation) — immediate, fixes the visible bug.</li>
+<li><strong>Phase 3</strong> (summarization) — biggest companion-feel upgrade.</li>
+<li><strong>Phase 2</strong> (budgeting) — makes 1 &amp; 3 robust at scale.</li>
+<li><strong>Phase 4</strong> (streaming) — smoothness + streaming voice.</li>
+<li><strong>Phase 5</strong> — polish, when the core feels right.</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../companion-agent/" class="btn btn-neutral float-left" title="Companion Agent"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../agent-harness-plan/" class="btn btn-neutral float-right" title="Agent Harness Plan">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../companion-agent/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../agent-harness-plan/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/knowledge-base/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Knowledge Base - Revenant</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Knowledge Base";
+        var mkdocs_page_input_path = "knowledge-base.md";
+        var mkdocs_page_url = "/revenant/knowledge-base/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../agent-harness-plan/">Agent Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Knowledge Base</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#1-overview">1. Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-memory-architecture-what-aibot-does-today">2. Memory architecture (what AIBot does today)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#2a-durable-conversation-store-sqlite-source-of-truth">2a. Durable conversation store — SQLite (source of truth)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2b-structured-personal-memory-sqlite-a-learning-engine">2b. Structured personal memory — SQLite + a learning engine</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2c-semantic-recall-nervapack-vectorstore-offline-index">2c. Semantic recall — NervaPack VectorStore (offline index)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-nervapack-for-this-repo-code-knowledge-graph-mcp-forward-looking">3. NervaPack for this repo: code knowledge graph + MCP (forward-looking)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#3a-what-nervapack-actually-is">3a. What NervaPack actually is</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3b-ingest-the-repo">3b. Ingest the repo</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3c-python-sdk-for-ad-hoc-scripts">3c. Python SDK (for ad-hoc scripts)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3d-mcp-server-the-part-that-lets-us-work-together">3d. MCP server (the part that lets us "work together")</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#verify-nervapack-locally">Verify NervaPack locally</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4-file-map">4. File map</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#python-backend-core">Python (backend / core)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#frontend-web">Frontend (web/)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#http-api-handled-in-web_apppy">HTTP API (handled in web_app.py)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#runtime-data-aibot-git-ignored">Runtime data — .aibot/ (git-ignored)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4b-active-work-companion-feeling-fixes-started-2026-06-25">4b. Active work — companion "feeling" fixes (started 2026-06-25)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#text-layer-done">Text layer — DONE</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#voice-layer-in-progress-kokoro-chatterbox">Voice layer — IN PROGRESS: Kokoro → Chatterbox</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#5-things-to-keep-straight-gotchas">5. Things to keep straight (gotchas)</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Design Records</li>
+      <li class="breadcrumb-item active">Knowledge Base</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="aibot-knowledge-base">AIBot — Knowledge Base<a class="headerlink" href="#aibot-knowledge-base" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Shared reference for the AIBot AI-companion project: what it is, how its memory
+works today, and how we plan to use <a href="https://nervapack.readthedocs.io/en/latest/">NervaPack</a>
+for a code knowledge graph + MCP so we can work on this repo together efficiently.</p>
+<p>Companion to <a href="../adr/0001-offline-local-llm-interface/">ADR 0001</a>.</p>
+<p><strong>Status of the NervaPack sections:</strong> the <em>AIBot code</em> facts below are verified
+against the source. The <em>NervaPack library</em> facts (SDK signatures, MCP command,
+tool names) are taken from the NervaPack docs and <strong>should be confirmed against
+the locally installed package</strong> — see <a href="#verify-nervapack-locally">Verify locally</a>.
+They were not verifiable in the authoring session because the shell was unavailable.</p>
+</blockquote>
+<hr />
+<h2 id="1-overview">1. Overview<a class="headerlink" href="#1-overview" title="Permanent link">&para;</a></h2>
+<p>AIBot is an <strong>offline-first local LLM companion / long-form writing tool</strong>. It talks
+to a local model server (Ollama or any OpenAI-compatible server such as LM Studio /
+llama.cpp / vLLM), targets 400–800 token replies, and keeps everything on disk. No
+cloud inference, no telemetry, no accounts.</p>
+<p>It ships in three runnable pieces plus a CLI:</p>
+<table>
+<thead>
+<tr>
+<th>Entry point</th>
+<th>Role</th>
+<th>Default port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend_app.py</code></td>
+<td>HTTP API (chat, memory, TTS, export, health)</td>
+<td><code>127.0.0.1:8766</code></td>
+</tr>
+<tr>
+<td><code>ui_app.py</code></td>
+<td>Static browser UI server (serves <code>web/</code>)</td>
+<td><code>127.0.0.1:8765</code></td>
+</tr>
+<tr>
+<td><code>web_app.py</code></td>
+<td>Legacy single-process launcher <strong>and</strong> the core request handler (<code>LocalUIHandler</code>) that <code>backend_app.py</code> subclasses</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>local_llm_writer.py</code></td>
+<td>CLI client + the reusable LLM-calling layer (<code>ChatConfig</code>, <code>call_model</code>)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Runtime data lives under <code>.aibot/</code> (git-ignored). See the <a href="#4-file-map">file map</a>.</p>
+<hr />
+<h2 id="2-memory-architecture-what-aibot-does-today">2. Memory architecture (what AIBot does <em>today</em>)<a class="headerlink" href="#2-memory-architecture-what-aibot-does-today" title="Permanent link">&para;</a></h2>
+<p>AIBot has a <strong>layered memory system</strong>. Three distinct stores serve three purposes —
+keep them separate in your head:</p>
+<pre><code>                       ┌─────────────────────────────────────────────┐
+   user message ──────►│  handle_chat()  (web_app.py)                 │
+                       │                                              │
+                       │  1. load structured personal memory ────────┼──► SQLite
+                       │  2. semantic recall (top-5) ────────────────┼──► NervaPack VectorStore
+                       │  3. response_shape() sizes the reply         │
+                       │  4. call_model() → Ollama / OpenAI-compat    │
+                       │  5. save turn ──────────────────────────────┼──► SQLite
+                       │  6. extract_personal_memories() (learn) ────┼──► SQLite (pending/active)
+                       │  7. index active memories ──────────────────┼──► NervaPack VectorStore
+                       └─────────────────────────────────────────────┘
+</code></pre>
+<h3 id="2a-durable-conversation-store-sqlite-source-of-truth">2a. Durable conversation store — SQLite (source of truth)<a class="headerlink" href="#2a-durable-conversation-store-sqlite-source-of-truth" title="Permanent link">&para;</a></h3>
+<ul>
+<li>File: <code>aibot_storage.py</code> → <code>ConversationStore</code>, backed by <code>.aibot/conversations.sqlite3</code>.</li>
+<li>Tables: <code>conversations</code> (id, title, timestamps) and <code>messages</code> (id, conversation_id,
+  role, content, created_at), indexed on <code>(conversation_id, created_at)</code>.</li>
+<li>This is the <strong>canonical</strong> record. Exports (<code>md</code> / <code>json</code> / <code>txt</code>) are produced from here.</li>
+</ul>
+<h3 id="2b-structured-personal-memory-sqlite-a-learning-engine">2b. Structured personal memory — SQLite + a learning engine<a class="headerlink" href="#2b-structured-personal-memory-sqlite-a-learning-engine" title="Permanent link">&para;</a></h3>
+<ul>
+<li>File: <code>aibot_personal_memory.py</code> → <code>PersonalMemoryStore</code> (same SQLite DB).</li>
+<li>Each <code>PersonalMemory</code> has a <strong>category</strong> (<code>identity_fact</code>, <code>preference</code>, <code>need</code>,
+  <code>boundary</code>, <code>companion_style</code>, <code>relationship_state</code>, <code>story_fact</code>, <code>voice_preference</code>)
+  and a <strong>status</strong> (<code>active</code>, <code>pending</code>, <code>archived</code>), plus <code>pinned</code> and <code>confidence</code>.</li>
+<li><code>extract_personal_memories()</code> is a <strong>regex/heuristic learner</strong>: after each turn it
+  pulls candidate facts (the user's name, stated preferences, boundaries, relationship
+  cues, story facts, voice feedback) out of the user's message. Conflicting items
+  (e.g. a new boundary that contradicts an existing preference) are saved as <code>pending</code>
+  for human approval rather than applied silently.</li>
+<li><code>prompt_memories()</code> formats the active/pinned memories for injection into the system
+  prompt every turn.</li>
+<li><code>aibot_companion_memory.py</code> (<code>CompanionMemoryStore</code>) holds the older relationship-state
+  blob (<code>user_name</code>, <code>companion_name</code>, <code>tone_preferences</code>, <code>boundaries</code>, …) in
+  <code>.aibot/companion_memory.json</code>, and includes a one-time migration into the
+  <code>personal_memories</code> table.</li>
+</ul>
+<h3 id="2c-semantic-recall-nervapack-vectorstore-offline-index">2c. Semantic recall — NervaPack <code>VectorStore</code> (offline index)<a class="headerlink" href="#2c-semantic-recall-nervapack-vectorstore-offline-index" title="Permanent link">&para;</a></h3>
+<ul>
+<li>File: <code>aibot_memory.py</code> → <code>NervaPackMemory</code>, backed by <code>.aibot/memory/nervapack_chroma</code>
+  (ChromaDB).</li>
+<li><strong>Important framing — this is an intentional adapter, not standard NervaPack usage.</strong>
+  NervaPack is a <em>code</em> knowledge-graph tool (AST → graph → K-Hop retrieval; see §3).
+  AIBot deliberately reaches <em>past</em> that and uses only NervaPack's underlying
+  <code>VectorStore</code> as a generic, persistent, fully-offline semantic index. The class
+  docstring says so explicitly: <em>"NervaPack is optimized for graph/code retrieval, but
+  its VectorStore gives us an offline persistent semantic index."</em></li>
+<li>It does this by wrapping each conversational item as a synthetic "chunk" with a
+  <strong>fake <code>file_path</code></strong> so the store will ingest it:</li>
+</ul>
+<p><code>python
+  # aibot_memory.py — a chat turn becomes a pseudo-"file"
+  chunk = {
+      "header": f"{role} message",
+      "file_path": f"conversation/{conversation_id}/{role}/{uuid.uuid4()}",
+      "content": content,
+  }
+  self.store.ingest_chunks([chunk])</code></p>
+<ul>
+<li>API actually used (verified in source):</li>
+<li><code>VectorStore(db_path=...)</code></li>
+<li><code>store.ingest_chunks([{header, file_path, content}, ...])</code></li>
+<li><code>store.search(query, n_results=limit)</code> → <code>results["documents"][0]</code></li>
+<li><code>store.collection.delete(where={"type": "markdown"})</code> (used by <code>rebuild_notes</code>)</li>
+<li><strong>Consequence to remember:</strong> because AIBot only uses <code>VectorStore</code>, the NervaPack
+  <em>graph</em>, <em>K-Hop BFS</em>, and <code>GraphRetriever</code> are <strong>not exercised at all</strong> by AIBot's
+  runtime memory. They're a separate capability we can adopt for the codebase itself (§3).</li>
+</ul>
+<hr />
+<h2 id="3-nervapack-for-this-repo-code-knowledge-graph-mcp-forward-looking">3. NervaPack for <em>this repo</em>: code knowledge graph + MCP (forward-looking)<a class="headerlink" href="#3-nervapack-for-this-repo-code-knowledge-graph-mcp-forward-looking" title="Permanent link">&para;</a></h2>
+<p>This section is about helping <strong>us work on AIBot together</strong> — not about AIBot's runtime
+memory. The idea: ingest the AIBot repo into a NervaPack knowledge graph and expose it
+over MCP, so future Claude sessions can answer "where is X / what calls Y" with
+token-efficient, AST-grounded context instead of re-reading files.</p>
+<blockquote>
+<p>⚠️ Confirm the commands/signatures in this section against the installed package
+before relying on them — see <a href="#verify-nervapack-locally">Verify locally</a>.</p>
+</blockquote>
+<h3 id="3a-what-nervapack-actually-is">3a. What NervaPack actually is<a class="headerlink" href="#3a-what-nervapack-actually-is" title="Permanent link">&para;</a></h3>
+<p>A privacy-first, <strong>offline</strong> knowledge graph for code. It parses source with
+<strong>tree-sitter</strong> (deterministic AST, no arbitrary chunks), links docs to code with a
+local LLM, and retrieves context with <strong>K-Hop BFS</strong> for up to ~90% token savings vs
+naive RAG. 100% local (ChromaDB + Ollama).</p>
+<p><strong>Graph model</strong> (<code>NetworkX DiGraph</code>):</p>
+<ul>
+<li>Node types: <code>file</code>, <code>class</code>, <code>function</code>, <code>import</code>, <code>markdown</code>.</li>
+<li>Edge types: <code>DEFINES</code> (file → code entity) and <code>EXPLAINS</code> (markdown → code entity).</li>
+</ul>
+<p><strong>Layers / modules</strong> (per docs):</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Module</th>
+<th>Key class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parser</td>
+<td><code>nervapack.parser</code></td>
+<td><code>ASTParser</code>, <code>MarkdownChunker</code>, <code>LanguageRegistry</code> → <code>ParsedEntity</code></td>
+</tr>
+<tr>
+<td>Vector store</td>
+<td><code>nervapack.graph.vector_store</code></td>
+<td><code>VectorStore</code> (ChromaDB, <code>all-MiniLM-L6-v2</code>, 384-dim)</td>
+</tr>
+<tr>
+<td>LLM linking</td>
+<td><code>nervapack.llm</code></td>
+<td><code>LLMProvider</code> base; <code>OllamaProvider</code>, <code>ClaudeAPIProvider</code>, <code>OpenAIProvider</code>, <code>MCPDelegationProvider</code></td>
+</tr>
+<tr>
+<td>Graph build</td>
+<td><code>nervapack.graph.builder</code></td>
+<td><code>GraphBuilder</code></td>
+</tr>
+<tr>
+<td>Retrieval</td>
+<td><code>nervapack.graph.retrieval</code></td>
+<td><code>GraphRetriever</code></td>
+</tr>
+</tbody>
+</table>
+<p>On-disk layout: <code>.nervapack/graph.graphml</code>, <code>.nervapack/chroma_db/</code>,
+<code>.nervapack/query_history.jsonl</code>, plus generated HTML visualizations.</p>
+<h3 id="3b-ingest-the-repo">3b. Ingest the repo<a class="headerlink" href="#3b-ingest-the-repo" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash">pip install &quot;nervapack[mcp]&quot;     # mcp extra needed for the MCP server
+cd /Users/preetam/Documents/AI/AIBot
+nervapack ingest .               # builds .nervapack/ (≈5–10 min for ~500 files)
+</code></pre>
+<p>This writes a <code>.nervapack/</code> directory — <strong>add it to <code>.gitignore</code></strong> alongside <code>.aibot/</code>.</p>
+<h3 id="3c-python-sdk-for-ad-hoc-scripts">3c. Python SDK (for ad-hoc scripts)<a class="headerlink" href="#3c-python-sdk-for-ad-hoc-scripts" title="Permanent link">&para;</a></h3>
+<p>Per the docs, the SDK is three classes:</p>
+<pre><code class="language-python">from nervapack.graph.builder import GraphBuilder
+from nervapack.graph.vector_store import VectorStore
+from nervapack.graph.retrieval import GraphRetriever
+
+graph     = GraphBuilder().load_graph()
+hits      = VectorStore().search(&quot;how is chat handled&quot;, n_results=3)   # → {&quot;ids&quot;: [...], ...}
+retriever = GraphRetriever(graph)
+subgraph  = retriever.retrieve_context(start_nodes=hits[&quot;ids&quot;][0], max_hops=1)
+markdown  = retriever.format_as_markdown(subgraph)
+</code></pre>
+<blockquote>
+<p>Note: AIBot's own <code>aibot_memory.py</code> constructs <code>VectorStore(db_path=...)</code> and calls
+<code>ingest_chunks(...)</code>. The doc snippets above show no-arg constructors. Treat the
+installed package's signatures as authoritative where they differ.</p>
+</blockquote>
+<h3 id="3d-mcp-server-the-part-that-lets-us-work-together">3d. MCP server (the part that lets us "work together")<a class="headerlink" href="#3d-mcp-server-the-part-that-lets-us-work-together" title="Permanent link">&para;</a></h3>
+<p>Per the docs, NervaPack ships an MCP server exposing three tools:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>query_codebase(prompt, max_hops)</code></td>
+<td>semantic + K-Hop retrieval over the graph</td>
+</tr>
+<tr>
+<td><code>graph_status()</code></td>
+<td>health / freshness of the graph</td>
+</tr>
+<tr>
+<td><code>list_entities(type, file_path)</code></td>
+<td>browse nodes (files, classes, functions, …)</td>
+</tr>
+</tbody>
+</table>
+<p>Documented client config (e.g. <code>.mcp.json</code>):</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;nervapack&quot;: {
+      &quot;command&quot;: &quot;nervapack-mcp&quot;,
+      &quot;description&quot;: &quot;NervaPack knowledge graph&quot;
+    }
+  }
+}
+</code></pre>
+<blockquote>
+<p>⚠️ <strong>Low-confidence details</strong> (came from a docs page that could not be re-verified):
+the standalone <code>nervapack-mcp</code> command, the three exact tool names, and the minimal
+config shape. A Typer-based CLI often exposes MCP as a <em>subcommand</em>
+(<code>nervapack mcp serve</code>) rather than a separate console script. <strong>Confirm before
+wiring it up</strong> (next section). Once confirmed, add the server to Claude Code via
+<code>.mcp.json</code> in the repo root (or <code>claude mcp add</code>).</p>
+</blockquote>
+<h3 id="verify-nervapack-locally">Verify NervaPack locally<a class="headerlink" href="#verify-nervapack-locally" title="Permanent link">&para;</a></h3>
+<p>Run these in a working terminal and paste the output back to me; I'll lock the §3
+details to ground truth:</p>
+<pre><code class="language-bash">pip show nervapack                 # version + install Location
+nervapack --help                   # is `mcp` a subcommand? is `ingest` there?
+which nervapack-mcp || echo &quot;no standalone nervapack-mcp script&quot;
+python -c &quot;import nervapack, inspect; from nervapack.graph.vector_store import VectorStore; print(inspect.signature(VectorStore.__init__)); print([m for m in dir(VectorStore) if not m.startswith('_')])&quot;
+# entry points (settles the exact MCP command):
+python -c &quot;import importlib.metadata as m; print(m.entry_points(group='console_scripts'))&quot; | tr ',' '\n' | grep -i nerva
+</code></pre>
+<hr />
+<h2 id="4-file-map">4. File map<a class="headerlink" href="#4-file-map" title="Permanent link">&para;</a></h2>
+<h3 id="python-backend-core">Python (backend / core)<a class="headerlink" href="#python-backend-core" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend_app.py</code></td>
+<td>API server; <code>BackendAPIHandler(LocalUIHandler)</code> adds CORS + OPTIONS</td>
+</tr>
+<tr>
+<td><code>ui_app.py</code></td>
+<td>Static UI server; injects <code>window.AIBOT_API_BASE_URL</code> via <code>/config.js</code></td>
+</tr>
+<tr>
+<td><code>web_app.py</code></td>
+<td><code>LocalUIHandler</code> (all <code>/api/*</code> routes), <code>AppState</code> singleton, <code>response_shape()</code>, <code>handle_chat()</code></td>
+</tr>
+<tr>
+<td><code>local_llm_writer.py</code></td>
+<td><code>ChatConfig</code>, <code>call_ollama</code> / <code>call_openai_compatible</code> / <code>call_model</code>, <code>trim_messages</code>, CLI <code>main()</code></td>
+</tr>
+<tr>
+<td><code>aibot_profiles.py</code></td>
+<td><code>DEFAULT_PROFILES</code>, <code>load/save/ensure_profiles</code>, <code>apply_profile</code>, <code>build_companion_prompt</code></td>
+</tr>
+<tr>
+<td><code>aibot_storage.py</code></td>
+<td><code>ConversationStore</code> + <code>Conversation</code> (SQLite, source of truth)</td>
+</tr>
+<tr>
+<td><code>aibot_personal_memory.py</code></td>
+<td><code>PersonalMemoryStore</code>, <code>PersonalMemory</code>, <code>extract_personal_memories</code>, <code>prompt_memories</code></td>
+</tr>
+<tr>
+<td><code>aibot_companion_memory.py</code></td>
+<td><code>CompanionMemoryStore</code> (legacy JSON blob + migration)</td>
+</tr>
+<tr>
+<td><code>aibot_memory.py</code></td>
+<td><code>NervaPackMemory</code> (VectorStore adapter), <code>format_memory_context</code></td>
+</tr>
+<tr>
+<td><code>aibot_tts.py</code></td>
+<td>voice profiles, <code>detect_mood</code>, <code>synthesize_tts</code> → Kokoro or macOS <code>say</code></td>
+</tr>
+<tr>
+<td><code>tts_kokoro_worker.py</code></td>
+<td>isolated Kokoro subprocess (runs in <code>.aibot/tts-venv</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="frontend-web">Frontend (<code>web/</code>)<a class="headerlink" href="#frontend-web" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>web/index.html</code></td>
+<td>sidebar + workspace shell; controls, companion panels, memory dashboard</td>
+</tr>
+<tr>
+<td><code>web/app.js</code></td>
+<td>global state, <code>api()</code> fetch client, profile/memory rendering, event handlers</td>
+</tr>
+<tr>
+<td><code>web/styles.css</code></td>
+<td>design-system CSS variables + components</td>
+</tr>
+</tbody>
+</table>
+<h3 id="http-api-handled-in-web_apppy">HTTP API (handled in <code>web_app.py</code>)<a class="headerlink" href="#http-api-handled-in-web_apppy" title="Permanent link">&para;</a></h3>
+<p><code>GET /api/profiles</code> · <code>GET /api/voice-profiles</code> · <code>GET|POST /api/conversations</code> ·
+<code>GET /api/conversations/{id}</code> · <code>POST /api/chat</code> · <code>GET|POST /api/memories</code> ·
+<code>POST /api/memories/{id}[/approve|/archive|/pin]</code> · <code>DELETE /api/memories/{id}</code> ·
+<code>POST /api/memories/rebuild-index</code> · <code>POST /api/companion-memory</code> · <code>POST /api/tts</code> ·
+<code>POST /api/export</code> · <code>POST /api/health</code> · <code>GET /audio/{file}</code></p>
+<h3 id="runtime-data-aibot-git-ignored">Runtime data — <code>.aibot/</code> (git-ignored)<a class="headerlink" href="#runtime-data-aibot-git-ignored" title="Permanent link">&para;</a></h3>
+<p><code>conversations.sqlite3</code> (conversations + personal memory) · <code>memory/nervapack_chroma/</code>
+(VectorStore index) · <code>audio/</code> · <code>profiles.json</code> · <code>voice_profiles.json</code> ·
+<code>companion_memory.json</code> (legacy) · <code>exports/</code> · <code>tts-venv/</code></p>
+<hr />
+<h2 id="4b-active-work-companion-feeling-fixes-started-2026-06-25">4b. Active work — companion "feeling" fixes (started 2026-06-25)<a class="headerlink" href="#4b-active-work-companion-feeling-fixes-started-2026-06-25" title="Permanent link">&para;</a></h2>
+<p>Problem: the companion felt flat — replies read like a <em>generated script</em> and the
+voice read text without <em>feeling</em> it. Confirmed flat in <strong>both</strong> layers.</p>
+<h3 id="text-layer-done">Text layer — DONE<a class="headerlink" href="#text-layer-done" title="Permanent link">&para;</a></h3>
+<p><code>web_app.py</code> <code>handle_chat</code> was assembling the prompt in a way that made the model
+"execute a writing task" each turn. Fixed:
+- Persona / writing-mode / companion / personalization memory moved into the <strong>system</strong>
+  message; the user turn is now just the user's words (+ quiet recalled background).
+- <strong>Removed the visible token target</strong> (<code>Target about N-M tokens</code>) — length is enforced
+  by the API <code>max_tokens</code>; showing the number made the model write <em>to</em> a word count.
+  The reply-shape <em>instruction</em> (tone/pacing) is kept.
+- Removed the <strong>duplicate style-prompt injection</strong> (it was already in <code>config.system_prompt</code>).</p>
+<h3 id="voice-layer-in-progress-kokoro-chatterbox">Voice layer — IN PROGRESS: Kokoro → Chatterbox<a class="headerlink" href="#voice-layer-in-progress-kokoro-chatterbox" title="Permanent link">&para;</a></h3>
+<p>Root cause: <code>aibot_tts.py</code> <code>apply_mood</code> only changes speed + swaps a voice — <strong>no prosody
+shaping</strong>, so Kokoro narrates flat. Decision (see memory <code>aibot-tts-engine-decision</code>):
+replace Kokoro with <strong>Chatterbox TTS</strong> (Resemble AI) — MIT, no content restriction,
+<code>exaggeration</code> 0.25–2.0 + <code>cfg</code> controls, Apple-Silicon MPS capable, built-in voice for now.
+<strong>Replace Kokoro entirely once Chatterbox is proven better</strong>, then clean Kokoro off disk.</p>
+<p>Migration checklist:
+1. <strong>(user)</strong> Install Chatterbox in <code>.aibot/chatterbox-venv</code>; smoke-test on MPS/CPU; confirm
+   it sounds expressive. (Bash is broken in-session, so the user runs this.)
+2. <strong>(claude)</strong> Write <code>tts_chatterbox_worker.py</code> (same stdin/stdout-JSON subprocess pattern
+   as <code>tts_kokoro_worker.py</code>); map mood → <code>exaggeration</code>/<code>cfg</code>; add <strong>per-sentence mood</strong>
+   synthesis (detect mood per sentence, generate each, stitch with pauses).
+3. <strong>(claude)</strong> Add <strong>pauses + emphasis</strong> at punctuation / ellipses / quoted lines.
+4. <strong>(claude)</strong> Remove Kokoro code + <code>mira-*neural</code> profiles. <strong>(user)</strong> delete model
+   weights, pip packages, and <code>.aibot/tts-venv</code> (needs Bash) — only AFTER Chatterbox is
+   confirmed, so there's never a no-voice gap.</p>
+<h2 id="5-things-to-keep-straight-gotchas">5. Things to keep straight (gotchas)<a class="headerlink" href="#5-things-to-keep-straight-gotchas" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>"Memory graph" is two different things.</strong> AIBot's runtime memory uses NervaPack's
+   <code>VectorStore</code> as a flat semantic index — <em>no graph, no K-Hop</em>. The actual NervaPack
+   <em>graph</em> is something we'd build over the <strong>repo's code</strong> (§3), for our own dev workflow.</li>
+<li><strong>SQLite is the source of truth</strong>, not the vector store. The Chroma index is rebuildable
+   from active personal memories (<code>POST /api/memories/rebuild-index</code>, <code>rebuild_notes</code>).</li>
+<li><strong>AIBot uses no MCP today.</strong> Adding it (§3d) is forward-looking and benefits <em>us</em>, not
+   the app's end-users.</li>
+<li><strong><code>web_app.py</code> is not dead.</strong> It's the legacy launcher <em>and</em> the base handler class —
+   <code>backend_app.py</code> subclasses it.</li>
+<li><strong>Two Python environments exist:</strong> the app's own interpreter and the isolated
+   <code>.aibot/tts-venv</code> for Kokoro/PyTorch. NervaPack must be importable from whichever runs
+   the app.</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../agent-harness-plan/" class="btn btn-neutral float-left" title="Agent Harness Plan"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../adr/0001-offline-local-llm-interface/" class="btn btn-neutral float-right" title="ADR 0001 — Offline Local LLM Interface">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../agent-harness-plan/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../adr/0001-offline-local-llm-interface/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

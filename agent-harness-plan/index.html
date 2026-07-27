@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://ramdhavepreetam.github.io/revenant/agent-harness-plan/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Agent Harness Plan - Revenant</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Agent Harness Plan";
+        var mkdocs_page_input_path = "agent-harness-plan.md";
+        var mkdocs_page_url = "/revenant/agent-harness-plan/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Revenant
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../model-routing/">Model Routing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../revenant-cli/">Revenant CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-agent/">Companion Agent</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design Records</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../companion-harness-plan/">Companion Harness Plan</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Agent Harness Plan</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#0-grounding-facts-verified-2026-07-26">0. Grounding facts (verified 2026-07-26)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#1-architecture-one-loop-two-front-ends">1. Architecture — one loop, two front-ends</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-the-tool-call-protocol-prompt-based-the-load-bearing-piece">2. The tool-call protocol (prompt-based, the load-bearing piece)</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../knowledge-base/">Knowledge Base</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0001-offline-local-llm-interface/">ADR 0001 — Offline Local LLM Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0002-qwen3-tts-local-voice-engine/">ADR 0002 — Qwen3-TTS Local Voice Engine</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../adr/0003-local-agent-harness/">ADR 0003 — Local Agent Harness</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/local_llm_writer/">core: local_llm_writer</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_router/">core: agent_router</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_tools/">core: agent_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_protocol/">core: agent_protocol</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_fs_tools/">core: agent_fs_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_edit_tools/">core: agent_edit_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_bash_tool/">core: agent_bash_tool</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_companion_tools/">core: agent_companion_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_capacity/">core: agent_capacity</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_native_tools/">core: agent_native_tools</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_loop/">core: agent_loop</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/agent_cli/">apps: agent_cli (revenant)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_context/">core: aibot_context</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_summary/">core: aibot_summary</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_profiles/">core: aibot_profiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_storage/">core: aibot_storage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_personal_memory/">core: aibot_personal_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_memory/">core: aibot_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_memory/">core: aibot_companion_memory</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_companion_compiler/">core: aibot_companion_compiler</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/aibot_tts/">tts: aibot_tts</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/web_app/">apps: web_app</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Revenant</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Design Records</li>
+      <li class="breadcrumb-item active">Agent Harness Plan</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="revenant-aibot-agent-harness-plan">Revenant — AIBot Agent Harness Plan<a class="headerlink" href="#revenant-aibot-agent-harness-plan" title="Permanent link">&para;</a></h1>
+<p><strong>Revenant</strong> is a local, offline agentic harness ("Claude Code, but for your private Ollama LLM").
+Reusable tool-calling loop that powers <strong>both</strong> a coding assistant (<code>revenant</code> CLI) and the companion.
+Name verified clear in the AI-agent/CLI space (2026-07-26).</p>
+<h2 id="0-grounding-facts-verified-2026-07-26">0. Grounding facts (verified 2026-07-26)<a class="headerlink" href="#0-grounding-facts-verified-2026-07-26" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>See <a href="../adr/0003-local-agent-harness/">ADR 0003</a></strong> for the full decision record + hardware table.</li>
+<li><strong>Machine:</strong> Apple M5 Pro, 15 cores, <strong>24 GB</strong> unified RAM, ~467 GB free, <code>rg</code> installed, Ollama 0.32.
+  → can hold 2× 7-8B Q4 models resident (~10 GB); 14B Q4 viable but slower.</li>
+<li><strong>Model decision:</strong> pull <strong><code>qwen2.5:7b</code></strong> (native tool-calling) for the CODING agent; keep
+  <strong>Stheno-8B</strong> for the COMPANION (prompt-based protocol). qwen2.5 pull started this session.</li>
+<li><strong>Backend is Ollama</strong> at <code>localhost:11434</code>. Models present:
+  <code>hf.co/.../L3-8B-Stheno-v3.2-gguf:Q4_K_M</code> (roleplay) and <code>gemma:latest</code> (2yr old).</li>
+<li><strong>LLM call layer already exists</strong>: <code>core/local_llm_writer.py</code> → <code>call_model()</code> (blocking)
+  and <code>stream_model()</code> (SSE deltas), both Ollama + OpenAI-compatible. The harness reuses these.</li>
+<li><strong>Turn machinery already exists</strong>: <code>apps/web_app.py</code> → <code>_prepare_turn()</code> / <code>_finalize_turn()</code>,
+  budgeted context (<code>aibot_context.py</code>), rolling summary (<code>aibot_summary.py</code>), layered memory
+  (<code>aibot_personal_memory.py</code>, <code>aibot_storage.py</code> SQLite).</li>
+<li><strong>CRITICAL CONSTRAINT — no native tool calling.</strong> Passing an OpenAI-style <code>tools</code> array to
+  <code>/api/chat</code> returns <strong>empty content, <code>tool_calls: null</code></strong> on <em>both</em> current models. The Stheno
+  GGUF has no tool template; this gemma build predates Ollama tool support.
+  → The harness MUST use <strong>prompt-based tool calling</strong>: instruct the model to emit a tagged block,
+    then parse it out of the text. Model-agnostic; works today, and still works if you later pull a
+    tool-native model (e.g. <code>qwen2.5</code>, <code>llama3.1:8b</code>) — we detect and prefer native then.</li>
+</ul>
+<h2 id="1-architecture-one-loop-two-front-ends">1. Architecture — one loop, two front-ends<a class="headerlink" href="#1-architecture-one-loop-two-front-ends" title="Permanent link">&para;</a></h2>
+<pre><code>                          core/agent_loop.py
+                    ┌────────────────────────────┐
+   coding CLI ─────▶│  AgentLoop.run(goal)       │
+   companion  ─────▶│   while not done:          │
+                    │     msgs = build_context() │──▶ call_model / stream_model  (existing)
+                    │     action = parse(reply)  │◀── model reply (text)
+                    │     if action.tool:        │
+                    │        obs = registry.run()│──▶ ToolRegistry.dispatch()
+                    │        append(obs)         │        ├─ fs tools (read/write/edit/glob/grep)
+                    │     else: final = reply    │        ├─ shell (gated)
+                    └────────────────────────────┘        ├─ memory (search/save)  ← reuses stores
+                                                          └─ web (optional, offline-default OFF)
+</code></pre>
+<ul>
+<li><strong><code>core/agent_loop.py</code></strong> — engine. Model-agnostic; knows nothing about companion vs coding.</li>
+<li><strong><code>core/agent_tools.py</code></strong> — <code>Tool</code> dataclass + <code>ToolRegistry</code>. Each tool = name, description,
+  JSON-ish schema (for the prompt), a <code>run(**kwargs) -&gt; str</code>, and flags: <code>parallel_safe</code>,
+  <code>requires_approval</code>, <code>mutating</code>.</li>
+<li><strong><code>core/agent_protocol.py</code></strong> — the prompt-based tool protocol: renders tool docs into the system
+  prompt, and <code>parse_action(text)</code> extracts the tool call (or "final answer"). Supports two wire
+  formats, auto-selected: native <code>tool_calls</code> if the model emits them, else the tagged-text fallback.</li>
+<li><strong>Front-ends</strong>: a coding entry point (<code>apps/agent_cli.py</code> (the <code>revenant</code> CLI)) and companion integration (new
+  <code>handle_agent_turn</code> path in <code>web_app.py</code>) both instantiate <code>AgentLoop</code> with a different
+  <code>ToolRegistry</code> + system persona.</li>
+</ul>
+<h2 id="2-the-tool-call-protocol-prompt-based-the-load-bearing-piece">2. The tool-call protocol (prompt-based, the load-bearing piece)<a class="headerlink" href="#2-the-tool-call-protocol-prompt-based-the-load-bearing-piece" title="Permanent link">&para;</a></h2>
+<p>System prompt gets an injected block:</p>
+<pre><code>You can act by emitting ONE action per reply, as a fenced block:
+```action
+{&quot;tool&quot;: &quot;read_file&quot;, &quot;args&quot;: {&quot;path&quot;: &quot;core/agent_loop.py&quot;}}
+</code></pre>
+<p>When you are done, reply normally with NO action block.
+Available tools:
+- read_file(path): return file contents
+- write_file(path, content): create/overwrite a file
+- run_bash(command): run a shell command  [asks for approval]
+...</p>
+<pre><code>
+Parser (`parse_action`) precedence:
+1. If the response object carried native `message.tool_calls` → use it (future tool-native models).
+2. Else scan for a ```action fenced block → `json.loads` the body.
+3. Else treat the whole reply as the **final answer** (loop ends).
+
+Robustness (8B models are sloppy): tolerate missing fences, trailing prose, single-quotes →
+try `json.loads`, then a lenient regex extract of `&quot;tool&quot;` + `&quot;args&quot;`, then give the model a
+one-line &quot;your action block was malformed, resend just the JSON&quot; nudge (max 1 retry) before
+falling back to treating it as final text.
+
+## 3. Tool set (v1)
+
+| Tool | Args | Flags | Notes |
+|------|------|-------|-------|
+| `read_file` | path | safe | clamp to workspace root; max N KB |
+| `write_file` | path, content | mutating, approval | staleness check optional |
+| `edit_file` | path, old, new | mutating, approval | exact-match single replace (mirror your Edit tool) |
+| `glob` | pattern | safe, parallel | |
+| `grep` | pattern, path? | safe, parallel | ripgrep if present, else Python |
+| `run_bash` | command | mutating, approval | allowlist + block `&amp;&amp; | ; \` $()` by default |
+| `list_dir` | path | safe | |
+| `memory_search` | query | safe | **reuses `STATE.memory.recall` / PersonalMemoryStore** |
+| `memory_save` | category, content | mutating | reuses `PersonalMemoryStore.learn`/notes; boundary stays gated |
+| `web_search` | query | safe, **off by default** | offline-first; only if user enables |
+
+Companion front-end exposes a **subset**: `memory_search`, `memory_save`, `set_reminder`,
+`recall_episode` — no filesystem/shell. Coding front-end exposes fs + shell + grep/glob.
+Same loop, different registry — that is the whole point of the shared harness.
+
+## 4. Safety / approval (mirrors Claude Code)
+
+- Every `mutating` / `requires_approval` tool call pauses and asks the human, unless a
+  `--yolo` / durable-approval flag is set (per session).
+- `run_bash` defaults to an **allowlist** + operator-blocklist; hard-deny `rm -rf`, fork bombs.
+- Path confinement: all fs tools resolve under a fixed workspace root; reject `..`/symlink escape.
+- Reuses the companion advisor safety rule: `boundary`-category memory writes stay human-gated
+  (already enforced in `PersonalMemoryStore.learn`; the `memory_save` tool routes through it, not around).
+
+## 5. Context &amp; loop control (reuse what exists)
+
+- Reuse `assemble_context()` (token-budgeted message list) for the loop's message array — the loop
+  is just a multi-turn conversation where some &quot;user&quot; turns are tool observations.
+- Reuse `maybe_summarize()` so long agentic runs roll old turns into a summary (prevents 8B
+  context blowout — the local analog of compaction).
+- `max_steps` cap (default ~15) + `max_bad_parses` cap to prevent infinite loops on a weak model.
+- Sentence/step streaming already solved (`sentences_from_deltas`) — surface each action + observation
+  to the UI/CLI as it happens.
+
+## 6. Build phases (each verified by running it)
+
+- **P1 — Registry + protocol + parser** (`agent_tools.py`, `agent_protocol.py`), unit-tested on
+  malformed 8B-style outputs. No LLM needed. *Deliverable: parser passes fixtures.*
+- **P2 — AgentLoop engine** (`agent_loop.py`) with fs tools (read/glob/grep/list) only, read-only,
+  no approval path yet. *Deliverable: `agent_cli.py &quot;summarize what core/ does&quot;` runs a real
+  read→grep→answer loop against Ollama.*
+- **P3 — Mutating tools + approval gate** (write/edit/bash, allowlist, path confinement).
+  *Deliverable: &quot;add a /health route to backend_app.py&quot; edits the file after approval; verify import.*
+- **P4 — Context/summary/step-streaming integration** (wire `assemble_context` + `maybe_summarize`
+  into the loop; stream steps). *Deliverable: a 10+ step task doesn't blow context.*
+- **P5 — Companion front-end** (companion registry: memory/reminder tools; `handle_agent_turn`
+  route). *Deliverable: &quot;remember we talked about Goa tomorrow&quot; triggers memory_save mid-chat.*
+- **P6 — Model upgrade path** (detect native `tool_calls`; recommend pulling a tool-native model
+  like `qwen2.5:7b`/`llama3.1:8b` for the coding front-end while keeping Stheno for companion).
+
+## 7. Explicitly NOT doing
+
+- **No Anthropic SDK / cloud API.** Project is offline-first by ADR; the `claude-api` skill's
+  `anthropic.Anthropic()` path is wrong here. All LLM calls stay on local `call_model`/`stream_model`.
+- No native Ollama `tools=` reliance on current models (verified broken). Kept as an auto-detected
+  fast path for future models only.
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../companion-harness-plan/" class="btn btn-neutral float-left" title="Companion Harness Plan"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../knowledge-base/" class="btn btn-neutral float-right" title="Knowledge Base">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../companion-harness-plan/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../knowledge-base/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
