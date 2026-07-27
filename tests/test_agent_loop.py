@@ -6,14 +6,11 @@ from pathlib import Path
 from unittest import mock
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts", _ROOT / "apps"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-import agent_loop
-from agent_loop import AgentLoop, AgentEvent
-from agent_tools import Tool, ToolParam, ToolRegistry
-from local_llm_writer import ChatConfig, LocalLLMError
+import nerva_agent.agent_loop as agent_loop
+from nerva_agent.agent_loop import AgentLoop, AgentEvent
+from nerva_agent.agent_tools import Tool, ToolParam, ToolRegistry
+from nerva_core.local_llm_writer import ChatConfig, LocalLLMError
 
 
 def _config() -> ChatConfig:
@@ -250,7 +247,7 @@ class LoopTests(unittest.TestCase):
 
     def test_auto_native_tools_probes_when_none(self):
         # use_native_tools=None -> loop asks supports_native_tools once.
-        import agent_native_tools
+        import nerva_agent.agent_native_tools as agent_native_tools
         reg = _registry([])
         script = _scripted({"role": "assistant", "content": "done"})
         with mock.patch.object(agent_native_tools, "supports_native_tools", return_value=True) as probe, \
@@ -262,7 +259,7 @@ class LoopTests(unittest.TestCase):
         self.assertIsNotNone(kwargs.get("tools"))
 
     def test_explicit_false_skips_probe(self):
-        import agent_native_tools
+        import nerva_agent.agent_native_tools as agent_native_tools
         reg = _registry([])
         script = _scripted({"role": "assistant", "content": "done"})
         with mock.patch.object(agent_native_tools, "supports_native_tools") as probe, \

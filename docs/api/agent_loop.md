@@ -1,3 +1,3 @@
 # core.agent_loop
 
-::: agent_loop
+::: nerva_agent.agent_loop

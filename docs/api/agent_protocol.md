@@ -1,3 +1,3 @@
 # core.agent_protocol
 
-::: agent_protocol
+::: nerva_agent.agent_protocol

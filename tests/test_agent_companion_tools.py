@@ -6,15 +6,12 @@ from pathlib import Path
 from unittest import mock
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts", _ROOT / "apps"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-import agent_loop
-from agent_loop import AgentLoop
-from agent_tools import ToolRegistry
-from agent_companion_tools import build_companion_tools
-from local_llm_writer import ChatConfig
+import nerva_agent.agent_loop as agent_loop
+from nerva_agent.agent_loop import AgentLoop
+from nerva_agent.agent_tools import ToolRegistry
+from nerva_agent.agent_companion_tools import build_companion_tools
+from nerva_core.local_llm_writer import ChatConfig
 
 
 class FakeMemory:

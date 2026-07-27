@@ -1,3 +1,3 @@
 # core.agent_tools
 
-::: agent_tools
+::: nerva_agent.agent_tools

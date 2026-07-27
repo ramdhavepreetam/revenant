@@ -1,15 +1,46 @@
-# Local LLM Writer
+# Revenant + AIBot — offline local-LLM monorepo
 
-A small Python CLI for talking to a local LLM with generation settings tuned for 8B/14B Q4_K_M or Q5 models. It targets 400-800 tokens per reply, saves conversations locally, uses NervaPack-backed local memory, and works with Ollama or OpenAI-compatible local servers.
+Two offline, on-prem programs built on a shared core, talking to local models via
+Ollama (no cloud, no telemetry):
+
+- **Revenant** — a local coding-agent CLI (Claude-Code-style tool-calling loop).
+- **AIBot** — a companion web app (backend API + static UI + local TTS).
+
+## Layout (pip-installable packages)
+
+```
+packages/
+  nerva-core/     shared: LLM layer + memory/profiles/storage
+  nerva-agent/    the agent engine (tool loop, protocol, tools, routing, capacity)
+  revenant-cli/   the `revenant` command            (depends on the two above)
+  aibot-app/      the AIBot web app + TTS            (depends on the two above)
+```
+
+Dev install (editable, in dependency order):
+
+```bash
+make dev        # pip install -e each package
+make test       # pytest (158 tests)
+make docs       # mkdocs build --strict
+```
+
+## Revenant CLI
+
+```bash
+revenant "summarize what packages/nerva-agent does"
+revenant --workspace ~/proj "where is auth handled?"
+```
+
+Full guide: [docs/revenant-cli.md](docs/revenant-cli.md). Design: [ADR 0003](docs/adr/0003-local-agent-harness.md).
+
+## AIBot app
 
 See [ADR 0001](docs/adr/0001-offline-local-llm-interface.md) for the offline local interface decision.
-
-## Local Backend and Browser UI
 
 The app is split into a backend API and a static UI. Start the backend first:
 
 ```bash
-python3 backend_app.py
+aibot-backend
 ```
 
 The backend listens on:
@@ -30,7 +61,7 @@ Native apps should call this backend directly. Main endpoints include:
 Start the static browser UI in a second terminal:
 
 ```bash
-python3 ui_app.py
+aibot-ui
 ```
 
 Open the UI:
@@ -42,7 +73,7 @@ http://127.0.0.1:8765
 Use another UI port or backend URL if needed:
 
 ```bash
-python3 ui_app.py --port 8770 --api-base-url http://127.0.0.1:8766
+aibot-ui --port 8770 --api-base-url http://127.0.0.1:8766
 ```
 
 `web_app.py` remains as a compatibility single-process launcher, but new development should target `backend_app.py` plus `ui_app.py`.

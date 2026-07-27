@@ -1,3 +1,3 @@
 # core.agent_router
 
-::: agent_router
+::: nerva_agent.agent_router

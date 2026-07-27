@@ -1,0 +1,17 @@
+pyproject.toml
+src/nerva_agent/__init__.py
+src/nerva_agent/agent_bash_tool.py
+src/nerva_agent/agent_capacity.py
+src/nerva_agent/agent_companion_tools.py
+src/nerva_agent/agent_edit_tools.py
+src/nerva_agent/agent_fs_tools.py
+src/nerva_agent/agent_loop.py
+src/nerva_agent/agent_native_tools.py
+src/nerva_agent/agent_protocol.py
+src/nerva_agent/agent_router.py
+src/nerva_agent/agent_tools.py
+src/nerva_agent.egg-info/PKG-INFO
+src/nerva_agent.egg-info/SOURCES.txt
+src/nerva_agent.egg-info/dependency_links.txt
+src/nerva_agent.egg-info/requires.txt
+src/nerva_agent.egg-info/top_level.txt

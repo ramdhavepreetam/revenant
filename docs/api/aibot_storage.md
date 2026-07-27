@@ -1,3 +1,3 @@
 # core.aibot_storage
 
-::: aibot_storage
+::: nerva_core.aibot_storage

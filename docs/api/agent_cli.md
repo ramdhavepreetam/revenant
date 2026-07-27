@@ -1,3 +1,3 @@
 # apps.agent_cli (revenant)
 
-::: agent_cli
+::: revenant_cli.cli

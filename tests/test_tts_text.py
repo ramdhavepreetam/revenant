@@ -5,11 +5,8 @@ import unittest
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-from aibot_tts import apply_delivery, build_segments, prepare_spoken_text, qwen3_instruction
+from aibot_app.aibot_tts import apply_delivery, build_segments, prepare_spoken_text, qwen3_instruction
 
 
 class TTSTextTests(unittest.TestCase):

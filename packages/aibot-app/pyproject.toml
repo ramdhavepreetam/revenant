@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aibot-app"
+version = "0.1.0"
+description = "AIBot companion web backend + static UI + TTS workers."
+requires-python = ">=3.11"
+dependencies = ["nerva-core", "nerva-agent"]
+
+[project.scripts]
+aibot-backend = "aibot_app.backend_app:main"
+aibot-ui = "aibot_app.ui_app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

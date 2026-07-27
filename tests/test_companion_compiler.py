@@ -5,18 +5,15 @@ import unittest
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts", _ROOT / "apps"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-from aibot_companion_compiler import (
+from nerva_core.aibot_companion_compiler import (
     compile_companion_profile,
     fallback_compile,
     merge_compiled_into_companion,
     profile_hash,
     profile_needs_compile,
 )
-from aibot_profiles import build_companion_prompt
+from nerva_core.aibot_profiles import build_companion_prompt
 
 
 class CompanionCompilerTests(unittest.TestCase):

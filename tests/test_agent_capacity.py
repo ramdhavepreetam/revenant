@@ -6,14 +6,11 @@ from pathlib import Path
 from unittest import mock
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts", _ROOT / "apps"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-import agent_native_tools
-from agent_capacity import recommend, MachineInfo
-from agent_native_tools import supports_native_tools, clear_cache
-from local_llm_writer import ChatConfig, LocalLLMError
+import nerva_agent.agent_native_tools as agent_native_tools
+from nerva_agent.agent_capacity import recommend, MachineInfo
+from nerva_agent.agent_native_tools import supports_native_tools, clear_cache
+from nerva_core.local_llm_writer import ChatConfig, LocalLLMError
 
 
 def _machine(ram, cores=8, plat="darwin", arch="arm64"):

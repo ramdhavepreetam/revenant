@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: aibot-app
+Version: 0.1.0
+Summary: AIBot companion web backend + static UI + TTS workers.
+Requires-Python: >=3.11
+Requires-Dist: nerva-core
+Requires-Dist: nerva-agent

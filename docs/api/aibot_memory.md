@@ -1,3 +1,3 @@
 # core.aibot_memory
 
-::: aibot_memory
+::: nerva_core.aibot_memory

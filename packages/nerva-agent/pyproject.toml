@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nerva-agent"
+version = "0.1.0"
+description = "Local tool-calling agent engine (the Revenant harness)."
+requires-python = ">=3.11"
+dependencies = ["nerva-core"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

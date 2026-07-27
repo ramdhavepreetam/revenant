@@ -6,12 +6,9 @@ import unittest
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts", _ROOT / "apps"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-from agent_tools import ToolRegistry
-from agent_fs_tools import build_fs_tools, WorkspaceError
+from nerva_agent.agent_tools import ToolRegistry
+from nerva_agent.agent_fs_tools import build_fs_tools, WorkspaceError
 
 
 class FsToolTests(unittest.TestCase):

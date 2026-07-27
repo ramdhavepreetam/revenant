@@ -5,11 +5,8 @@ import unittest
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts", _ROOT / "apps"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-from web_app import delivery_for_sentence
+from aibot_app.web_app import delivery_for_sentence
 
 
 class DeliveryMetadataTests(unittest.TestCase):

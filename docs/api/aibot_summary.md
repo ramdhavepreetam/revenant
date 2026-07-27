@@ -1,3 +1,3 @@
 # core.aibot_summary
 
-::: aibot_summary
+::: nerva_core.aibot_summary

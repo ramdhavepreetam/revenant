@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "revenant-cli"
+version = "0.1.0"
+description = "revenant — local coding-agent CLI."
+requires-python = ">=3.11"
+dependencies = ["nerva-core", "nerva-agent"]
+
+[project.scripts]
+revenant = "revenant_cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

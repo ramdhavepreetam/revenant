@@ -12,9 +12,13 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          # Modules live under core/, tts/, apps/ (flat, no package). Add them to
-          # the import path so ::: <module> autodoc resolves.
-          paths: [core, tts, apps]
+          # Modules live in the packages/*/src trees; add each to the import path
+          # so ::: <package.module> autodoc resolves.
+          paths:
+            - packages/nerva-core/src
+            - packages/nerva-agent/src
+            - packages/revenant-cli/src
+            - packages/aibot-app/src
           options:
             docstring_style: google
             show_source: true

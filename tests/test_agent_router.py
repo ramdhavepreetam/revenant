@@ -6,19 +6,16 @@ from pathlib import Path
 from unittest import mock
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts", _ROOT / "apps"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-import agent_router
-from agent_router import (
+import nerva_agent.agent_router as agent_router
+from nerva_agent.agent_router import (
     DEFAULT_FALLBACK,
     classify,
     config_for_role,
     _heuristic_role,
     _normalize_role,
 )
-from local_llm_writer import ChatConfig, LocalLLMError
+from nerva_core.local_llm_writer import ChatConfig, LocalLLMError
 
 
 # A minimal profiles dict with the role map + the models it references.

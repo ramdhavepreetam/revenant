@@ -5,12 +5,9 @@ import unittest
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
-for _p in (_ROOT / "core", _ROOT / "tts", _ROOT / "apps"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
-from agent_tools import Tool, ToolParam, ToolRegistry
-from agent_protocol import (
+from nerva_agent.agent_tools import Tool, ToolParam, ToolRegistry
+from nerva_agent.agent_protocol import (
     FinalAnswer,
     ToolCall,
     parse_action,
