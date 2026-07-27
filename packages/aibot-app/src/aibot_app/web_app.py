@@ -15,7 +15,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from nerva_core.aibot_companion_compiler import (
+from aibot_app.aibot_companion_compiler import (
     COMPANION_COMPILER_VERSION,
     HARNESS_PROMPT_VERSION,
     compile_companion_profile,
@@ -23,9 +23,9 @@ from nerva_core.aibot_companion_compiler import (
     profile_hash,
     profile_needs_compile,
 )
-from nerva_core.aibot_companion_memory import CompanionMemoryStore
+from aibot_app.aibot_companion_memory import CompanionMemoryStore
 from nerva_core.aibot_memory import NervaPackMemory
-from nerva_core.aibot_personal_memory import MEMORY_CATEGORIES, PersonalMemoryStore, normalize_category, normalize_status
+from aibot_app.aibot_personal_memory import MEMORY_CATEGORIES, PersonalMemoryStore, normalize_category, normalize_status
 from nerva_core.aibot_profiles import apply_profile, build_companion_prompt, load_profiles, save_profiles
 from nerva_core.aibot_storage import ConversationStore, default_data_dir
 from aibot_app.aibot_tts import load_voice_profiles, synthesize_tts
@@ -38,8 +38,8 @@ from nerva_core.local_llm_writer import (
     trim_messages,
     trim_to_last_sentence,
 )
-from nerva_core.aibot_context import assemble_context, rank_memories, format_memory_block, sentences_from_deltas
-from nerva_core.aibot_summary import maybe_summarize
+from aibot_app.aibot_context import assemble_context, rank_memories, format_memory_block, sentences_from_deltas
+from aibot_app.aibot_summary import maybe_summarize
 from nerva_agent.agent_router import classify, config_for_role
 from nerva_agent.agent_tools import ToolRegistry
 from nerva_agent.agent_companion_tools import build_companion_tools

@@ -26,12 +26,22 @@ make docs       # mkdocs build --strict
 
 ## Revenant CLI
 
+Install (any OS with Python 3.11+):
+
+```bash
+pip install revenant-cli      # installs the `revenant` command
+```
+
+Or grab a standalone macOS `.dmg` / Windows `.exe` from
+[Releases](https://github.com/ramdhavepreetam/revenant/releases) — see [docs/install.md](docs/install.md).
+
 ```bash
 revenant "summarize what packages/nerva-agent does"
 revenant --workspace ~/proj "where is auth handled?"
 ```
 
-Full guide: [docs/revenant-cli.md](docs/revenant-cli.md). Design: [ADR 0003](docs/adr/0003-local-agent-harness.md).
+Needs [Ollama](https://ollama.com) running with a model pulled. Full guide:
+[docs/revenant-cli.md](docs/revenant-cli.md). Design: [ADR 0003](docs/adr/0003-local-agent-harness.md).
 
 ## AIBot app
 

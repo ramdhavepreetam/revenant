@@ -5,9 +5,24 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nerva-core"
 version = "0.1.0"
-description = "Offline local-LLM writer + memory/profiles/storage (Ollama)."
+description = "Offline local-LLM layer (Ollama / OpenAI-compatible) with SQLite storage and profiles."
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Preetam Ramdhave" }]
+keywords = ["llm", "ollama", "local", "offline", "agent"]
 dependencies = []
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/ramdhavepreetam/revenant"
+Repository = "https://github.com/ramdhavepreetam/revenant"
 
 [tool.setuptools.packages.find]
 where = ["src"]

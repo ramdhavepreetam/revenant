@@ -4,3 +4,10 @@ __pycache__/
 frontend/node_modules/
 frontend/dist/
 site/
+
+# local packaging build outputs
+dist_bin/
+build_bin/
+dist_pypi/
+dist_installers/
+*.egg-info/

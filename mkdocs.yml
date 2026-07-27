@@ -37,6 +37,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Install: install.md
   - Architecture: architecture.md
   - Guides:
       - Model Routing: model-routing.md

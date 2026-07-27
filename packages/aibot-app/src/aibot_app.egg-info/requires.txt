@@ -1,2 +1,0 @@
-nerva-core
-nerva-agent

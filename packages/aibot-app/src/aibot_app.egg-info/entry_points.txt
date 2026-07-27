@@ -1,3 +1,0 @@
-[console_scripts]
-aibot-backend = aibot_app.backend_app:main
-aibot-ui = aibot_app.ui_app:main

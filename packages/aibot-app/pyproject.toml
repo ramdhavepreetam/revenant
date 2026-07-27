@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "AIBot companion web backend + static UI + TTS workers."
 requires-python = ">=3.11"
 dependencies = ["nerva-core", "nerva-agent"]
+# PRIVATE — this package must NEVER be published. The classifier makes twine/PyPI
+# reject any upload attempt.
+classifiers = ["Private :: Do Not Upload"]
 
 [project.scripts]
 aibot-backend = "aibot_app.backend_app:main"

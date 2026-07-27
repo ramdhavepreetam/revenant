@@ -6,7 +6,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
 
-from nerva_core.aibot_companion_compiler import (
+from aibot_app.aibot_companion_compiler import (
     compile_companion_profile,
     fallback_compile,
     merge_compiled_into_companion,

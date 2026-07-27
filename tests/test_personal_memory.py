@@ -8,7 +8,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
 
-from nerva_core.aibot_personal_memory import PersonalMemoryStore, extract_personal_memories
+from aibot_app.aibot_personal_memory import PersonalMemoryStore, extract_personal_memories
 
 
 class PersonalMemoryTests(unittest.TestCase):

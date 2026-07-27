@@ -1,0 +1,14 @@
+Revenant — local coding-agent CLI (macOS)
+
+To install, copy `revenant` to a directory on your PATH:
+    sudo cp revenant /usr/local/bin/revenant
+
+This binary is UNSIGNED. On first run macOS Gatekeeper may block it. To allow it:
+    xattr -d com.apple.quarantine /usr/local/bin/revenant
+(or right-click the binary in Finder -> Open -> Open.)
+
+Requires Ollama running locally with a model pulled:
+    ollama pull qwen2.5-coder:7b
+
+Then:
+    revenant "summarize what this repo does"
