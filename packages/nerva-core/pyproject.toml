@@ -20,6 +20,12 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
+# Optional: a real tokenizer for accurate context-budget estimates. Absent by
+# default so the core stays zero-dependency and fully offline; estimate_tokens
+# transparently falls back to a word-count heuristic when tiktoken isn't installed.
+[project.optional-dependencies]
+tokenizer = ["tiktoken>=0.5"]
+
 [project.urls]
 Homepage = "https://github.com/ramdhavepreetam/revenant"
 Repository = "https://github.com/ramdhavepreetam/revenant"

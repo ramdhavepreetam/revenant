@@ -54,6 +54,10 @@ class AgentResult:
     steps: int
     stopped_reason: str  # "final" | "max_steps" | "error"
     events: list[AgentEvent] = field(default_factory=list)
+    # The full message transcript at the point the run ended. A multi-turn driver
+    # (the REPL) threads this back into the next run() as `history` so the agent
+    # keeps prior context; single-shot callers can ignore it.
+    messages: list[dict[str, Any]] = field(default_factory=list)
 
 
 EventSink = Callable[[AgentEvent], None]
@@ -162,12 +166,28 @@ class AgentLoop:
         return head + [summary_turn] + recent
 
     # --- main loop ---------------------------------------------------------
-    def run(self, goal: str) -> AgentResult:
+    def run(
+        self, goal: str, history: list[dict[str, Any]] | None = None
+    ) -> AgentResult:
+        """Drive `goal` to a final answer or the step cap.
+
+        When `history` is given (a prior run's `AgentResult.messages`), the goal
+        continues that transcript so the agent retains earlier context — this is
+        how the REPL is multi-turn. When it's None the run starts fresh with a
+        system+goal transcript, preserving the original single-shot behavior. The
+        returned AgentResult.messages is the transcript to thread into the next turn.
+        """
         events: list[AgentEvent] = []
-        messages: list[dict[str, Any]] = [
-            {"role": "system", "content": self._system_prompt()},
-            {"role": "user", "content": goal},
-        ]
+        if history:
+            # Continue an existing conversation: reuse system+prior turns, append
+            # the new goal as the next user turn.
+            messages: list[dict[str, Any]] = list(history)
+            messages.append({"role": "user", "content": goal})
+        else:
+            messages = [
+                {"role": "system", "content": self._system_prompt()},
+                {"role": "user", "content": goal},
+            ]
         # Resolve native-tool use: explicit flag, else auto-detect once per model.
         use_native = self.use_native_tools
         if use_native is None:
@@ -191,7 +211,7 @@ class AgentLoop:
                 message = call_model_message(self.config, messages, tools=native_tools)
             except LocalLLMError as exc:
                 self._emit(AgentEvent("error", text=str(exc), step=step), events)
-                return AgentResult("", step - 1, "error", events)
+                return AgentResult("", step - 1, "error", events, messages)
 
             content = (message.get("content") or "").strip()
             action = parse_action(content, message)
@@ -212,7 +232,9 @@ class AgentLoop:
                     messages.append({"role": "user", "content": MALFORMED_ACTION_NUDGE})
                     continue
                 self._emit(AgentEvent("final", text=action.text, step=step), events)
-                return AgentResult(action.text, step, "final", events)
+                # Record the answer so a follow-up turn (REPL) sees it in context.
+                messages.append({"role": "assistant", "content": action.text})
+                return AgentResult(action.text, step, "final", events, messages)
 
             # --- Tool call ----------------------------------------------------
             assert isinstance(action, ToolCall)
@@ -262,7 +284,7 @@ class AgentLoop:
             )
 
         self._emit(AgentEvent("limit", text=f"hit max_steps={self.max_steps}", step=self.max_steps), events)
-        return AgentResult("", self.max_steps, "max_steps", events)
+        return AgentResult("", self.max_steps, "max_steps", events, messages)
 
 
 def _has_valid_json_action(content: str) -> bool:
