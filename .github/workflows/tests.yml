@@ -1,0 +1,39 @@
+name: Tests
+
+# Runs the pytest suite and a strict docs build on every push and pull request,
+# so a broken commit can't merge silently. (Installer builds live in
+# build-installers.yml and only fire on tags.)
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the packages (dependency order) + test tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e packages/nerva-core -e packages/nerva-agent -e packages/revenant-cli
+          pip install pytest pytest-subtests mkdocs-material
+
+      - name: Run the test suite
+        run: pytest -q
+
+      - name: Smoke-test the CLI (--help needs no Ollama)
+        run: revenant --help
+
+      - name: Strict docs build
+        run: mkdocs build --strict
