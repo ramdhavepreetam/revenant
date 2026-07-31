@@ -97,6 +97,24 @@ def _chat_args():
     )
 
 
+def _chat_args_ws(workspace):
+    """chat args bound to a real workspace (so session autosave has a home)."""
+    ns = _chat_args()
+    ns.workspace = str(workspace)
+    return ns
+
+
+def _patch_build_agent_ws(monkeypatch, fake_loop, workspace):
+    """Like _patch_build_agent, but returns the given workspace + a model name,
+    so cmd_chat's session autosave writes under it."""
+    color = cli._color(False)
+    monkeypatch.setattr(
+        cli, "_build_agent",
+        lambda args: (Path(workspace), type("C", (), {"model": "m"})(),
+                      type("R", (), {"note": "n"})(), fake_loop, color),
+    )
+
+
 def test_repl_threads_history_across_turns(monkeypatch):
     fake = _FakeLoop()
     _patch_build_agent(monkeypatch, fake)
@@ -442,3 +460,78 @@ def test_repl_unknown_skill_prints_and_skips(monkeypatch):
     rc = cli.cmd_chat(_chat_args(), input_fn=lambda _p: next(lines))
     assert rc == 0
     assert loop.calls == []  # unknown skill: no turn ran
+
+
+# --- resume subcommand (F3, ADR-0007) ---------------------------------------
+
+from revenant_cli import session_store as _ss
+
+
+def test_resume_parser_optional_id():
+    p = cli.build_parser()
+    a = p.parse_args(cli._normalize_argv(["resume"]))
+    assert a.command == "resume" and a.session_id is None
+    b = p.parse_args(cli._normalize_argv(["resume", "123", "--workspace", "/w"]))
+    assert b.session_id == "123" and b.workspace == "/w"
+
+
+def _resume_args(workspace, session_id=None):
+    return argparse.Namespace(
+        workspace=str(workspace), session_id=session_id, base_url="", model="",
+        max_steps=0, max_context_tokens=0, no_native_tools=False,
+        read_only=True, yolo=False, no_color=True,
+    )
+
+
+def test_chat_autosaves_session(tmp_path, monkeypatch):
+    fake = _FakeLoop()
+    _patch_build_agent_ws(monkeypatch, fake, tmp_path)
+    lines = iter(["do a thing", "/exit"])
+    rc = cli.cmd_chat(_chat_args_ws(tmp_path), input_fn=lambda _p: next(lines))
+    assert rc == 0
+    sessions = _ss.list_sessions(tmp_path)
+    assert len(sessions) == 1
+    assert sessions[0]["goal"] == "do a thing"
+
+
+def test_resume_list_renders_sessions(tmp_path, capsys):
+    _ss.save_session(tmp_path, goal="earlier goal", model="m",
+                     messages=[{"role": "user", "content": "x"}])
+    rc = cli.cmd_resume(_resume_args(tmp_path, session_id="list"))
+    assert rc == 0
+    assert "earlier goal" in capsys.readouterr().out
+
+
+def test_resume_list_empty(tmp_path, capsys):
+    rc = cli.cmd_resume(_resume_args(tmp_path, session_id="list"))
+    assert rc == 0
+    assert "no saved sessions" in capsys.readouterr().out
+
+
+def test_resume_unknown_id_errors(tmp_path, capsys):
+    rc = cli.cmd_resume(_resume_args(tmp_path, session_id="0000000000000"))
+    assert rc == 2
+    assert "no session" in capsys.readouterr().err
+
+
+def test_resume_none_with_no_sessions(tmp_path, capsys):
+    rc = cli.cmd_resume(_resume_args(tmp_path, session_id=None))
+    assert rc == 0
+    assert "no saved sessions to resume" in capsys.readouterr().out
+
+
+def test_resume_id_rehydrates_history_into_loop(tmp_path, monkeypatch):
+    prior = [{"role": "user", "content": "old goal"},
+             {"role": "assistant", "content": "old answer"}]
+    sid = _ss.save_session(tmp_path, goal="old goal", model="m", messages=prior)
+
+    fake = _FakeLoop()
+    _patch_build_agent_ws(monkeypatch, fake, tmp_path)
+    lines = iter(["keep going", "/exit"])
+    rc = cli.cmd_resume(_resume_args(tmp_path, session_id=sid),
+                        input_fn=lambda _p: next(lines))
+    assert rc == 0
+    # The resumed turn received the prior transcript as history.
+    first_history = fake.calls[0][1]
+    assert first_history is not None
+    assert {"role": "user", "content": "old goal"} in first_history
