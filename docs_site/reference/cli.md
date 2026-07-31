@@ -80,6 +80,14 @@ revenant run --skill run-tests            # run the skill's body
 revenant run --skill review-diff "focus on error handling"   # skill + extra goal
 ```
 
+Pass `--plan` to decompose a larger goal into small steps and run them **one at a
+time**, each checked before the next — so a local model isn't asked to hold the
+whole task in its head:
+
+```bash
+revenant run --plan "add pagination to the users endpoint and test it"
+```
+
 ---
 
 ## `chat`

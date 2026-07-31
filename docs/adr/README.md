@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-31 · **Tests:** 393 green · **Shipped: v0.2.0 on PyPI** · **Building: H-series (0.3.0)**
+**Last updated:** 2026-07-31 · **Tests:** 472 green · **Shipped: v0.2.0 on PyPI** · **H-series (0.3.0) complete** 🎉
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -16,12 +16,12 @@
   git-native undo. All 14 PRs merged.
 - **📦 Shipped to PyPI: v0.2.0** (`pip install -U revenant-cli`) — tag `v0.2.0`.
 - **Suite:** 366 tests green (`python3 -m pytest tests/ -q`).
-- **🔨 Building the H-series (0.3.0): make the small local model punch above its
-  weight.** Strategy [ADR-0011](0011-harness-carries-the-model.md).
-  **H1 verify→repair is SHIPPED** [ADR-0012](0012-verify-repair-loop.md) — edits
-  are now checked and repaired before the user sees them. **⏭ NEXT: H0 eval**
-  [ADR-0015](0015-eval-harness.md) (measure H1's lift) or **H2** context injection
-  [ADR-0013](0013-proactive-context-injection.md).
+- **🎉 H-series (0.3.0) COMPLETE — H0/H1/H2/H3 all Implemented.** The harness now
+  verifies+repairs edits (H1), pushes code context (H2), decomposes long goals
+  (H3), and measures its own lift (H0). Strategy
+  [ADR-0011](0011-harness-carries-the-model.md); the small local model punches
+  above its weight. **⏭ NEXT: run the H0 evals against a real 14B to quantify the
+  lift**, then tag/ship **0.3.0** to PyPI.
 - **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
   one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
   (P8); persisting the code graph (P7).
@@ -66,7 +66,7 @@
 | [0011](0011-harness-carries-the-model.md) | **The harness carries the model** (H-series strategy) | 0.3.0 | Accepted |
 | [0012](0012-verify-repair-loop.md) | Verify → repair loop | H1 | Implemented (targeted-tests deferred) |
 | [0013](0013-proactive-context-injection.md) | Proactive context injection | H2 | Implemented |
-| [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Proposed |
+| [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Implemented (tighter-schemas deferred) |
 | [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Implemented |
 
 ---
@@ -101,12 +101,14 @@ model and into deterministic machinery. Strategy: [ADR-0011](0011-harness-carrie
 |-------|--------|-------|--------|--------|
 | **H1** | **Verify → repair loop** | plausible-but-broken edits | `before_tool` seam, loop-driver, undo, code-graph | ✅ Shipped (targeted-tests deferred) |
 | **H2** | Proactive context injection | edits in the dark | `pack_symbol_context` (F14.3) | ✅ Shipped (via `after_tool`) |
-| **H3** | Decompose + per-step verify | can't hold a long plan | sub-agents (P8), H1 | ⬜ Next |
+| **H3** | Decompose + per-step verify | can't hold a long plan | sub-agents (P8), H1 | ✅ Shipped (`run --plan`; schemas deferred) |
 | **H0** | Eval harness | — (measures the lift) | new; small | ✅ Shipped (5 tasks + `--compare`) |
 
+**🎉 The H-series (0.3.0) is complete — H0/H1/H2/H3 all Implemented.** Every
+failure mode in ADR-0011 now has a shipped countermeasure.
+
 **Governing rule:** the model proposes; the harness verifies and repairs. A model
-mistake that reaches the user is a *harness* failure. Stand up **H0 early** so
-**H1**'s impact is a number, not a vibe.
+mistake that reaches the user is a *harness* failure.
 
 ---
 
@@ -172,6 +174,18 @@ plugs into one — it is not greenfield:
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-07-31 (c) — H0/H2/H3 shipped → H-series complete
+- **H0 eval harness** (agent-built): `evals/` + 5 tasks + runner + `--compare`;
+  31 model-free tests. Measures harness lift with the model held constant.
+- **H2 context injection** (agent-built): `context_inject.py` + `context_hook.py`
+  push def+callers on edit and resolve error symbols; wired via `after_tool`
+  (documented deviation); composes with H1. 44 tests.
+- **H3 decompose** (me): `planner.py` + `run --plan` drives a goal as small,
+  H1-verified steps. 13 tests. Verified e2e: a 2-step plan ran to completion.
+- **Two phases built by parallel subagents in isolated worktrees**, verified
+  independently, then integrated (H0 → H2 → H3) with clean rebases. Suite 393 →
+  472. **Every ADR-0011 failure mode now has a shipped countermeasure.**
 
 ### 2026-07-31 (b) — H1 verify→repair shipped
 - `nerva_agent/verify.py`: verifier abstraction (PyCompile + Command + Composite).
