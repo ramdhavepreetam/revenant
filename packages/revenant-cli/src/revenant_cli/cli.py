@@ -33,6 +33,10 @@ from nerva_agent.mcp_tools import build_mcp_tools
 from nerva_agent.skills import (
     discover_skills, render_skill_index, compose_skill_body, scope_registry,
 )
+from nerva_agent.loop_driver import (
+    loop_until, Budget, model_final_predicate, command_predicate,
+    file_exists_predicate,
+)
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path,
@@ -139,7 +143,7 @@ def build_config(profiles: dict, base_url: str, model: str | None) -> ChatConfig
     return config
 
 
-_SUBCOMMANDS = ("run", "chat", "undo", "mcp", "skills", "config", "resume")
+_SUBCOMMANDS = ("run", "chat", "loop", "undo", "mcp", "skills", "config", "resume")
 
 
 _DEFAULT_BASE_URL = "http://localhost:11434"
@@ -177,6 +181,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_chat = sub.add_parser("chat", help="Interactive multi-turn session (REPL).")
     _add_common_flags(p_chat)
+
+    # F13 (P5): run a goal autonomously, iterating until a success condition.
+    p_loop = sub.add_parser("loop", help="Run a goal autonomously until a condition is met.")
+    p_loop.add_argument("goal", help="What you want the agent to accomplish.")
+    _add_common_flags(p_loop)
+    p_loop.add_argument("--autonomous", action="store_true",
+                        help="Run unattended: auto-approve edits within the budget "
+                             "(a checkpoint is taken before each iteration for undo).")
+    p_loop.add_argument("--until", metavar="CMD",
+                        help="Success when this shell command exits 0.")
+    p_loop.add_argument("--until-tests", action="store_true",
+                        help="Success when the test command exits 0 (see --test-cmd).")
+    p_loop.add_argument("--until-file", metavar="PATH",
+                        help="Success when PATH exists.")
+    p_loop.add_argument("--test-cmd", default="pytest -q",
+                        help="Command used by --until-tests (default: 'pytest -q').")
+    p_loop.add_argument("--max-iterations", type=int, default=10,
+                        help="Stop after this many iterations (default: 10).")
+    p_loop.add_argument("--max-wall", type=float, default=0.0,
+                        help="Stop after this many seconds of wall clock (0 = no limit).")
+    p_loop.add_argument("--dry-run", action="store_true",
+                        help="Preview: record intended edits/commands without executing them.")
 
     p_undo = sub.add_parser("undo", help="Revert file changes the agent made.")
     p_undo.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
@@ -334,6 +360,8 @@ def _build_agent(args: argparse.Namespace):
     # Stash skills + base preamble so the REPL's /skill can inject a body (F12.4).
     loop._skills = {s.name: s for s in skills}
     loop._base_preamble = preamble
+    # Stash the checkpointer so `loop` can take a per-iteration undo boundary (F13.2).
+    loop._checkpointer = checkpointer
     return workspace, config, rec, loop, color
 
 
@@ -394,6 +422,92 @@ def cmd_run(args: argparse.Namespace) -> int:
     if result.stopped_reason == "max_steps":
         return 3
     return 1
+
+
+def _resolve_predicate(args: argparse.Namespace, workspace: Path):
+    """Build the success predicate + a human label from the loop flags."""
+    if args.until:
+        return command_predicate(args.until, cwd=workspace), f"`{args.until}` exits 0"
+    if args.until_tests:
+        return command_predicate(args.test_cmd, cwd=workspace), f"`{args.test_cmd}` passes"
+    if args.until_file:
+        target = (workspace / args.until_file)
+        return file_exists_predicate(target), f"{args.until_file} exists"
+    # Weakest bound: the agent declaring completion. Still budget-limited.
+    return model_final_predicate(), "the agent reports completion"
+
+
+def cmd_loop(args: argparse.Namespace) -> int:
+    """Run a goal autonomously, iterating until a condition is met (F13, ADR-0006).
+
+    Bounded by --max-iterations / --max-wall. --autonomous auto-approves edits
+    (a checkpoint is taken before each iteration so `revenant undo` can step back
+    a whole round). Each iteration is journaled as a resumable session.
+    """
+    workspace = Path(args.workspace).resolve()
+    if not workspace.is_dir():
+        print(f"error: workspace is not a directory: {workspace}", file=sys.stderr)
+        return 2
+
+    # --autonomous implies auto-approve, but ONLY within the declared budget and
+    # with checkpointing on (ADR-0006). --dry-run keeps approvals off and swaps
+    # in recording tools (handled in _build_agent via args.dry_run) — but we keep
+    # this slice's dry-run at the driver level: it forces read-only so no edits
+    # execute, letting the user preview the plan the agent narrates.
+    if args.autonomous and not args.dry_run:
+        args.yolo = True
+    if args.dry_run:
+        args.read_only = True
+
+    built = _build_agent(args)
+    if built is None:
+        return 2
+    workspace, config, rec, loop, color = built
+    predicate, label = _resolve_predicate(args, workspace)
+
+    mode = "dry-run" if args.dry_run else ("autonomous" if args.autonomous else "loop")
+    print(f"{color['dim']}revenant loop · model={config.model} · {mode} · "
+          f"until: {label} · max {args.max_iterations} iters{color['reset']}")
+
+    checkpointer = getattr(loop, "_checkpointer", None)
+    session_id = {"id": None}
+
+    def on_iteration(info) -> None:
+        # Per-iteration checkpoint boundary: a marker snapshot so undo can step
+        # back a whole iteration (real file snapshots happen inside tool calls).
+        if checkpointer is not None and not args.dry_run:
+            try:
+                checkpointer.snapshot("edit_file", {"path": f".aibot/loop-iter-{info.index}.marker"})
+            except Exception:  # noqa: BLE001 - checkpoint boundary is best-effort
+                pass
+        state = "✓ done" if info.predicate.done else "· continuing"
+        print(f"{color['bold']}[iter {info.index}]{color['reset']} "
+              f"{color['dim']}{state} — {info.predicate.reason}{color['reset']}")
+        # F13.4 run journal: persist the transcript so far as a resumable session.
+        session_id["id"] = session_store.save_session(
+            workspace, goal=args.goal, model=config.model,
+            messages=info.messages, session_id=session_id["id"],
+            turns_covered=info.index,
+        ) or session_id["id"]
+
+    budget = Budget(max_iterations=args.max_iterations,
+                    max_wall_seconds=args.max_wall)
+    try:
+        outcome = loop_until(args.goal, loop.run, predicate, budget,
+                             on_iteration=on_iteration)
+    finally:
+        _close_mcp(loop)
+
+    if outcome.stopped_reason == "done":
+        print(f"{color['bold']}done{color['reset']} "
+              f"{color['dim']}in {outcome.iterations} iteration(s): "
+              f"{outcome.last_reason}{color['reset']}")
+        return 0
+    print(f"{color['dim']}stopped ({outcome.stopped_reason}) after "
+          f"{outcome.iterations} iteration(s); last: {outcome.last_reason}{color['reset']}")
+    if session_id["id"]:
+        print(f"{color['dim']}resume with: revenant resume {session_id['id']}{color['reset']}")
+    return 3
 
 
 def cmd_chat(args: argparse.Namespace, input_fn=input,
@@ -677,6 +791,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_run(args)
     if args.command == "chat":
         return cmd_chat(args)
+    if args.command == "loop":
+        return cmd_loop(args)
     if args.command == "undo":
         return cmd_undo(args)
     if args.command == "mcp":

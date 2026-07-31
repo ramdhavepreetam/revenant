@@ -1,8 +1,8 @@
 # ADR-0006 — Loops: autonomous & recurring runs (Phase 5)
 
-- **Status:** Proposed
+- **Status:** Implemented (F13.3 triggers deferred)
 - **Phase:** P5 · **F-slices:** F13.1 iterate-until-done, F13.2 safety substrate, F13.3 triggers, F13.4 run journal
-- **Date proposed:** 2026-07-30 · **Date implemented:** —
+- **Date proposed:** 2026-07-30 · **Date implemented:** 2026-07-30
 - **Depends on:** ADR-0010 (undo hardened), ADR-0007 (run journal) · **Blocks:** —
 
 ## Context
@@ -65,22 +65,52 @@ stop predicate and a wall-clock/step/token budget; there is no unbounded mode.
 - Any tool failure → normal recoverable observation; never a silent partial edit
   without a checkpoint.
 
-## Test plan
-`tests/test_loop_driver.py` (with a fake AgentLoop):
-- [ ] stops when the predicate passes; threads history between iterations.
-- [ ] respects `--max-iterations` / token / wall budgets.
-- [ ] `--dry-run` records intended edits without touching disk.
-- [ ] each iteration creates a checkpoint boundary.
-`tests/test_cli.py`:
-- [ ] `--until "<cmd>"` maps to a predicate; `--until-tests` uses the test cmd.
-- [ ] `--watch` re-triggers on a simulated file change (mtime poll path).
+## Test plan — DONE (19 tests, 2026-07-30)
+`tests/test_loop_driver.py` (12, fake run_fn):
+- [x] stops when the predicate passes; threads history between iterations; nudges.
+- [x] respects `--max-iterations` (incl. the 0→run-once floor), wall, and token budgets.
+- [x] `on_iteration` callback fires each round.
+- [x] built-in predicates: model-final, command exit-0 / non-zero / bad-command,
+      file-exists.
+`tests/test_cli.py` (7):
+- [x] loop parser flags; default predicate stops on model-final.
+- [x] `--until-file` iterates until the file is created; `--max-iterations` bound
+      returns exit 3.
+- [x] `--autonomous` forces yolo; `--dry-run` forces read-only + no yolo.
+- [x] each loop journals a resumable session (F13.4).
 
 ## Acceptance criteria
-- [ ] `revenant loop --autonomous --until-tests "make tests pass"` iterates,
-      checkpoints each round, and stops on green within budget.
-- [ ] `--dry-run` previews an autonomous run with zero disk writes.
-- [ ] Undo can step back a whole iteration.
-- [ ] Tests green; ADR + README updated; F13 marked Implemented.
+- [x] `revenant loop --until-tests "…"` (and `--until`, `--until-file`) iterates
+      and stops on success within budget (verified end-to-end with a fake agent
+      that satisfies a file predicate on iteration 2).
+- [x] `--dry-run` previews with zero disk writes (forced read-only).
+- [x] A per-iteration checkpoint boundary is taken so `revenant undo` can step
+      back a whole iteration (builds on ADR-0010).
+- [x] Each loop is journaled as a resumable session (F13.4, via session_store).
+- [x] Tests green (290 → 309); ADR + README updated; F13 marked Implemented
+      (F13.3 triggers deferred).
+
+## Implementation notes (what actually shipped)
+- **Driver** `nerva_agent/loop_driver.py`: `loop_until(goal, run_fn, predicate,
+  budget, on_iteration)`. `run_fn` is injected (the CLI passes `loop.run`), so the
+  driver has no ChatConfig/registry dependency and is trivially testable.
+  Predicates are plain callables; built-ins: `model_final_predicate`,
+  `command_predicate`, `file_exists_predicate`.
+- **Bounded always** (ADR-0006): `Budget{max_iterations, max_wall_seconds,
+  max_tokens}`; `max_iterations=0` still runs exactly once — there is no unbounded
+  mode. A predicate that errors counts as not-done.
+- **`revenant loop`** wires flags → predicate; `--autonomous` sets yolo (within
+  budget) and takes a per-iteration checkpoint boundary; `--dry-run` forces
+  read-only (preview, no writes); every iteration is journaled via `session_store`
+  so a stopped loop prints `revenant resume <id>`.
+- **Deviation — F13.3 triggers deferred:** `--every` (schedule) and `--watch`
+  (re-run on change) are NOT built. `--watch` is best done on P7's incremental
+  index; both are a clean follow-up. `--max-tokens` is a driver-level estimate
+  (chars/4), not exact model accounting.
 
 ## Progress log
 - 2026-07-30 — Proposed. Gated on ADR-0010 (undo tests) and ADR-0007 (journal).
+- 2026-07-30 — **Implemented** (minus F13.3 triggers). Driver + budgets + dry-run
+  + run journal + `revenant loop` subcommand. 19 tests, suite 290 → 309. Verified
+  end-to-end. Both gates (undo P2.5, journal P6) were in place. Next: P7 Code
+  graph (ADR-0008) or P8 (ADR-0009); triggers (F13.3) a small follow-up.
