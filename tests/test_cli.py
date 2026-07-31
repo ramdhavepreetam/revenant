@@ -535,3 +535,117 @@ def test_resume_id_rehydrates_history_into_loop(tmp_path, monkeypatch):
     first_history = fake.calls[0][1]
     assert first_history is not None
     assert {"role": "user", "content": "old goal"} in first_history
+
+
+# --- loop subcommand (F13, ADR-0006) ----------------------------------------
+
+def test_loop_parser_flags():
+    p = cli.build_parser()
+    a = p.parse_args(cli._normalize_argv(
+        ["loop", "do it", "--until-tests", "--max-iterations", "3", "--autonomous"]))
+    assert a.command == "loop" and a.goal == "do it"
+    assert a.until_tests is True and a.max_iterations == 3 and a.autonomous is True
+
+
+class _LoopFakeLoop:
+    """A loop whose run() succeeds only once `flag` flips; carries checkpointer attrs."""
+    def __init__(self, succeed_on=1):
+        self.n = 0
+        self.succeed_on = succeed_on
+        self._mcp_clients = []
+        self._checkpointer = None
+
+    def run(self, goal, history=None):
+        self.n += 1
+        return type("R", (), {
+            "messages": (history or []) + [{"role": "user", "content": goal[:30]}],
+            "stopped_reason": "final" if self.n >= self.succeed_on else "max_steps",
+            "answer": "",
+        })()
+
+
+def _loop_args(workspace, **over):
+    ns = argparse.Namespace(
+        goal="accomplish X", workspace=str(workspace), base_url="", model="",
+        max_steps=0, max_context_tokens=0, no_native_tools=False, read_only=False,
+        yolo=False, no_color=True, autonomous=False, dry_run=False,
+        until=None, until_tests=False, until_file=None, test_cmd="pytest -q",
+        max_iterations=5, max_wall=0.0,
+    )
+    for k, v in over.items():
+        setattr(ns, k, v)
+    return ns
+
+
+def _patch_loop_build(monkeypatch, fake, workspace):
+    color = cli._color(False)
+    monkeypatch.setattr(
+        cli, "_build_agent",
+        lambda args: (Path(workspace), type("C", (), {"model": "m"})(),
+                      type("R", (), {"note": "n"})(), fake, color),
+    )
+    return color
+
+
+def test_loop_stops_when_model_reports_done(tmp_path, monkeypatch, capsys):
+    fake = _LoopFakeLoop(succeed_on=1)
+    _patch_loop_build(monkeypatch, fake, tmp_path)
+    rc = cli.cmd_loop(_loop_args(tmp_path))  # default predicate = model final
+    assert rc == 0
+    assert fake.n == 1
+    assert "done" in capsys.readouterr().out
+
+
+def test_loop_until_file_iterates_until_created(tmp_path, monkeypatch):
+    target = tmp_path / "out.txt"
+
+    class Creator(_LoopFakeLoop):
+        def run(self, goal, history=None):
+            self.n += 1
+            if self.n == 2:
+                target.write_text("x")
+            return type("R", (), {
+                "messages": (history or []) + [{"role": "user", "content": goal[:30]}],
+                "stopped_reason": "max_steps",  # model never says final; file drives
+                "answer": "",
+            })()
+
+    fake = Creator(succeed_on=99)
+    _patch_loop_build(monkeypatch, fake, tmp_path)
+    rc = cli.cmd_loop(_loop_args(tmp_path, until_file="out.txt"))
+    assert rc == 0
+    assert fake.n == 2
+
+
+def test_loop_hits_iteration_budget(tmp_path, monkeypatch, capsys):
+    fake = _LoopFakeLoop(succeed_on=99)  # never done
+    _patch_loop_build(monkeypatch, fake, tmp_path)
+    rc = cli.cmd_loop(_loop_args(tmp_path, max_iterations=3))
+    assert rc == 3  # non-zero: did not reach the goal
+    assert fake.n == 3
+    assert "max_iterations" in capsys.readouterr().out
+
+
+def test_loop_autonomous_forces_yolo(tmp_path, monkeypatch):
+    fake = _LoopFakeLoop(succeed_on=1)
+    _patch_loop_build(monkeypatch, fake, tmp_path)
+    args = _loop_args(tmp_path, autonomous=True)
+    cli.cmd_loop(args)
+    assert args.yolo is True  # autonomous implies auto-approve within budget
+
+
+def test_loop_dry_run_forces_read_only(tmp_path, monkeypatch):
+    fake = _LoopFakeLoop(succeed_on=1)
+    _patch_loop_build(monkeypatch, fake, tmp_path)
+    args = _loop_args(tmp_path, dry_run=True, autonomous=True)
+    cli.cmd_loop(args)
+    assert args.read_only is True   # dry-run never executes edits
+    assert args.yolo is False       # and never auto-approves
+
+
+def test_loop_journals_a_resumable_session(tmp_path, monkeypatch):
+    fake = _LoopFakeLoop(succeed_on=2)
+    _patch_loop_build(monkeypatch, fake, tmp_path)
+    cli.cmd_loop(_loop_args(tmp_path))
+    # A session was persisted (the run journal) and is resumable.
+    assert len(_ss.list_sessions(tmp_path)) == 1

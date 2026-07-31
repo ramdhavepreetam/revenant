@@ -4,24 +4,24 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-30 · **Tests:** 290 green
+**Last updated:** 2026-07-30 · **Tests:** 309 green
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
 
 ## ▶ START HERE — current state (resume point)
 
-- **Done:** P0 (engine), **P2.5** undo+ADRs, **P3** MCP, **P4** Skills, **P6** Resume.
-- **Branches on origin:** `phase2.5-undo-and-adr-roadmap` (`7fc5fa9`),
-  `phase3-mcp-integration` (`6226776`+`6a3643b`), `phase4-skills` (`49100c7`).
-  **P6 is committed on the next branch (see git log); no PRs opened yet.**
-- **Suite:** 290 tests green (`python3 -m pytest tests/ -q`).
-- **⏭ NEXT: P5 — Loops** → [ADR-0006](0006-loops.md). Its safety floor (undo,
-  P2.5) and run-journal dependency (Resume, P6) are both now in place — no more
-  blockers. Start with F13.1 (iterate-until-done driver).
-- **Deferred, don't forget:** one-shot `run` autosave/resume (P6);
-  `revenant run --skill` (P4); `mcp add` + MCP HTTP/SSE transport (P3);
-  F9 git-native undo → P8.
+- **Done:** P0, **P2.5** undo+ADRs, **P3** MCP, **P4** Skills, **P6** Resume,
+  **P5** Loops.
+- **PRs open (stacked #4→#5→#6→#7):** P2.5→master, P3→P2.5, P4→P3, P6→P4.
+  **P5 (`phase5-loops`) is committed; open its PR (targets `phase6-resume`).**
+- **Suite:** 309 tests green (`python3 -m pytest tests/ -q`).
+- **⏭ NEXT: P7 — Code graph** → [ADR-0008](0008-code-graph.md) (the deep bet:
+  repo-scale reasoning), or **P8** → [ADR-0009](0009-subagents-and-git-undo.md)
+  (sub-agents + git-native undo). Either is a fine next step.
+- **Deferred, don't forget:** loop **triggers** F13.3 `--every`/`--watch` (P5);
+  one-shot `run` autosave (P6); `run --skill` (P4); `mcp add` + MCP HTTP
+  transport (P3); F9 git-native undo → P8.
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
@@ -54,7 +54,7 @@
 | [0010](0010-undo-hardening.md) | Undo checkpointing & test debt (bridge) | P2.5 | Implemented |
 | [0004](0004-mcp-integration.md) | MCP — external tools over the wire | P3 | Implemented |
 | [0005](0005-skills.md) | Skills — reusable packaged workflows | P4 | Implemented |
-| [0006](0006-loops.md) | Loops — autonomous & recurring runs | P5 | Proposed |
+| [0006](0006-loops.md) | Loops — autonomous & recurring runs | P5 | Implemented (triggers deferred) |
 | [0007](0007-resume-session-persistence.md) | Resume & session persistence | P6 | Implemented |
 | [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Proposed |
 | [0009](0009-subagents-and-git-undo.md) | Sub-agents & git-native undo | P8 | Proposed |
@@ -74,9 +74,9 @@ capability jump.
 | **P2.5** | Undo hardening (F8/F9) + tests | — | Low | ✅ Shipped (F9 git-undo → P8) |
 | **P3** | **MCP** integration | P2.5 seams | Low | ✅ Shipped (add/HTTP deferred) |
 | **P4** | **Skills** | project_context patterns | Low–Med | ✅ Shipped (run --skill deferred) |
-| **P5** | **Loops** (autonomous) | P2.5 hardened, P6 journal | Med | ⬜ **Next up** (blockers cleared) |
+| **P5** | **Loops** (autonomous) | P2.5 hardened, P6 journal | Med | ✅ Shipped (triggers deferred) |
 | **P6** | Resume / persistence | aibot_storage hooks | Low | ✅ Shipped (per-ws JSON) |
-| **P7** | **Code graph** | agent_ignore | High | ⬜ Horizon (deep bet) |
+| **P7** | **Code graph** | agent_ignore | High | ⬜ **Next up** (deep bet) |
 | **P8** | Sub-agents + git-undo | agent_router, P4 | High | ⬜ Horizon |
 
 Visual roadmap artifact: see the shared Revenant roadmap page.
@@ -128,14 +128,31 @@ plugs into one — it is not greenfield:
   one-shot deferred (needs the `run` goal positional to become optional).
 - ~~P6 Resume.~~ **Shipped 2026-07-30** — 18 tests, suite 290. Per-workspace JSON
   sessions; `chat` auto-saves; `resume list`/`resume <id>`. One-shot `run`
-  autosave deferred. This unblocks the P5 run journal.
-- Next actionable phase: **P5 Loops** ([ADR-0006](0006-loops.md)) — no blockers left.
+  autosave deferred.
+- ~~P5 Loops.~~ **Shipped 2026-07-30** — 19 tests, suite 309. `revenant loop`
+  with predicates + budgets + dry-run + run journal. **Triggers (F13.3
+  `--every`/`--watch`) deferred** — a clean follow-up (watch pairs with P7).
+- Next actionable phase: **P7 Code graph** ([ADR-0008](0008-code-graph.md)),
+  or **P8** ([ADR-0009](0009-subagents-and-git-undo.md)).
 
 ---
 
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-07-30 (f) — P5 Loops shipped
+- `nerva_agent/loop_driver.py`: `loop_until` (inject `run_fn`, thread history,
+  nudge on not-yet), `Budget`, and built-in predicates (model-final, command
+  exit-0, file-exists). Autonomy always bounded — no run-forever mode.
+- `revenant loop` subcommand: `--until`/`--until-tests`/`--until-file`,
+  `--max-iterations`/`--max-wall`, `--autonomous` (yolo within budget + a
+  per-iteration checkpoint boundary for undo), `--dry-run` (read-only preview).
+  Each iteration is journaled as a resumable session (F13.4, reuses P6).
+- **19 new tests → suite 309.** Verified end-to-end (fake agent satisfies a file
+  predicate on iteration 2 → stops, exit 0).
+- **F13.3 triggers (`--every`/`--watch`) deferred.** ADR-0006 → Implemented.
+- **Next: P7 Code graph (ADR-0008) or P8 (ADR-0009).**
 
 ### 2026-07-30 (e) — P6 Resume shipped
 - `revenant_cli/session_store.py`: per-workspace JSON sessions under
