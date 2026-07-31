@@ -81,11 +81,24 @@ class RevenantAgentRunner:
         import argparse as _argparse
         from revenant_cli.cli import _build_agent
 
+        # When verify is on, enable the harness's correctness features for this
+        # task: write a [verify] config into the workspace and turn the code graph
+        # ON (so H2 context injection is active too). This is what makes the eval
+        # an honest "harness on vs. off" comparison (ADR-0015 --compare).
+        if self.verify:
+            # Rely on the built-in per-file pycompile (on by default) for syntax,
+            # and pytest for behavior. NO {paths}-scoped py_compile command — that
+            # runs with an empty arg after a run_bash step and would false-fail.
+            (workspace / ".revenant.toml").write_text(
+                "[verify]\nenabled = true\nmax_repair_attempts = 3\n"
+                "pycompile = true\ncommands = [\"pytest -q\"]\n"
+            )
+
         args = _argparse.Namespace(
             workspace=str(workspace), base_url=self.base_url, model=self.model,
             max_steps=self.max_steps, max_context_tokens=0,
             no_native_tools=False, read_only=False, yolo=True, no_color=True,
-            no_graph=True, skill=None,
+            no_graph=not self.verify, skill=None,   # graph (H2) on when verifying
         )
         built = _build_agent(args)
         if built is None:
@@ -300,6 +313,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--compare", nargs=2, metavar=("BASELINE_JSON", "CANDIDATE_JSON"),
                     help="Diff two saved reports instead of running the suite")
     p.add_argument("--task", action="append", default=[], help="Run only this task (repeatable)")
+    p.add_argument("--verify", action="store_true",
+                   help="Enable the harness's verify→repair + code graph for the "
+                        "run (for an on-vs-off --compare against a plain baseline).")
     return p
 
 
@@ -321,12 +337,13 @@ def main(argv: "list[str] | None" = None) -> int:
     elif not model_server_reachable(args.base_url):
         print(f"no local model server reachable at {args.base_url} -- skipping.", file=sys.stderr)
     else:
-        agent_runner = RevenantAgentRunner(args.model, args.base_url, args.max_steps)
+        agent_runner = RevenantAgentRunner(args.model, args.base_url, args.max_steps,
+                                           verify=args.verify)
 
     report = run_suite(
         tasks, agent_runner,
         model=args.model, base_url=args.base_url,
-        harness_flags={"max_steps": args.max_steps},
+        harness_flags={"max_steps": args.max_steps, "verify": args.verify},
     )
     print(format_report(report))
 

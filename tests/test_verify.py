@@ -72,6 +72,28 @@ def test_command_missing_binary_degrades_to_pass(tmp_path):
     assert isinstance(r, VerifyResult)
 
 
+def test_path_scoped_command_skipped_when_no_changed_paths(tmp_path):
+    # Regression (the eval A/B bug): a {paths}-scoped command run with NO changed
+    # paths (e.g. after run_bash) must SKIP, not report a bogus failure from an
+    # empty substitution. Before the fix, `py_compile {paths}` -> `py_compile `
+    # errored with a usage message and falsely failed every bash step.
+    r = CommandVerifier(tmp_path, "python3 -m py_compile {paths}").check([])
+    assert r.ok is True
+    assert "skipped" in r.checker
+
+
+def test_path_scoped_command_still_runs_with_paths(tmp_path):
+    # But it MUST still run when there are changed paths.
+    (tmp_path / "bad.py").write_text("def f(:\n")
+    r = CommandVerifier(tmp_path, "python3 -m py_compile {paths}").check(["bad.py"])
+    assert r.ok is False  # genuinely broken file -> real failure
+
+
+def test_command_without_path_placeholder_runs_regardless(tmp_path):
+    # A command with no {paths}/{tests} isn't path-scoped -> runs even with none.
+    assert CommandVerifier(tmp_path, "true").check([]).ok is True
+
+
 # --- CompositeVerifier -------------------------------------------------------
 
 def test_composite_returns_first_failure(tmp_path):
