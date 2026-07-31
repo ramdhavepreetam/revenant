@@ -7,10 +7,12 @@ model or network is touched.
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 import pytest
 
 from revenant_cli import cli
+from revenant_cli.checkpoint import Checkpointer
 
 
 # --- argv normalization / back-compat ---------------------------------------
@@ -141,3 +143,110 @@ def test_repl_exits_on_eof(monkeypatch):
     rc = cli.cmd_chat(_chat_args(), input_fn=raise_eof)
     assert rc == 0
     assert fake.calls == []
+
+
+# --- undo subcommand (F8, ADR-0010) -----------------------------------------
+
+def test_undo_parser_flags():
+    p = cli.build_parser()
+    ns = p.parse_args(cli._normalize_argv(["undo", "--all", "--workspace", "/tmp"]))
+    assert ns.command == "undo"
+    assert ns.all is True
+    assert ns.workspace == "/tmp"
+
+
+def test_checkpoint_store_path_under_data_dir(tmp_path):
+    store = cli._checkpoint_store(tmp_path)
+    assert store.name == "checkpoints.json"
+    assert store.parent.name == ".aibot"
+    assert store.parent.parent == tmp_path
+
+
+def _undo_args(workspace, *, all_=False):
+    return argparse.Namespace(workspace=str(workspace), all=all_, no_color=True)
+
+
+def test_cmd_undo_nothing_to_undo(tmp_path, capsys):
+    rc = cli.cmd_undo(_undo_args(tmp_path))
+    assert rc == 0
+    assert "nothing to undo" in capsys.readouterr().out.lower()
+
+
+def test_cmd_undo_last_restores_from_store(tmp_path, capsys):
+    (tmp_path / "a.txt").write_text("original\n")
+    # Seed a persisted checkpoint the way a prior session would have.
+    cp = Checkpointer(tmp_path, store_path=cli._checkpoint_store(tmp_path))
+    cp.snapshot("edit_file", {"path": "a.txt"})
+    (tmp_path / "a.txt").write_text("mutated\n")
+
+    rc = cli.cmd_undo(_undo_args(tmp_path))
+    assert rc == 0
+    assert (tmp_path / "a.txt").read_text() == "original\n"
+    assert "a.txt" in capsys.readouterr().out
+
+
+def test_cmd_undo_all_reverts_everything(tmp_path, capsys):
+    (tmp_path / "a.txt").write_text("a0\n")
+    cp = Checkpointer(tmp_path, store_path=cli._checkpoint_store(tmp_path))
+    cp.snapshot("edit_file", {"path": "a.txt"})
+    (tmp_path / "a.txt").write_text("a1\n")
+    cp.snapshot("write_file", {"path": "new.txt"})
+    (tmp_path / "new.txt").write_text("created\n")
+
+    rc = cli.cmd_undo(_undo_args(tmp_path, all_=True))
+    assert rc == 0
+    assert (tmp_path / "a.txt").read_text() == "a0\n"
+    assert not (tmp_path / "new.txt").exists()
+    assert "reverted 2 change(s)" in capsys.readouterr().out
+
+
+# --- _build_agent wires the checkpointer only in write mode -----------------
+
+def _agent_args(workspace, *, read_only):
+    return argparse.Namespace(
+        workspace=str(workspace), base_url="", model="", max_steps=0,
+        max_context_tokens=0, no_native_tools=False, read_only=read_only,
+        yolo=False, no_color=True,
+    )
+
+
+def _stub_agent_build(monkeypatch):
+    """Neutralize model/hardware probing so _build_agent runs offline.
+
+    Captures the before_tool passed into the constructed AgentLoop so tests can
+    assert the checkpointer is wired (write mode) or not (read-only).
+    """
+    captured = {}
+
+    class _Rec:
+        max_context_tokens = 6000
+        max_steps = 15
+        keep_recent_steps = 3
+        note = "stub"
+
+    def fake_loop_ctor(*_a, before_tool=None, **_k):
+        captured["before_tool"] = before_tool
+        return object()
+
+    monkeypatch.setattr(cli, "AgentLoop", fake_loop_ctor)
+    monkeypatch.setattr(cli, "recommend", lambda *a, **k: _Rec())
+    monkeypatch.setattr(cli, "load_config", lambda ws: {})
+    monkeypatch.setattr(cli, "load_profiles", lambda *a, **k: {})
+    monkeypatch.setattr(
+        cli, "build_config",
+        lambda *a, **k: type("C", (), {"model": "m", "base_url": "http://x"})(),
+    )
+    monkeypatch.setattr(cli, "find_project_doc", lambda *a, **k: None)
+    return captured
+
+
+def test_build_agent_wires_before_tool_in_write_mode(tmp_path, monkeypatch):
+    captured = _stub_agent_build(monkeypatch)
+    cli._build_agent(_agent_args(tmp_path, read_only=False))
+    assert captured["before_tool"] is not None
+
+
+def test_build_agent_no_before_tool_in_read_only(tmp_path, monkeypatch):
+    captured = _stub_agent_build(monkeypatch)
+    cli._build_agent(_agent_args(tmp_path, read_only=True))
+    assert captured["before_tool"] is None
