@@ -5,10 +5,11 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased]
+## [0.2.0] — Extensibility release
 
 Adds the extensibility layer — external tools, reusable workflows, autonomous
 runs, and repo-scale reasoning — all fully offline with no new runtime deps.
+Backward-compatible with 0.1.0: existing `run`/`chat` usage is unchanged.
 
 ### Added
 
@@ -26,9 +27,18 @@ runs, and repo-scale reasoning — all fully offline with no new runtime deps.
 - **`revenant resume`** — save and resume sessions; `chat` and `loop` auto-save.
 - **Code graph** — a symbol/dependency index with `defn_of`, `who_calls`,
   `neighbors`, and `impact_of` tools (stdlib `ast`; `--no-graph` to skip).
+  Supports structure-aware context and incremental single-file re-indexing.
 - **Sub-agents** — the `spawn_subagent` tool delegates a scoped sub-goal to a
   nested, budgeted agent.
 - **Project config** — layered `.revenant.toml` (flag › project › user › default).
+- **One-shot skills** — `revenant run --skill <name>` runs a skill's procedure.
+- **Loop watch** — `revenant loop --watch '<glob>'` re-runs on file changes.
+
+### Notes
+
+- No new required runtime dependencies; Revenant stays fully offline.
+- Requires an [Ollama](https://ollama.com) server with a tool-capable model
+  (e.g. `ollama pull qwen2.5-coder:7b`).
 
 ---
 
@@ -60,4 +70,5 @@ The first public release of Revenant.
 
 ---
 
+[0.2.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.1.0
