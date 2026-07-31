@@ -4,22 +4,24 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-30 · **Tests:** 247 green
+**Last updated:** 2026-07-30 · **Tests:** 272 green
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
 
 ## ▶ START HERE — current state (resume point)
 
-- **Done & committed:** P0 (engine), **P2.5** undo+ADRs (branch
-  `phase2.5-undo-and-adr-roadmap`, commit `7fc5fa9`), **P3** MCP (branch
-  `phase3-mcp-integration`, commit `6226776`). Both branches are **committed but
-  not yet pushed / no PR opened**.
-- **Suite:** 247 tests green (`python3 -m pytest tests/ -q`).
-- **⏭ NEXT: P4 — Skills** → [ADR-0005](0005-skills.md). Start with F12.1
-  (`SKILL.md` format + `discover_skills` loader in `nerva_agent/skills.py`).
-- **Deferred, don't forget:** `mcp add` subcommand + MCP HTTP/SSE transport
-  (P3 shipped stdio + list/test only); F9 git-native undo → P8.
+- **Done:** P0 (engine), **P2.5** undo+ADRs, **P3** MCP, **P4** Skills.
+- **Branches (pushed to origin):** `phase2.5-undo-and-adr-roadmap` (`7fc5fa9`),
+  `phase3-mcp-integration` (`6226776`, +`6a3643b` banner). **P4 is committed on
+  the next branch (see git log); no PRs opened yet.**
+- **Suite:** 272 tests green (`python3 -m pytest tests/ -q`).
+- **⏭ NEXT: P6 — Resume** → [ADR-0007](0007-resume-session-persistence.md)
+  (small, unblocks the P5 run journal), **then P5 — Loops** →
+  [ADR-0006](0006-loops.md). Or go straight to P5 if loops are the priority.
+- **Deferred, don't forget:** `revenant run --skill` one-shot (P4);
+  `mcp add` + MCP HTTP/SSE transport (P3, stdio + list/test only);
+  F9 git-native undo → P8.
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
@@ -51,7 +53,7 @@
 | [0003](0003-local-agent-harness.md) | Local agent harness (one loop, two front-ends) | — | Implemented |
 | [0010](0010-undo-hardening.md) | Undo checkpointing & test debt (bridge) | P2.5 | Implemented |
 | [0004](0004-mcp-integration.md) | MCP — external tools over the wire | P3 | Implemented |
-| [0005](0005-skills.md) | Skills — reusable packaged workflows | P4 | Proposed |
+| [0005](0005-skills.md) | Skills — reusable packaged workflows | P4 | Implemented |
 | [0006](0006-loops.md) | Loops — autonomous & recurring runs | P5 | Proposed |
 | [0007](0007-resume-session-persistence.md) | Resume & session persistence | P6 | Proposed |
 | [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Proposed |
@@ -71,9 +73,9 @@ capability jump.
 | **P0** | Engine + CLI (F1–F7, routing, capacity) | — | — | ✅ Shipped |
 | **P2.5** | Undo hardening (F8/F9) + tests | — | Low | ✅ Shipped (F9 git-undo → P8) |
 | **P3** | **MCP** integration | P2.5 seams | Low | ✅ Shipped (add/HTTP deferred) |
-| **P4** | **Skills** | project_context patterns | Low–Med | ⬜ **Next up** |
+| **P4** | **Skills** | project_context patterns | Low–Med | ✅ Shipped (run --skill deferred) |
 | **P5** | **Loops** (autonomous) | P2.5 hardened, P6 journal | Med | ⬜ After safety floor |
-| **P6** | Resume / persistence | aibot_storage hooks | Low | ⬜ Small, unblocks P5 journal |
+| **P6** | Resume / persistence | aibot_storage hooks | Low | ⬜ **Next up** (unblocks P5 journal) |
 | **P7** | **Code graph** | agent_ignore | High | ⬜ Horizon (deep bet) |
 | **P8** | Sub-agents + git-undo | agent_router, P4 | High | ⬜ Horizon |
 
@@ -122,13 +124,29 @@ plugs into one — it is not greenfield:
 - ~~Undo (F8/F9) lacks tests.~~ **Cleared 2026-07-30** — 23 tests, suite 217.
 - ~~P3 MCP.~~ **Shipped 2026-07-30** — 29 tests, suite 247. `mcp add` action and
   the HTTP/SSE transport were deferred (stdio only); note both when they're needed.
-- Next actionable phase: **P4 Skills** ([ADR-0005](0005-skills.md)).
+- ~~P4 Skills.~~ **Shipped 2026-07-30** — 25 tests, suite 272. `run --skill`
+  one-shot deferred (needs the `run` goal positional to become optional).
+- Next actionable phase: **P6 Resume** ([ADR-0007](0007-resume-session-persistence.md)),
+  then **P5 Loops** ([ADR-0006](0006-loops.md)).
 
 ---
 
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-07-30 (d) — P4 Skills shipped
+- `nerva_agent/skills.py`: `Skill` + `discover_skills` (`+++` TOML frontmatter
+  via stdlib tomllib), `render_skill_index` (progressive disclosure),
+  `compose_skill_body` (body injection), `scope_registry` (tool scoping that
+  composes with the P3 MCP tools).
+- `cli.py`: `_skill_dirs`/`_load_skills`; skill index folded into the preamble;
+  `revenant skills list|show`; REPL `/skills` and `/skill <name>` (loads body,
+  scopes tools, runs the body as the turn goal).
+- Frontmatter format decided as **`+++` TOML** (user call) — zero new deps.
+- **25 new tests → suite 272.** `skills list/show` verified end-to-end.
+- `run --skill` one-shot deferred. ADR-0005 → Implemented.
+- **Next: P6 Resume (ADR-0007), then P5 Loops (ADR-0006).**
 
 ### 2026-07-30 (c) — P3 MCP shipped
 - `nerva_agent/mcp_client.py` (stdlib JSON-RPC over stdio) + `mcp_tools.py`
