@@ -127,3 +127,7 @@ tools = ["run_bash", "read_file", "edit_file"]   # optional scoped tool set
   suite 247 → 272). Verified `skills list/show` end-to-end via the real CLI.
   Frontmatter decided as `+++` TOML. `run --skill` deferred. Status →
   Implemented. Next phase: P6 Resume (ADR-0007) or P5 Loops (ADR-0006).
+- 2026-07-31 — **`run --skill` one-shot added** (deferred follow-up): `run`'s
+  goal is now optional; `revenant run --skill <name>` loads the skill body as the
+  goal and scopes the registry, matching the REPL's `/skill`. Closes the last P4
+  deferral.

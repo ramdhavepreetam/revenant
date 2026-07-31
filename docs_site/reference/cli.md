@@ -72,6 +72,14 @@ revenant run --read-only "Explain the auth flow."
 revenant "Add input validation to create_user()."   # shorthand
 ```
 
+Pass `--skill <name>` to run a [skill's](#skills) procedure as the goal (the goal
+argument becomes optional, and the agent's tools are scoped to the skill):
+
+```bash
+revenant run --skill run-tests            # run the skill's body
+revenant run --skill review-diff "focus on error handling"   # skill + extra goal
+```
+
 ---
 
 ## `chat`
@@ -114,6 +122,8 @@ budget is exhausted. Autonomy is always bounded — there is no run-forever mode
 | `--max-iterations N` | `10` | Stop after N iterations. |
 | `--max-wall SECONDS` | `0` | Stop after this many seconds of wall clock (`0` = no limit). |
 | `--dry-run` | off | Preview: forces read-only, so the agent narrates its plan without writing. |
+| `--watch GLOB` | — | Re-run the whole loop whenever a workspace file matching `GLOB` changes (mtime poll; respects ignore globs). `Ctrl-C` to stop. |
+| `--watch-interval SECONDS` | `1.0` | Poll interval for `--watch`. |
 
 ```bash
 # Iterate until the test suite passes, unattended, checkpointing each round.
@@ -121,6 +131,9 @@ revenant loop --autonomous --until-tests "make the failing tests pass"
 
 # Preview what an autonomous run would do, with zero disk writes.
 revenant loop --dry-run --until-file out.txt "generate out.txt"
+
+# Re-run the loop every time a source file changes.
+revenant loop --watch 'src/**/*.py' --until-tests "keep the tests green"
 ```
 
 Exit code `0` means the condition was met; `3` means a budget was hit first (the

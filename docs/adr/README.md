@@ -20,9 +20,10 @@
 - **Suite:** 352 tests green (`python3 -m pytest tests/ -q`).
 - **⏭ NEXT: the deferred backlog** (all optional polish, no phase blocked on them):
   graph **F14.3** structure-aware packing + **F14.4** incremental re-index (P7);
-  loop **triggers** F13.3 `--every`/`--watch` (P5); one-shot `run` autosave (P6);
-  `run --skill` (P4); `mcp add` + MCP HTTP transport (P3); role-routed sub-agents
-  (P8). Or refresh the user-facing `docs_site/` for the new commands.
+  loop **`--every`** schedule trigger (P5); one-shot `run` autosave (P6);
+  `mcp add` + MCP HTTP transport (P3); role-routed sub-agents (P8).
+- **Done since the roadmap:** user docs refreshed (PR #11, merged); `run --skill`
+  + loop `--watch` (deferred follow-ups) shipped.
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
