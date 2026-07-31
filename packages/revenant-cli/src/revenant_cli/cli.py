@@ -39,11 +39,13 @@ from nerva_agent.loop_driver import (
 )
 from nerva_agent.code_graph.indexer import build_index
 from nerva_agent.code_graph.tools import build_code_graph_tools
+from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path,
 )
 from revenant_cli import session_store
+from revenant_cli.git_checkpoint import GitCheckpointer, is_git_repo
 from revenant_cli.project_context import compose_preamble, find_project_doc
 from revenant_cli.checkpoint import Checkpointer
 
@@ -318,8 +320,17 @@ def _build_agent(args: argparse.Namespace):
     if not read_only:
         tools += build_edit_tools(workspace)
         tools.append(build_bash_tool(workspace))
-        # F8: snapshot files before mutating tools so `revenant undo` can revert.
-        checkpointer = Checkpointer(workspace, store_path=_checkpoint_store(workspace))
+        # Undo: prefer git-native checkpointing when the workspace is a git repo
+        # (F16.1/P8) — it captures the whole tree incl. run_bash side-effects.
+        # Otherwise fall back to file-snapshots (F8/P2.5).
+        if is_git_repo(workspace):
+            checkpointer = GitCheckpointer(workspace)
+            print(f"{color['dim']}undo: git-native (whole-tree){color['reset']}")
+        else:
+            checkpointer = Checkpointer(workspace, store_path=_checkpoint_store(workspace))
+        # F15.1 (P8): let the agent delegate a scoped sub-goal to a nested loop.
+        tools.append(build_spawn_tool(
+            _make_subagent_factory(args), depth=getattr(args, "_subagent_depth", 0)))
         # F11 (P3): connect configured MCP servers and add their tools. A server
         # that fails to connect is skipped with a warning (degrade, ADR-0001).
         specs = mcp_server_specs(cfg)
@@ -416,6 +427,36 @@ def _load_skills(workspace: Path):
     """Discover all skills for a workspace (project overrides user by name)."""
     project, user = _skill_dirs(workspace)
     return discover_skills(project, user)
+
+
+def _make_subagent_factory(parent_args: argparse.Namespace):
+    """A loop_factory for spawn_subagent: builds a nested agent (F15.1, P8).
+
+    Each sub-agent is a full `_build_agent` with the same config but a deeper
+    `_subagent_depth` (so its own spawn tool refuses past the cap) and, if the
+    parent named tools, a registry scoped to just those. Runs unattended, so it
+    inherits auto-approve within the parent's mode.
+    """
+    import copy
+
+    def factory(goal: str, tool_names, depth: int):
+        child = copy.copy(parent_args)
+        child._subagent_depth = depth
+        # A sub-agent runs unattended; auto-approve within the parent's budget.
+        child.yolo = True
+        built = _build_agent(child)
+        if built is None:
+            raise RuntimeError("could not build sub-agent workspace")
+        _ws, _cfg, _rec, loop, _color = built
+        if tool_names:
+            scoped = scope_registry(
+                loop.registry,
+                type("S", (), {"name": "subagent", "tools": tool_names})(),
+            )
+            loop.registry = scoped
+        return loop
+
+    return factory
 
 
 def _mode_label(args: argparse.Namespace) -> str:
@@ -640,13 +681,22 @@ def cmd_resume(args: argparse.Namespace, input_fn=input) -> int:
 
 
 def cmd_undo(args: argparse.Namespace) -> int:
-    """Revert file changes recorded by a prior session's checkpointer (F8)."""
+    """Revert changes recorded by a prior run's checkpointer (F8/F16.1).
+
+    Uses git-native whole-tree undo when the workspace is a git repo (reverts
+    run_bash side-effects too); otherwise the file-snapshot store.
+    """
     workspace = Path(args.workspace).resolve()
     color = _color(sys.stdout.isatty() and not args.no_color)
-    store = _checkpoint_store(workspace)
-    checkpointer = Checkpointer.load(workspace, store)
 
-    if not checkpointer.snapshots:
+    if is_git_repo(workspace):
+        checkpointer = GitCheckpointer(workspace)
+        has_any = checkpointer.has_snapshots()
+    else:
+        checkpointer = Checkpointer.load(workspace, _checkpoint_store(workspace))
+        has_any = bool(checkpointer.snapshots)
+
+    if not has_any:
         print(f"{color['dim']}nothing to undo (no recorded changes for {workspace}).{color['reset']}")
         return 0
 
