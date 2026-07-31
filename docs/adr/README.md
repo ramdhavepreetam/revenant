@@ -67,7 +67,7 @@
 | [0012](0012-verify-repair-loop.md) | Verify → repair loop | H1 | Implemented (targeted-tests deferred) |
 | [0013](0013-proactive-context-injection.md) | Proactive context injection | H2 | Proposed |
 | [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Proposed |
-| [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Proposed |
+| [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Implemented |
 
 ---
 
@@ -102,7 +102,7 @@ model and into deterministic machinery. Strategy: [ADR-0011](0011-harness-carrie
 | **H1** | **Verify → repair loop** | plausible-but-broken edits | `before_tool` seam, loop-driver, undo, code-graph | ✅ Shipped (targeted-tests deferred) |
 | **H2** | Proactive context injection | edits in the dark | `pack_symbol_context` (F14.3) | ⬜ Next |
 | **H3** | Decompose + per-step verify | can't hold a long plan | sub-agents (P8), H1 | ⬜ Next |
-| **H0** | Eval harness | — (measures the lift) | new; small | ⬜ Early, cross-cutting |
+| **H0** | Eval harness | — (measures the lift) | new; small | ✅ Shipped (5 tasks + `--compare`) |
 
 **Governing rule:** the model proposes; the harness verifies and repairs. A model
 mistake that reaches the user is a *harness* failure. Stand up **H0 early** so
