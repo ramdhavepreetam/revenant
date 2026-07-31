@@ -28,7 +28,9 @@ from nerva_agent.agent_bash_tool import build_bash_tool
 from nerva_agent.agent_loop import AgentLoop, AgentEvent
 from nerva_agent.agent_capacity import recommend
 
-from revenant_cli.config import load_config, resolve
+from nerva_agent.mcp_tools import build_mcp_tools
+
+from revenant_cli.config import load_config, resolve, mcp_server_specs
 from revenant_cli.project_context import compose_preamble, find_project_doc
 from revenant_cli.checkpoint import Checkpointer
 
@@ -175,9 +177,31 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Revert all recorded changes (default: just the last).")
     p_undo.add_argument("--no-color", action="store_true")
 
-    # Skeleton subcommands wired in later slices (F11 MCP, F3 resume).
+    # F11 (P3): manage MCP servers configured via [[mcp.servers]]. The workspace
+    # / color flags are added to BOTH the `mcp` parser and each sub-action, so
+    # `revenant mcp list --workspace X` and `revenant mcp --workspace X list`
+    # both parse (argparse won't accept a parent optional after a sub-action).
+    def _add_mcp_flags(p: argparse.ArgumentParser, *, suppress: bool) -> None:
+        # On sub-action parsers, default to SUPPRESS so a value given at the
+        # parent level (`mcp --workspace X list`) isn't clobbered by the sub's default.
+        ws_default = argparse.SUPPRESS if suppress else "."
+        p.add_argument("--workspace", default=ws_default, help="Repo root (default: cwd).")
+        if suppress:
+            p.add_argument("--no-color", action="store_true", default=argparse.SUPPRESS)
+        else:
+            p.add_argument("--no-color", action="store_true")
+
+    p_mcp = sub.add_parser("mcp", help="Inspect configured MCP servers and their tools.")
+    _add_mcp_flags(p_mcp, suppress=False)
+    mcp_sub = p_mcp.add_subparsers(dest="mcp_action")
+    p_mcp_list = mcp_sub.add_parser("list", help="List configured servers and their tools.")
+    _add_mcp_flags(p_mcp_list, suppress=True)
+    p_mcp_test = mcp_sub.add_parser("test", help="Connect to a server and report health.")
+    _add_mcp_flags(p_mcp_test, suppress=True)
+    p_mcp_test.add_argument("name", help="Server name to test (from [[mcp.servers]]).")
+
+    # Skeleton subcommands wired in later slices (F3 resume).
     sub.add_parser("config", help="Show/edit configuration (coming soon).")
-    sub.add_parser("mcp", help="Manage MCP servers (coming soon).")
     sub.add_parser("resume", help="Resume a saved session (coming soon).")
     return parser
 
@@ -230,11 +254,21 @@ def _build_agent(args: argparse.Namespace):
 
     tools = build_fs_tools(workspace)
     checkpointer = None
+    mcp_clients: list = []
     if not read_only:
         tools += build_edit_tools(workspace)
         tools.append(build_bash_tool(workspace))
         # F8: snapshot files before mutating tools so `revenant undo` can revert.
         checkpointer = Checkpointer(workspace, store_path=_checkpoint_store(workspace))
+        # F11 (P3): connect configured MCP servers and add their tools. A server
+        # that fails to connect is skipped with a warning (degrade, ADR-0001).
+        specs = mcp_server_specs(cfg)
+        if specs:
+            mcp_tools, mcp_clients = build_mcp_tools(specs)
+            tools += mcp_tools
+            if mcp_tools:
+                print(f"{color['dim']}mcp: loaded {len(mcp_tools)} tool(s) "
+                      f"from {len(mcp_clients)} server(s){color['reset']}")
     registry = ToolRegistry(tools)
 
     # F6 (tier a): ground the agent on the project's own instruction file if present.
@@ -256,7 +290,18 @@ def _build_agent(args: argparse.Namespace):
         summarizer_config=summarizer,
         before_tool=(checkpointer.snapshot if checkpointer else None),
     )
+    # Stash MCP clients on the loop so the command handler can close them on exit.
+    loop._mcp_clients = mcp_clients
     return workspace, config, rec, loop, color
+
+
+def _close_mcp(loop) -> None:
+    """Close any MCP server subprocesses attached to a loop. Never raises."""
+    for client in getattr(loop, "_mcp_clients", ()) or ():
+        try:
+            client.close()
+        except Exception:  # noqa: BLE001 - cleanup is best-effort
+            pass
 
 
 def _checkpoint_store(workspace: Path) -> Path:
@@ -280,7 +325,10 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"{color['dim']}revenant · model={config.model} · workspace={workspace} · {_mode_label(args)}{color['reset']}")
     print(f"{color['dim']}capacity: {rec.note}{color['reset']}")
 
-    result = loop.run(args.goal)
+    try:
+        result = loop.run(args.goal)
+    finally:
+        _close_mcp(loop)
     if result.stopped_reason == "final":
         return 0
     if result.stopped_reason == "max_steps":
@@ -305,27 +353,30 @@ def cmd_chat(args: argparse.Namespace, input_fn=input) -> int:
     print(f"{c['dim']}Type your goal. Commands: /exit, /reset, /help.{c['reset']}")
 
     history: list[dict] = []
-    while True:
-        try:
-            line = input_fn(f"{c['bold']}revenant› {c['reset']}").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            break
-        if not line:
-            continue
-        if line in ("/exit", "/quit"):
-            break
-        if line == "/reset":
-            history = []
-            print(f"{c['dim']}context cleared.{c['reset']}")
-            continue
-        if line == "/help":
-            print(f"{c['dim']}/exit quit · /reset clear context · /help this message{c['reset']}")
-            continue
+    try:
+        while True:
+            try:
+                line = input_fn(f"{c['bold']}revenant› {c['reset']}").strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                break
+            if not line:
+                continue
+            if line in ("/exit", "/quit"):
+                break
+            if line == "/reset":
+                history = []
+                print(f"{c['dim']}context cleared.{c['reset']}")
+                continue
+            if line == "/help":
+                print(f"{c['dim']}/exit quit · /reset clear context · /help this message{c['reset']}")
+                continue
 
-        result = loop.run(line, history=history or None)
-        # Thread the transcript forward so the next turn keeps context.
-        history = result.messages
+            result = loop.run(line, history=history or None)
+            # Thread the transcript forward so the next turn keeps context.
+            history = result.messages
+    finally:
+        _close_mcp(loop)
     return 0
 
 
@@ -351,6 +402,68 @@ def cmd_undo(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mcp(args: argparse.Namespace) -> int:
+    """Inspect configured MCP servers and their tools (F11.4)."""
+    workspace = Path(args.workspace).resolve()
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    cfg = load_config(workspace)
+    specs = mcp_server_specs(cfg)
+
+    action = getattr(args, "mcp_action", None) or "list"
+
+    if not specs:
+        print(f"{color['dim']}no MCP servers configured. Add [[mcp.servers]] to "
+              f".revenant.toml.{color['reset']}")
+        return 0
+
+    if action == "test":
+        target = next((s for s in specs if s.name == args.name), None)
+        if target is None:
+            print(f"error: no configured server named {args.name!r}. "
+                  f"Known: {', '.join(s.name for s in specs)}", file=sys.stderr)
+            return 2
+        tools, clients = build_mcp_tools([target])
+        try:
+            if clients:
+                print(f"{color['bold']}✓{color['reset']} {target.name}: "
+                      f"connected, {len(tools)} tool(s)")
+                for t in tools:
+                    print(f"{color['dim']}    - {t.name}{color['reset']}")
+                return 0
+            print(f"{color['bold']}✗{color['reset']} {target.name}: could not connect")
+            return 1
+        finally:
+            for c in clients:
+                try:
+                    c.close()
+                except Exception:  # noqa: BLE001
+                    pass
+
+    # action == "list"
+    tools, clients = build_mcp_tools(specs)
+    try:
+        connected = {c.spec.name for c in clients}
+        by_server: dict[str, list[str]] = {}
+        for t in tools:
+            server = t.name.split(".", 1)[0]
+            by_server.setdefault(server, []).append(t.name)
+        for spec in specs:
+            mark = "✓" if spec.name in connected else "✗"
+            label = spec.alias or spec.name
+            names = by_server.get(label, [])
+            print(f"{color['bold']}{mark}{color['reset']} {spec.name} "
+                  f"{color['dim']}({spec.transport}){color['reset']} — {len(names)} tool(s)")
+            for name in names:
+                print(f"{color['dim']}    - {name}{color['reset']}")
+        return 0
+    finally:
+        for c in clients:
+            try:
+                c.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     parser = build_parser()
@@ -362,7 +475,9 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_chat(args)
     if args.command == "undo":
         return cmd_undo(args)
-    if args.command in ("config", "mcp", "resume"):
+    if args.command == "mcp":
+        return cmd_mcp(args)
+    if args.command in ("config", "resume"):
         print(f"'{args.command}' is not implemented yet — coming in a later release.",
               file=sys.stderr)
         return 2

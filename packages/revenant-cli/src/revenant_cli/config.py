@@ -88,6 +88,47 @@ def load_config(workspace: Path) -> dict[str, Any]:
     return merged
 
 
+def mcp_server_specs(config: dict[str, Any]):
+    """Read `[[mcp.servers]]` entries from the merged config into McpServerSpec.
+
+    Project entries win over user entries with the same `name` (project layer is
+    more specific, mirroring the scalar merge). Malformed entries are skipped with
+    a warning — a bad server block must never make the CLI unusable (F11.3).
+
+    Returns `list[McpServerSpec]`. Import is local so `nerva-agent` stays an
+    implementation detail of this reader, not a load-time dependency of config.
+    """
+    from nerva_agent.mcp_client import McpServerSpec  # cli-tier dep (ADR-0002)
+
+    def _entries(raw: dict[str, Any]) -> list[dict]:
+        mcp = raw.get("mcp") if isinstance(raw, dict) else None
+        servers = mcp.get("servers") if isinstance(mcp, dict) else None
+        return [s for s in servers if isinstance(s, dict)] if isinstance(servers, list) else []
+
+    # user first, project second → project overrides by name.
+    by_name: dict[str, McpServerSpec] = {}
+    for raw in (config.get("_raw_user", {}), config.get("_raw_project", {})):
+        for entry in _entries(raw):
+            name = entry.get("name")
+            if not isinstance(name, str) or not name:
+                print("warning: skipping [[mcp.servers]] entry without a name",
+                      file=sys.stderr)
+                continue
+            transport = entry.get("transport", "stdio")
+            read_only = entry.get("read_only") or []
+            by_name[name] = McpServerSpec(
+                name=name,
+                transport=transport,
+                command=entry.get("command"),
+                args=list(entry.get("args") or []),
+                env=dict(entry.get("env") or {}),
+                url=entry.get("url"),
+                read_only=[t for t in read_only if isinstance(t, str)],
+                alias=entry.get("alias"),
+            )
+    return list(by_name.values())
+
+
 def resolve(key: str, flag_value: Any, config: dict[str, Any], default: Any) -> Any:
     """Apply precedence for one setting: flag > config > default.
 

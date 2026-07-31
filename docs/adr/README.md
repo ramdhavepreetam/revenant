@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-30 · **Tests:** 217 green
+**Last updated:** 2026-07-30 · **Tests:** 247 green
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -33,7 +33,7 @@
 | [0002](0002-monorepo-package-split.md) | Monorepo package split | — | Implemented |
 | [0003](0003-local-agent-harness.md) | Local agent harness (one loop, two front-ends) | — | Implemented |
 | [0010](0010-undo-hardening.md) | Undo checkpointing & test debt (bridge) | P2.5 | Implemented |
-| [0004](0004-mcp-integration.md) | MCP — external tools over the wire | P3 | Proposed |
+| [0004](0004-mcp-integration.md) | MCP — external tools over the wire | P3 | Implemented |
 | [0005](0005-skills.md) | Skills — reusable packaged workflows | P4 | Proposed |
 | [0006](0006-loops.md) | Loops — autonomous & recurring runs | P5 | Proposed |
 | [0007](0007-resume-session-persistence.md) | Resume & session persistence | P6 | Proposed |
@@ -53,8 +53,8 @@ capability jump.
 |-------|--------|-----------|------|--------|
 | **P0** | Engine + CLI (F1–F7, routing, capacity) | — | — | ✅ Shipped |
 | **P2.5** | Undo hardening (F8/F9) + tests | — | Low | ✅ Shipped (F9 git-undo → P8) |
-| **P3** | **MCP** integration | P2.5 seams | Low | ⬜ **Next up** |
-| **P4** | **Skills** | project_context patterns | Low–Med | ⬜ Next |
+| **P3** | **MCP** integration | P2.5 seams | Low | ✅ Shipped (add/HTTP deferred) |
+| **P4** | **Skills** | project_context patterns | Low–Med | ⬜ **Next up** |
 | **P5** | **Loops** (autonomous) | P2.5 hardened, P6 journal | Med | ⬜ After safety floor |
 | **P6** | Resume / persistence | aibot_storage hooks | Low | ⬜ Small, unblocks P5 journal |
 | **P7** | **Code graph** | agent_ignore | High | ⬜ Horizon (deep bet) |
@@ -102,15 +102,27 @@ plugs into one — it is not greenfield:
 
 ## Immediate debt
 
-- ~~Undo (F8/F9) lacks tests.~~ **Cleared 2026-07-30** — 23 tests added, suite at
-  217. See [ADR-0010](0010-undo-hardening.md). P5's safety floor is in place.
-- Next actionable phase: **P3 MCP** ([ADR-0004](0004-mcp-integration.md)).
+- ~~Undo (F8/F9) lacks tests.~~ **Cleared 2026-07-30** — 23 tests, suite 217.
+- ~~P3 MCP.~~ **Shipped 2026-07-30** — 29 tests, suite 247. `mcp add` action and
+  the HTTP/SSE transport were deferred (stdio only); note both when they're needed.
+- Next actionable phase: **P4 Skills** ([ADR-0005](0005-skills.md)).
 
 ---
 
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-07-30 (c) — P3 MCP shipped
+- `nerva_agent/mcp_client.py` (stdlib JSON-RPC over stdio) + `mcp_tools.py`
+  (remote tool → registry `Tool`, approval-by-default, read_only relax).
+- `config.py` `mcp_server_specs` reads the reserved `[[mcp.servers]]` section;
+  `_build_agent` loads MCP tools in write mode and closes clients on exit.
+- `revenant mcp list|test` subcommand (replaces the stub). `mcp add` + HTTP
+  transport deferred.
+- **29 new tests → suite 247.** Verified end-to-end through the real CLI against
+  a fake stdio server; fixed an argparse flag-ordering bug the unit tests missed.
+- ADR-0004 → Implemented. **Next: P4 Skills (ADR-0005).**
 
 ### 2026-07-30 (b) — Undo test debt cleared → P2.5 shipped
 - Added `tests/test_checkpoint.py` (16 tests) and 7 undo cases in

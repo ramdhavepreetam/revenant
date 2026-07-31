@@ -1,8 +1,8 @@
 # ADR-0004 — MCP: external tools over the wire (Phase 3)
 
-- **Status:** Proposed
+- **Status:** Implemented
 - **Phase:** P3 · **F-slices:** F11.1 client, F11.2 adapter, F11.3 config, F11.4 subcommand
-- **Date proposed:** 2026-07-30 · **Date implemented:** —
+- **Date proposed:** 2026-07-30 · **Date implemented:** 2026-07-30
 - **Depends on:** ADR-0003 (registry, loop), ADR-0002 (placement) · **Blocks:** ADR-0005 (skill-scoped tools), ADR-0008/0009 partially
 
 ## Context
@@ -90,31 +90,57 @@ Replace the stub:
 - Native-schema rendering must tolerate remote tools with schemas richer than
   `ToolParam` supports — degrade to a described string param, never crash.
 
-## Test plan
-`tests/test_mcp_client.py` — against a **fake in-process stdio server** (a small
-script speaking MCP JSON-RPC):
-- [ ] handshake + `list_tools` returns expected defs.
-- [ ] `call_tool` round-trips args and flattens result to text.
-- [ ] transport error → client error, not a crash.
+## Test plan — DONE (29 tests, 2026-07-30)
+`tests/test_mcp_client.py` (11) — against a **fake in-process stdio server**:
+- [x] handshake + `list_tools` returns expected defs.
+- [x] `call_tool` round-trips args and flattens result to text.
+- [x] transport error / dead server / bad JSON-RPC → `McpError`, not a crash.
+- [x] non-stdio / no-command specs rejected; `close()` idempotent.
+- [x] `_flatten_content`: text parts, non-text marker, error result, JSON fallback.
 
-`tests/test_mcp_tools.py`:
-- [ ] `mcp_tool_to_tool` maps JSON-Schema → `ToolParam` (required/optional/type).
-- [ ] adapted tool defaults to `requires_approval=True`; `read_only` list relaxes it.
-- [ ] name namespacing / alias applied.
+`tests/test_mcp_tools.py` (12):
+- [x] `mcp_tool_to_tool` maps JSON-Schema → `ToolParam` (required/optional/type).
+- [x] complex types degrade to string with a type note; empty schema → no params.
+- [x] adapted tool defaults to `requires_approval=True`; `read_only` relaxes it.
+- [x] name namespacing / alias applied; error→observation; build skips bad server.
 
-`tests/test_config.py` additions:
-- [ ] `mcp_server_specs` parses `[[mcp.servers]]` from project and user layers.
+`tests/test_config.py` (4):
+- [x] `mcp_server_specs` parses `[[mcp.servers]]`; project overrides user by name;
+      entries without a name skipped with a warning.
 
-`tests/test_cli.py` additions:
-- [ ] `_build_agent` includes MCP tools in write mode, none in read-only.
-- [ ] `revenant mcp list` renders configured servers (with a fake client).
+`tests/test_cli.py` (6):
+- [x] `_build_agent` wiring unaffected (before_tool still correct).
+- [x] `revenant mcp list` / `test` render servers+tools against a real fake server.
+- [x] unknown server errors; no-servers case; **flag-ordering regression guard**.
 
 ## Acceptance criteria
-- [ ] A `[[mcp.servers]]` git server entry yields working `git.*` tools in a run.
-- [ ] Remote mutating tools hit the approval gate; `read_only` ones don't.
-- [ ] `revenant mcp list/test` work; failures degrade gracefully.
-- [ ] Offline footprint unchanged for users with no MCP servers configured.
-- [ ] Tests green; ADR + README updated; F11 marked Implemented.
+- [x] A `[[mcp.servers]]` git server entry yields working `git.*` tools
+      (verified end-to-end via the real CLI entrypoint + fake stdio server).
+- [x] Remote mutating tools hit the approval gate (`requires_approval=True`);
+      `read_only` ones are parallel-safe and skip it.
+- [x] `revenant mcp list/test` work; a failing server degrades with a warning.
+- [x] Offline footprint unchanged (stdlib-only client; no MCP servers → no-op).
+- [x] Tests green (217 → 247); ADR + README updated; F11 marked Implemented.
+
+## Implementation notes (what actually shipped)
+- **Stdlib only.** The client (`nerva_agent/mcp_client.py`) speaks MCP JSON-RPC
+  2.0 over a subprocess's stdin/stdout with `subprocess` + `json` — no MCP SDK,
+  no new dependency, offline footprint unchanged. HTTP/SSE transport is stubbed
+  in `McpServerSpec` but deferred.
+- **Client cleanup.** Connected clients are stashed on `loop._mcp_clients` and
+  closed via `_close_mcp(loop)` in a `try/finally` around `cmd_run` / the
+  `cmd_chat` REPL, so server subprocesses don't leak.
+- **Deviation from the sketch:** the `mcp add` action was **not** built in v1
+  (list/test only), matching the ADR's "optional in v1" note. Adding a server is
+  still a hand-edit of `.revenant.toml`.
+- **Bug found by end-to-end testing (not unit tests):** argparse rejected
+  parent optionals placed *after* the sub-action (`mcp list --workspace X`).
+  Fixed by adding the flags to each sub-action parser with `default=SUPPRESS`
+  so a parent-level value isn't clobbered; covered by a regression test.
 
 ## Progress log
 - 2026-07-30 — Proposed. Seams confirmed present in `config.py` and `cli.py`.
+- 2026-07-30 — **Implemented.** F11.1–F11.4 built and tested (29 new tests,
+  suite 217 → 247). Verified end-to-end through the real CLI against a fake
+  stdio MCP server (`mcp list`, `mcp test`, bare `mcp`). Status → Implemented.
+  `mcp add` deferred; HTTP transport deferred. Next phase: P4 Skills (ADR-0005).

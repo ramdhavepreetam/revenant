@@ -226,7 +226,7 @@ def _stub_agent_build(monkeypatch):
 
     def fake_loop_ctor(*_a, before_tool=None, **_k):
         captured["before_tool"] = before_tool
-        return object()
+        return type("L", (), {})()  # attributable (cli sets loop._mcp_clients)
 
     monkeypatch.setattr(cli, "AgentLoop", fake_loop_ctor)
     monkeypatch.setattr(cli, "recommend", lambda *a, **k: _Rec())
@@ -250,3 +250,92 @@ def test_build_agent_no_before_tool_in_read_only(tmp_path, monkeypatch):
     captured = _stub_agent_build(monkeypatch)
     cli._build_agent(_agent_args(tmp_path, read_only=True))
     assert captured["before_tool"] is None
+
+
+# --- mcp subcommand (F11.4, ADR-0004) ---------------------------------------
+
+import sys as _sys
+import textwrap as _textwrap
+
+_FAKE_MCP_SERVER = _textwrap.dedent('''
+    import json, sys
+    def send(o): sys.stdout.write(json.dumps(o)+"\\n"); sys.stdout.flush()
+    for line in sys.stdin:
+        line=line.strip()
+        if not line: continue
+        m=json.loads(line); mid=m.get("id"); method=m.get("method")
+        if method=="initialize":
+            send({"jsonrpc":"2.0","id":mid,"result":{"protocolVersion":"2024-11-05","capabilities":{}}})
+        elif method=="notifications/initialized": pass
+        elif method=="tools/list":
+            send({"jsonrpc":"2.0","id":mid,"result":{"tools":[
+                {"name":"status","description":"repo status","inputSchema":{"type":"object","properties":{}}}]}})
+        elif method=="tools/call":
+            send({"jsonrpc":"2.0","id":mid,"result":{"content":[{"type":"text","text":"clean"}]}})
+        else:
+            send({"jsonrpc":"2.0","id":mid,"error":{"code":-32601,"message":"nope"}})
+''')
+
+
+def _mcp_workspace(tmp_path):
+    """A workspace with a .revenant.toml pointing at a fake stdio MCP server."""
+    server = tmp_path / "srv.py"
+    server.write_text(_FAKE_MCP_SERVER)
+    toml = tmp_path / ".revenant.toml"
+    toml.write_text(
+        "[[mcp.servers]]\n"
+        'name = "git"\n'
+        'transport = "stdio"\n'
+        f'command = "{_sys.executable}"\n'
+        f'args = ["{server}"]\n'
+        'read_only = ["status"]\n'
+    )
+    return tmp_path
+
+
+def _mcp_args(workspace, action=None, name=None):
+    ns = argparse.Namespace(workspace=str(workspace), no_color=True, mcp_action=action)
+    if name is not None:
+        ns.name = name
+    return ns
+
+
+def test_cmd_mcp_list_shows_server_and_tools(tmp_path, capsys):
+    rc = cli.cmd_mcp(_mcp_args(_mcp_workspace(tmp_path), action="list"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "git" in out
+    assert "git.status" in out
+
+
+def test_cmd_mcp_test_reports_health(tmp_path, capsys):
+    rc = cli.cmd_mcp(_mcp_args(_mcp_workspace(tmp_path), action="test", name="git"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "git" in out and "git.status" in out
+
+
+def test_cmd_mcp_test_unknown_server_errors(tmp_path, capsys):
+    rc = cli.cmd_mcp(_mcp_args(_mcp_workspace(tmp_path), action="test", name="nope"))
+    assert rc == 2
+    assert "no configured server" in capsys.readouterr().err
+
+
+def test_cmd_mcp_no_servers_configured(tmp_path, capsys):
+    rc = cli.cmd_mcp(_mcp_args(tmp_path, action="list"))
+    assert rc == 0
+    assert "no MCP servers configured" in capsys.readouterr().out
+
+
+def test_mcp_parser_accepts_flags_before_and_after_action():
+    """Regression: parent optionals must parse on either side of the sub-action."""
+    p = cli.build_parser()
+    # flags AFTER the sub-action
+    a = p.parse_args(["mcp", "list", "--workspace", "/w", "--no-color"])
+    assert a.command == "mcp" and a.mcp_action == "list" and a.workspace == "/w"
+    # flags BEFORE the sub-action (parent value must survive, not reset to '.')
+    b = p.parse_args(["mcp", "--workspace", "/w", "list"])
+    assert b.mcp_action == "list" and b.workspace == "/w"
+    # test action carries its positional
+    c = p.parse_args(["mcp", "test", "git", "--workspace", "/w"])
+    assert c.mcp_action == "test" and c.name == "git" and c.workspace == "/w"
