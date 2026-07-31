@@ -29,8 +29,13 @@ from nerva_agent.agent_loop import AgentLoop, AgentEvent
 from nerva_agent.agent_capacity import recommend
 
 from nerva_agent.mcp_tools import build_mcp_tools
+from nerva_agent.skills import (
+    discover_skills, render_skill_index, compose_skill_body, scope_registry,
+)
 
-from revenant_cli.config import load_config, resolve, mcp_server_specs
+from revenant_cli.config import (
+    load_config, resolve, mcp_server_specs, user_config_path,
+)
 from revenant_cli.project_context import compose_preamble, find_project_doc
 from revenant_cli.checkpoint import Checkpointer
 
@@ -132,7 +137,7 @@ def build_config(profiles: dict, base_url: str, model: str | None) -> ChatConfig
     return config
 
 
-_SUBCOMMANDS = ("run", "chat", "undo", "config", "mcp", "resume")
+_SUBCOMMANDS = ("run", "chat", "undo", "mcp", "skills", "config", "resume")
 
 
 _DEFAULT_BASE_URL = "http://localhost:11434"
@@ -199,6 +204,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_mcp_test = mcp_sub.add_parser("test", help="Connect to a server and report health.")
     _add_mcp_flags(p_mcp_test, suppress=True)
     p_mcp_test.add_argument("name", help="Server name to test (from [[mcp.servers]]).")
+
+    # F12 (P4): inspect skills (reusable SKILL.md workflows).
+    def _add_skills_flags(p: argparse.ArgumentParser, *, suppress: bool) -> None:
+        ws_default = argparse.SUPPRESS if suppress else "."
+        p.add_argument("--workspace", default=ws_default, help="Repo root (default: cwd).")
+        if suppress:
+            p.add_argument("--no-color", action="store_true", default=argparse.SUPPRESS)
+        else:
+            p.add_argument("--no-color", action="store_true")
+
+    p_skills = sub.add_parser("skills", help="List and show reusable skills (SKILL.md).")
+    _add_skills_flags(p_skills, suppress=False)
+    skills_sub = p_skills.add_subparsers(dest="skills_action")
+    p_skills_list = skills_sub.add_parser("list", help="List available skills.")
+    _add_skills_flags(p_skills_list, suppress=True)
+    p_skills_show = skills_sub.add_parser("show", help="Print a skill's full body.")
+    _add_skills_flags(p_skills_show, suppress=True)
+    p_skills_show.add_argument("name", help="Skill name to show.")
 
     # Skeleton subcommands wired in later slices (F3 resume).
     sub.add_parser("config", help="Show/edit configuration (coming soon).")
@@ -277,6 +300,15 @@ def _build_agent(args: argparse.Namespace):
     if doc is not None:
         print(f"{color['dim']}context: loaded {doc.name}{color['reset']}")
 
+    # F12 (P4): fold a compact skill index into the preamble (progressive
+    # disclosure — only names+descriptions, never bodies). The REPL can then
+    # invoke a skill by name to load its full procedure.
+    skills = _load_skills(workspace)
+    index = render_skill_index(skills)
+    if index:
+        preamble = f"{preamble}\n\n{index}"
+        print(f"{color['dim']}skills: {len(skills)} available{color['reset']}")
+
     loop = AgentLoop(
         config, registry,
         system_preamble=preamble,
@@ -292,6 +324,9 @@ def _build_agent(args: argparse.Namespace):
     )
     # Stash MCP clients on the loop so the command handler can close them on exit.
     loop._mcp_clients = mcp_clients
+    # Stash skills + base preamble so the REPL's /skill can inject a body (F12.4).
+    loop._skills = {s.name: s for s in skills}
+    loop._base_preamble = preamble
     return workspace, config, rec, loop, color
 
 
@@ -311,6 +346,24 @@ def _checkpoint_store(workspace: Path) -> Path:
     invocation) can reconstruct the checkpointer for exactly this repo.
     """
     return workspace / default_data_dir() / "checkpoints.json"
+
+
+def _skill_dirs(workspace: Path) -> tuple[Path, Path]:
+    """The (project, user) skill roots for a workspace (F12, ADR-0005).
+
+    Project skills live in `<ws>/.revenant/skills`; user skills alongside the
+    user config in `~/.config/revenant/skills`. Returned even if absent —
+    `discover_skills` tolerates missing roots.
+    """
+    project = workspace / ".revenant" / "skills"
+    user = user_config_path().parent / "skills"
+    return project, user
+
+
+def _load_skills(workspace: Path):
+    """Discover all skills for a workspace (project overrides user by name)."""
+    project, user = _skill_dirs(workspace)
+    return discover_skills(project, user)
 
 
 def _mode_label(args: argparse.Namespace) -> str:
@@ -369,8 +422,17 @@ def cmd_chat(args: argparse.Namespace, input_fn=input) -> int:
                 print(f"{c['dim']}context cleared.{c['reset']}")
                 continue
             if line == "/help":
-                print(f"{c['dim']}/exit quit · /reset clear context · /help this message{c['reset']}")
+                print(f"{c['dim']}/exit quit · /reset clear context · "
+                      f"/skills list · /skill <name> run a skill · /help{c['reset']}")
                 continue
+            if line == "/skills":
+                _print_skill_list(loop, c)
+                continue
+            if line.startswith("/skill"):
+                goal = _skill_repl_goal(loop, line, c)
+                if goal is None:
+                    continue  # unknown/misused: message already printed
+                line = goal  # fall through to run the skill body as this turn's goal
 
             result = loop.run(line, history=history or None)
             # Thread the transcript forward so the next turn keeps context.
@@ -399,6 +461,82 @@ def cmd_undo(args: argparse.Namespace) -> int:
     else:
         desc = checkpointer.undo_last()
         print(f"{color['bold']}↶{color['reset']} {desc}")
+    return 0
+
+
+def _print_skill_list(loop, color) -> None:
+    """Print the skills available in a REPL session (from loop._skills)."""
+    skills = getattr(loop, "_skills", {}) or {}
+    if not skills:
+        print(f"{color['dim']}no skills available. Add one under "
+              f".revenant/skills/<name>/SKILL.md{color['reset']}")
+        return
+    for name in sorted(skills):
+        s = skills[name]
+        print(f"{color['bold']}{s.slash}{color['reset']} "
+              f"{color['dim']}— {s.description}{color['reset']}")
+
+
+def _skill_repl_goal(loop, line: str, color) -> str | None:
+    """Handle `/skill <name>` in the REPL: return the skill body as the turn goal.
+
+    Injects the skill's instructions into the loop's system preamble (progressive
+    disclosure — the body loads only now) and scopes the registry to the skill's
+    declared tools. Returns the body to run as this turn's goal, or None if the
+    skill name is missing/unknown (a message is printed).
+    """
+    parts = line.split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        print(f"{color['dim']}usage: /skill <name>  (see /skills){color['reset']}")
+        return None
+    name = parts[1].strip().lstrip("/")
+    skills = getattr(loop, "_skills", {}) or {}
+    skill = skills.get(name)
+    if skill is None:
+        known = ", ".join(sorted(skills)) or "(none)"
+        print(f"{color['dim']}unknown skill {name!r}. Available: {known}{color['reset']}")
+        return None
+    # Load the body into the active preamble and scope the tools for this skill.
+    base = getattr(loop, "_base_preamble", loop.system_preamble)
+    loop.system_preamble = compose_skill_body(base, skill)
+    if skill.tools:
+        loop.registry = scope_registry(loop.registry, skill)
+    print(f"{color['dim']}▶ skill '{skill.name}' loaded{color['reset']}")
+    return skill.body
+
+
+def cmd_skills(args: argparse.Namespace) -> int:
+    """`revenant skills list|show <name>` — inspect available skills (F12.4)."""
+    workspace = Path(args.workspace).resolve()
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    skills = {s.name: s for s in _load_skills(workspace)}
+    action = getattr(args, "skills_action", None) or "list"
+
+    if action == "show":
+        skill = skills.get(args.name)
+        if skill is None:
+            known = ", ".join(sorted(skills)) or "(none)"
+            print(f"error: no skill named {args.name!r}. Available: {known}", file=sys.stderr)
+            return 2
+        print(f"{color['bold']}{skill.slash}{color['reset']} "
+              f"{color['dim']}({skill.source}){color['reset']}")
+        print(f"{color['dim']}{skill.description}{color['reset']}")
+        if skill.tools:
+            print(f"{color['dim']}tools: {', '.join(skill.tools)}{color['reset']}")
+        print()
+        print(skill.body)
+        return 0
+
+    # action == "list"
+    if not skills:
+        print(f"{color['dim']}no skills found. Add one under "
+              f".revenant/skills/<name>/SKILL.md{color['reset']}")
+        return 0
+    for name in sorted(skills):
+        s = skills[name]
+        tools = f" {color['dim']}[{', '.join(s.tools)}]{color['reset']}" if s.tools else ""
+        print(f"{color['bold']}{s.slash}{color['reset']} "
+              f"{color['dim']}({s.source}) — {s.description}{color['reset']}{tools}")
     return 0
 
 
@@ -477,6 +615,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_undo(args)
     if args.command == "mcp":
         return cmd_mcp(args)
+    if args.command == "skills":
+        return cmd_skills(args)
     if args.command in ("config", "resume"):
         print(f"'{args.command}' is not implemented yet — coming in a later release.",
               file=sys.stderr)

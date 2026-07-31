@@ -339,3 +339,106 @@ def test_mcp_parser_accepts_flags_before_and_after_action():
     # test action carries its positional
     c = p.parse_args(["mcp", "test", "git", "--workspace", "/w"])
     assert c.mcp_action == "test" and c.name == "git" and c.workspace == "/w"
+
+
+# --- skills subcommand + /skill REPL (F12.4, ADR-0005) ----------------------
+
+def _skill_workspace(tmp_path, tools=None):
+    d = tmp_path / ".revenant" / "skills" / "run-tests"
+    d.mkdir(parents=True)
+    fm = ['name = "run-tests"', 'description = "Run the suite."']
+    if tools:
+        fm.append("tools = [" + ", ".join(f'"{t}"' for t in tools) + "]")
+    (d / "SKILL.md").write_text("+++\n" + "\n".join(fm) + "\n+++\n1. run pytest")
+    return tmp_path
+
+
+def _skills_args(workspace, action=None, name=None):
+    ns = argparse.Namespace(workspace=str(workspace), no_color=True, skills_action=action)
+    if name is not None:
+        ns.name = name
+    return ns
+
+
+def test_cmd_skills_list(tmp_path, capsys):
+    rc = cli.cmd_skills(_skills_args(_skill_workspace(tmp_path), action="list"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "/run-tests" in out and "Run the suite." in out
+
+
+def test_cmd_skills_show(tmp_path, capsys):
+    rc = cli.cmd_skills(_skills_args(_skill_workspace(tmp_path), action="show", name="run-tests"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "1. run pytest" in out  # body is shown
+
+
+def test_cmd_skills_show_unknown(tmp_path, capsys):
+    rc = cli.cmd_skills(_skills_args(_skill_workspace(tmp_path), action="show", name="nope"))
+    assert rc == 2
+    assert "no skill named" in capsys.readouterr().err
+
+
+def test_cmd_skills_none_found(tmp_path, capsys):
+    rc = cli.cmd_skills(_skills_args(tmp_path, action="list"))
+    assert rc == 0
+    assert "no skills found" in capsys.readouterr().out
+
+
+def test_skills_parser_flag_ordering():
+    p = cli.build_parser()
+    a = p.parse_args(["skills", "list", "--workspace", "/w"])
+    assert a.command == "skills" and a.skills_action == "list" and a.workspace == "/w"
+    b = p.parse_args(["skills", "show", "run-tests", "--workspace", "/w"])
+    assert b.skills_action == "show" and b.name == "run-tests"
+
+
+# /skill in the REPL: a fake loop carrying skill state.
+
+from nerva_agent.skills import Skill as _Skill
+from nerva_agent.agent_tools import Tool as _Tool, ToolRegistry as _Registry
+
+
+class _SkillLoop(_FakeLoop):
+    def __init__(self, skills, registry):
+        super().__init__()
+        self._skills = {s.name: s for s in skills}
+        self._base_preamble = "BASE"
+        self.system_preamble = "BASE"
+        self.registry = registry
+
+
+def test_repl_skill_command_loads_body_and_scopes_tools(monkeypatch):
+    skill = _Skill(name="rt", description="d", body="RUN PYTEST", tools=["run_bash"])
+    reg = _Registry([_Tool(name=n, description=n, run=lambda **k: "ok")
+                     for n in ("run_bash", "read_file", "edit_file")])
+    loop = _SkillLoop([skill], reg)
+    color = cli._color(False)
+    monkeypatch.setattr(
+        cli, "_build_agent",
+        lambda args: ("/ws", type("C", (), {"model": "m"})(),
+                      type("R", (), {"note": "n"})(), loop, color),
+    )
+    lines = iter(["/skill rt", "/exit"])
+    rc = cli.cmd_chat(_chat_args(), input_fn=lambda _p: next(lines))
+    assert rc == 0
+    # Body injected into the preamble; registry scoped to the skill's tools.
+    assert "RUN PYTEST" in loop.system_preamble
+    assert loop.registry.names() == ["run_bash"]
+    # The skill body was run as the turn goal.
+    assert loop.calls[0][0] == "RUN PYTEST"
+
+
+def test_repl_unknown_skill_prints_and_skips(monkeypatch):
+    loop = _SkillLoop([], _Registry([]))
+    color = cli._color(False)
+    monkeypatch.setattr(
+        cli, "_build_agent",
+        lambda args: ("/ws", type("C", (), {"model": "m"})(),
+                      type("R", (), {"note": "n"})(), loop, color),
+    )
+    lines = iter(["/skill ghost", "/exit"])
+    rc = cli.cmd_chat(_chat_args(), input_fn=lambda _p: next(lines))
+    assert rc == 0
+    assert loop.calls == []  # unknown skill: no turn ran
