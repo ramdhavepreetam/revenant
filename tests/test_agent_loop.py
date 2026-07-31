@@ -137,6 +137,35 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(result.stopped_reason, "final")
         self.assertEqual(result.steps, 1)
 
+    def test_result_carries_transcript(self):
+        reg = _registry([])
+        script = _scripted({"role": "assistant", "content": "the answer"})
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=script):
+            result = AgentLoop(_config(), reg, max_steps=5).run("q1")
+        # messages holds the full transcript incl. the final answer, for threading.
+        roles = [m["role"] for m in result.messages]
+        self.assertEqual(roles[0], "system")
+        self.assertEqual(result.messages[1], {"role": "user", "content": "q1"})
+        self.assertEqual(result.messages[-1], {"role": "assistant", "content": "the answer"})
+
+    def test_run_with_history_continues_conversation(self):
+        reg = _registry([])
+        script = _scripted(
+            {"role": "assistant", "content": "first answer"},
+            {"role": "assistant", "content": "second answer"},
+        )
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=script):
+            loop = AgentLoop(_config(), reg, max_steps=5)
+            r1 = loop.run("q1")
+            r2 = loop.run("q2", history=r1.messages)
+        # The second run kept the first turn's context and added only ONE system prompt.
+        self.assertEqual(sum(1 for m in r2.messages if m["role"] == "system"), 1)
+        contents = [m["content"] for m in r2.messages]
+        self.assertIn("q1", contents)
+        self.assertIn("first answer", contents)
+        self.assertIn("q2", contents)
+        self.assertEqual(r2.messages[-1], {"role": "assistant", "content": "second answer"})
+
     def test_unknown_tool_is_recoverable_observation(self):
         # An unknown tool should NOT crash the loop; it becomes an ERROR observation
         # and the model gets another turn.

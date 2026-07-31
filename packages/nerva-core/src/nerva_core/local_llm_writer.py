@@ -260,9 +260,46 @@ def stream_model(config: ChatConfig, messages: list[dict[str, str]]):
         raise LocalLLMError(f"Could not connect to {url}: {exc.reason}") from exc
 
 
-def estimate_tokens(text: str) -> int:
-    # Cheap approximation that is good enough for local CLI guidance.
+def _heuristic_tokens(text: str) -> int:
+    # Cheap word-count approximation; the offline fallback when tiktoken is absent.
     return max(1, round(len(text.split()) * 1.33))
+
+
+# Lazily-built tiktoken encoder, cached at module level. `False` means "tried and
+# unavailable" so we don't re-attempt the import on every call; `None` means "not
+# tried yet". Local models don't use OpenAI's tokenizer, but cl100k_base is a far
+# better length proxy than word-count for budgeting the context window.
+_ENCODER: Any = None
+
+
+def _get_encoder() -> Any:
+    global _ENCODER
+    if _ENCODER is None:
+        try:
+            import tiktoken  # optional dependency; absent on minimal offline installs
+
+            _ENCODER = tiktoken.get_encoding("cl100k_base")
+        except Exception:
+            _ENCODER = False
+    return _ENCODER
+
+
+def estimate_tokens(text: str) -> int:
+    """Estimate the token count of `text` for context-budget decisions.
+
+    Uses tiktoken's cl100k_base encoding when available, falling back to a
+    word-count heuristic so minimal/offline installs never break. Returns at
+    least 1 so empty strings never zero out a budget calculation.
+    """
+    if not text:
+        return 1
+    enc = _get_encoder()
+    if enc:
+        try:
+            return max(1, len(enc.encode(text)))
+        except Exception:
+            pass  # fall through to the heuristic on any encoder hiccup
+    return _heuristic_tokens(text)
 
 
 def trim_to_last_sentence(text: str) -> str:
