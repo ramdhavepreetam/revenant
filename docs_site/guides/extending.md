@@ -61,8 +61,14 @@ revenant skills list             # discovered skills
 revenant skills show run-tests   # a skill's full body
 ```
 
-Inside `chat`, run one with `/skill run-tests`. Skills are discovered from the
-project (`.revenant/skills/`) and your user config
+Inside `chat`, run one with `/skill run-tests`, or one-shot from the shell:
+
+```bash
+revenant run --skill run-tests               # run the skill's procedure
+revenant run --skill review-diff "the auth changes"   # skill + extra context
+```
+
+Skills are discovered from the project (`.revenant/skills/`) and your user config
 (`~/.config/revenant/skills/`); project skills win on a name clash.
 
 ---
@@ -96,6 +102,13 @@ Safety:
 
 Each loop is saved as a session — a stopped loop prints a `revenant resume <id>`
 hint so you can pick it up.
+
+Add `--watch '<glob>'` to re-run the whole loop whenever a matching workspace
+file changes (an mtime poll that respects your ignore globs):
+
+```bash
+revenant loop --watch 'src/**/*.py' --until-tests "keep the tests green"
+```
 
 ---
 

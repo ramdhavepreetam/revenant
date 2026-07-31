@@ -182,7 +182,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command")
 
     p_run = sub.add_parser("run", help="Run a single goal to completion (one-shot).")
-    p_run.add_argument("goal", help="What you want the agent to do.")
+    p_run.add_argument("goal", nargs="?", default="",
+                       help="What you want the agent to do. Optional when --skill is given.")
+    p_run.add_argument("--skill", metavar="NAME",
+                       help="Run a skill's procedure as the goal (see `revenant skills`).")
     _add_common_flags(p_run)
 
     p_chat = sub.add_parser("chat", help="Interactive multi-turn session (REPL).")
@@ -209,6 +212,11 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Stop after this many seconds of wall clock (0 = no limit).")
     p_loop.add_argument("--dry-run", action="store_true",
                         help="Preview: record intended edits/commands without executing them.")
+    p_loop.add_argument("--watch", metavar="GLOB",
+                        help="Re-run the loop whenever a workspace file matching GLOB "
+                             "changes (mtime poll; respects ignore globs). Ctrl-C to stop.")
+    p_loop.add_argument("--watch-interval", type=float, default=1.0,
+                        help="Seconds between --watch polls (default: 1.0).")
 
     p_undo = sub.add_parser("undo", help="Revert file changes the agent made.")
     p_undo.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
@@ -464,15 +472,38 @@ def _mode_label(args: argparse.Namespace) -> str:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    skill_name = getattr(args, "skill", None)
+    if not args.goal and not skill_name:
+        print("error: provide a GOAL, or --skill <name>.", file=sys.stderr)
+        return 2
+
     built = _build_agent(args)
     if built is None:
         return 2
     workspace, config, rec, loop, color = built
+
+    goal = args.goal
+    if skill_name:
+        # One-shot skill: load its body as the goal, scope tools (F12.4 follow-up).
+        skill = getattr(loop, "_skills", {}).get(skill_name)
+        if skill is None:
+            known = ", ".join(sorted(getattr(loop, "_skills", {}))) or "(none)"
+            print(f"error: no skill named {skill_name!r}. Available: {known}",
+                  file=sys.stderr)
+            _close_mcp(loop)
+            return 2
+        base = getattr(loop, "_base_preamble", loop.system_preamble)
+        loop.system_preamble = compose_skill_body(base, skill)
+        if skill.tools:
+            loop.registry = scope_registry(loop.registry, skill)
+        goal = args.goal or skill.body
+        print(f"{color['dim']}skill: {skill.name}{color['reset']}")
+
     print(f"{color['dim']}revenant · model={config.model} · workspace={workspace} · {_mode_label(args)}{color['reset']}")
     print(f"{color['dim']}capacity: {rec.note}{color['reset']}")
 
     try:
-        result = loop.run(args.goal)
+        result = loop.run(goal)
     finally:
         _close_mcp(loop)
     if result.stopped_reason == "final":
@@ -495,13 +526,73 @@ def _resolve_predicate(args: argparse.Namespace, workspace: Path):
     return model_final_predicate(), "the agent reports completion"
 
 
-def cmd_loop(args: argparse.Namespace) -> int:
+def _tree_signature(workspace: Path, glob: str) -> dict:
+    """Map of {path: mtime} for files matching `glob`, respecting ignore globs.
+
+    Used by --watch to detect changes cheaply without a filesystem-events dep.
+    """
+    from nerva_agent.agent_ignore import load_ignore_matcher
+    matcher = load_ignore_matcher(workspace)
+    sig: dict[str, float] = {}
+    for path in workspace.glob(glob):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(workspace).as_posix()
+        if matcher.match(rel, is_dir=False):
+            continue
+        try:
+            sig[rel] = path.stat().st_mtime
+        except OSError:
+            continue
+    return sig
+
+
+def cmd_loop(args: argparse.Namespace, _watch_ticks=None) -> int:
     """Run a goal autonomously, iterating until a condition is met (F13, ADR-0006).
 
     Bounded by --max-iterations / --max-wall. --autonomous auto-approves edits
     (a checkpoint is taken before each iteration so `revenant undo` can step back
     a whole round). Each iteration is journaled as a resumable session.
+
+    With --watch GLOB, the whole loop re-runs each time a matching file changes
+    (mtime poll). `_watch_ticks` is an injectable iterable of sleep callables for
+    testing; in normal use it polls on a timer until interrupted.
     """
+    if getattr(args, "watch", None):
+        return _cmd_loop_watch(args, _watch_ticks)
+    return _cmd_loop_once(args)
+
+
+def _cmd_loop_watch(args: argparse.Namespace, watch_ticks=None) -> int:
+    """Re-run the loop whenever a matching file changes (F13.3)."""
+    import time as _time
+    workspace = Path(args.workspace).resolve()
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    glob = args.watch
+    print(f"{color['dim']}watch: {glob} · re-runs on change · Ctrl-C to stop{color['reset']}")
+
+    # A tick source: injected (tests) or a real sleep generator (never-ending).
+    def real_ticks():
+        while True:
+            yield lambda: _time.sleep(args.watch_interval)
+    ticks = watch_ticks if watch_ticks is not None else real_ticks()
+
+    last = _tree_signature(workspace, glob)
+    rc = _cmd_loop_once(args)  # initial run
+    try:
+        for sleep in ticks:
+            sleep()
+            current = _tree_signature(workspace, glob)
+            if current != last:
+                last = current
+                print(f"{color['dim']}watch: change detected — re-running{color['reset']}")
+                rc = _cmd_loop_once(args)
+    except KeyboardInterrupt:
+        print()
+    return rc
+
+
+def _cmd_loop_once(args: argparse.Namespace) -> int:
     workspace = Path(args.workspace).resolve()
     if not workspace.is_dir():
         print(f"error: workspace is not a directory: {workspace}", file=sys.stderr)

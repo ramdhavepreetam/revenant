@@ -744,3 +744,112 @@ def test_cmd_undo_git_nothing_to_undo(tmp_path, capsys):
     rc = cli.cmd_undo(_undo_args(tmp_path))
     assert rc == 0
     assert "nothing to undo" in capsys.readouterr().out
+
+
+# --- run --skill one-shot (P4 follow-up) ------------------------------------
+
+def test_run_goal_is_optional_with_skill():
+    p = cli.build_parser()
+    ns = p.parse_args(cli._normalize_argv(["run", "--skill", "run-tests"]))
+    assert ns.command == "run" and ns.skill == "run-tests" and ns.goal == ""
+
+
+def test_run_requires_goal_or_skill(tmp_path, capsys, monkeypatch):
+    # Neither goal nor skill -> error, exit 2, no agent built.
+    monkeypatch.setattr(cli, "_build_agent", lambda a: (_ for _ in ()).throw(AssertionError("should not build")))
+    args = _agent_args(tmp_path, read_only=True)
+    args.goal = ""
+    args.skill = None
+    rc = cli.cmd_run(args)
+    assert rc == 2
+    assert "provide a GOAL" in capsys.readouterr().err
+
+
+def test_run_skill_loads_body_and_scopes_tools(tmp_path, monkeypatch):
+    from nerva_agent.skills import Skill as _Skill
+    from nerva_agent.agent_tools import Tool as _Tool, ToolRegistry as _Registry
+
+    skill = _Skill(name="rt", description="d", body="RUN THE SUITE", tools=["run_bash"])
+    reg = _Registry([_Tool(name=n, description=n, run=lambda **k: "ok")
+                     for n in ("run_bash", "read_file")])
+
+    class L:
+        def __init__(self):
+            self._skills = {"rt": skill}
+            self._base_preamble = "BASE"
+            self.system_preamble = "BASE"
+            self.registry = reg
+            self._mcp_clients = []
+            self.ran = None
+        def run(self, goal, history=None):
+            self.ran = goal
+            return type("R", (), {"messages": [], "stopped_reason": "final", "answer": ""})()
+
+    loop = L()
+    color = cli._color(False)
+    monkeypatch.setattr(cli, "_build_agent",
+        lambda a: (Path(tmp_path), type("C", (), {"model": "m"})(),
+                   type("Rec", (), {"note": "n"})(), loop, color))
+    args = _agent_args(tmp_path, read_only=False)
+    args.goal = ""
+    args.skill = "rt"
+    rc = cli.cmd_run(args)
+    assert rc == 0
+    assert loop.ran == "RUN THE SUITE"          # skill body became the goal
+    assert "RUN THE SUITE" in loop.system_preamble
+    assert loop.registry.names() == ["run_bash"]  # scoped to the skill's tools
+
+
+def test_run_unknown_skill_errors(tmp_path, monkeypatch, capsys):
+    class L:
+        _skills = {}
+        _base_preamble = "B"
+        system_preamble = "B"
+        registry = None
+        _mcp_clients = []
+    loop = L()
+    color = cli._color(False)
+    monkeypatch.setattr(cli, "_build_agent",
+        lambda a: (Path(tmp_path), type("C", (), {"model": "m"})(),
+                   type("Rec", (), {"note": "n"})(), loop, color))
+    args = _agent_args(tmp_path, read_only=True)
+    args.goal = ""
+    args.skill = "ghost"
+    rc = cli.cmd_run(args)
+    assert rc == 2
+    assert "no skill named" in capsys.readouterr().err
+
+
+# --- loop --watch trigger (F13.3) -------------------------------------------
+
+def test_loop_watch_parser():
+    p = cli.build_parser()
+    ns = p.parse_args(cli._normalize_argv(["loop", "g", "--watch", "src/**"]))
+    assert ns.watch == "src/**"
+
+
+def test_tree_signature_respects_ignore(tmp_path):
+    (tmp_path / "keep.py").write_text("x")
+    (tmp_path / "vendor").mkdir()
+    (tmp_path / "vendor" / "skip.py").write_text("y")
+    (tmp_path / ".gitignore").write_text("vendor/\n")
+    sig = cli._tree_signature(tmp_path, "**/*.py")
+    assert "keep.py" in sig
+    assert "vendor/skip.py" not in sig
+
+
+def test_loop_watch_reruns_on_change(tmp_path, monkeypatch):
+    (tmp_path / "f.py").write_text("v1")
+    runs = {"n": 0}
+    monkeypatch.setattr(cli, "_cmd_loop_once", lambda a: runs.__setitem__("n", runs["n"] + 1) or 0)
+
+    # First tick: no change (no rerun). Second tick: mutate the file, expect a rerun.
+    def make_change():
+        (tmp_path / "f.py").write_text("v2")
+
+    ticks = [lambda: None, make_change]  # each yielded item is called as sleep()
+    args = argparse.Namespace(workspace=str(tmp_path), watch="**/*.py",
+                              watch_interval=0.0, no_color=True)
+    cli._cmd_loop_watch(args, watch_ticks=iter(ticks))
+    # initial run + one rerun after the change = 2
+    assert runs["n"] == 2

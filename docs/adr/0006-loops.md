@@ -114,3 +114,7 @@ stop predicate and a wall-clock/step/token budget; there is no unbounded mode.
   + run journal + `revenant loop` subcommand. 19 tests, suite 290 → 309. Verified
   end-to-end. Both gates (undo P2.5, journal P6) were in place. Next: P7 Code
   graph (ADR-0008) or P8 (ADR-0009); triggers (F13.3) a small follow-up.
+- 2026-07-31 — **F13.3 `--watch` trigger added** (deferred follow-up): `revenant
+  loop --watch '<glob>'` re-runs the whole loop on a matching file change
+  (mtime poll, ignore-aware; `--watch-interval` configurable). The `--every`
+  schedule trigger remains deferred (better served by an external cron/OS timer).
