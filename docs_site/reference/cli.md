@@ -1,30 +1,41 @@
 # CLI reference
 
-Complete reference for the `revenant` command.
+Complete reference for the `revenant` command and its subcommands.
 
 ---
 
 ## Synopsis
 
 ```bash
-revenant [OPTIONS] "GOAL"
+revenant <command> [OPTIONS]
+revenant "GOAL"              # shorthand for `revenant run "GOAL"`
 ```
 
-Revenant runs an agent loop toward `GOAL` against the model and workspace you
-specify, dispatching read-only tools freely and mutating tools behind approval.
+Revenant runs a tool-calling agent loop against your local Ollama model,
+dispatching read-only tools freely and mutating tools behind approval. A bare
+`revenant "GOAL"` is treated as `revenant run "GOAL"` for backward compatibility.
 
 !!! example "Typical invocation"
     ```bash
     revenant --workspace ~/proj --model qwen2.5:7b "where is auth handled?"
     ```
 
-## Positional argument
+## Commands
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `goal` | Yes | What you want the agent to do, in natural language. |
+| Command | Purpose |
+|---------|---------|
+| [`run`](#run) | Run a single goal to completion (one-shot). |
+| [`chat`](#chat) | Interactive multi-turn session (REPL). |
+| [`loop`](#loop) | Run a goal **autonomously** until a condition is met. |
+| [`undo`](#undo) | Revert changes the agent made. |
+| [`mcp`](#mcp) | Inspect configured MCP servers and their tools. |
+| [`skills`](#skills) | List and show reusable `SKILL.md` workflows. |
+| [`resume`](#resume) | Resume a saved session. |
+| `config` | Show/edit configuration *(coming soon)*. |
 
-## Options
+## Common options
+
+Shared by `run`, `chat`, `loop`, and `resume`:
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
@@ -36,56 +47,172 @@ specify, dispatching read-only tools freely and mutating tools behind approval.
 | `--read-only` | flag | off | Disable mutating tools (`write`, `edit`, `bash`). |
 | `--no-native-tools` | flag | off | Force the prompt-based action protocol instead of native `tool_calls`. |
 | `--yolo` | flag | off | Auto-approve mutating tools. **Destructive commands are still blocked.** |
+| `--no-graph` | flag | off | Skip building the [code graph](tools.md#code-graph-tools) (`defn_of`, `who_calls`, …). |
 | `--no-color` | flag | off | Disable ANSI color in output. |
 
 !!! warning "`--yolo` safety"
     `--yolo` writes files and runs shell commands without prompting. Destructive
     footguns (`rm -rf /`, fork bombs, `mkfs`) remain hard-blocked, but ordinary
-    damaging commands are not. Use only in disposable workspaces. See
-    [Approvals & safety](../guides/approvals-and-safety.md).
+    damaging commands are not. Use only in disposable workspaces, or rely on
+    [`revenant undo`](#undo). See [Approvals & safety](../guides/approvals-and-safety.md).
 
-## Exit behavior
+---
 
-The loop ends when the model produces a final answer or reaches `--max-steps`.
-Revenant prints the final answer to stdout; tool calls and observations are
-printed as the loop runs.
+## `run`
 
-## Examples
+```bash
+revenant run "GOAL" [common options]
+```
 
-=== "Explore (read-only)"
+Runs one goal to a final answer or the step cap, printing tool calls and
+observations as they happen. This is the default command.
 
-    ```bash
-    revenant --read-only "Explain the auth flow."
-    ```
+```bash
+revenant run --read-only "Explain the auth flow."
+revenant "Add input validation to create_user()."   # shorthand
+```
 
-=== "Make an approved change"
+---
 
-    ```bash
-    revenant --model qwen2.5-coder:7b "Add input validation to create_user()."
-    ```
+## `chat`
 
-=== "Point at a subdirectory"
+```bash
+revenant chat [common options]
+```
 
-    ```bash
-    revenant --workspace ./services/api --read-only "List the public endpoints."
-    ```
+An interactive REPL. One agent is built once; each line you type continues the
+same conversation. The session is **auto-saved** so you can [`resume`](#resume) it.
 
-=== "Remote Ollama server"
+REPL commands:
 
-    ```bash
-    revenant --base-url http://192.168.1.50:11434 "Summarize this repo."
-    ```
+| Command | Effect |
+|---------|--------|
+| `/exit`, `/quit` | Leave the session. |
+| `/reset` | Clear the conversation context. |
+| `/help` | Show the command list. |
+| `/skills` | List available [skills](#skills). |
+| `/skill <name>` | Load a skill's procedure and run it as the next turn. |
 
-=== "Force prompt-based tools"
+---
 
-    ```bash
-    revenant --no-native-tools --model my-gguf-model "..."
-    ```
+## `loop`
+
+```bash
+revenant loop "GOAL" [common options] [loop options]
+```
+
+Runs a goal **autonomously**, iterating until a success condition is met or a
+budget is exhausted. Autonomy is always bounded — there is no run-forever mode.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--autonomous` | off | Run unattended: auto-approve edits within the budget. A checkpoint is taken before each iteration so `undo` can step back a whole round. |
+| `--until CMD` | — | Success when the shell command `CMD` exits `0`. |
+| `--until-tests` | off | Success when the test command (`--test-cmd`) exits `0`. |
+| `--until-file PATH` | — | Success when `PATH` exists. |
+| `--test-cmd CMD` | `pytest -q` | Command used by `--until-tests`. |
+| `--max-iterations N` | `10` | Stop after N iterations. |
+| `--max-wall SECONDS` | `0` | Stop after this many seconds of wall clock (`0` = no limit). |
+| `--dry-run` | off | Preview: forces read-only, so the agent narrates its plan without writing. |
+
+```bash
+# Iterate until the test suite passes, unattended, checkpointing each round.
+revenant loop --autonomous --until-tests "make the failing tests pass"
+
+# Preview what an autonomous run would do, with zero disk writes.
+revenant loop --dry-run --until-file out.txt "generate out.txt"
+```
+
+Exit code `0` means the condition was met; `3` means a budget was hit first (the
+partial run is saved — the command prints a `revenant resume <id>` hint).
+
+---
+
+## `undo`
+
+```bash
+revenant undo [--all] [--workspace PATH] [--no-color]
+```
+
+Reverts changes the agent made in a workspace. Two backends, chosen automatically:
+
+- **Git-native** (when the workspace is a git repo): restores the whole working
+  tree from a shadow-commit, including files a `run_bash` command created.
+  Snapshots live under `refs/revenant/undo/*` and never touch your branches.
+- **File-snapshot** (non-git workspaces): restores files `write_file`/`edit_file`
+  touched.
+
+`--all` reverts every recorded change; the default reverts only the most recent.
+
+```bash
+revenant undo          # revert the last change
+revenant undo --all    # revert everything from the run
+```
+
+---
+
+## `mcp`
+
+```bash
+revenant mcp list [--workspace PATH]
+revenant mcp test <name> [--workspace PATH]
+```
+
+Inspect [Model Context Protocol](../guides/extending.md#mcp-servers) servers
+configured via `[[mcp.servers]]` in your `.revenant.toml`.
+
+- `mcp list` — show configured servers and the tools each exposes.
+- `mcp test <name>` — connect to one server and report its health.
+
+```bash
+revenant mcp list
+revenant mcp test git
+```
+
+---
+
+## `skills`
+
+```bash
+revenant skills list [--workspace PATH]
+revenant skills show <name> [--workspace PATH]
+```
+
+Inspect reusable [skills](../guides/extending.md#skills) — `SKILL.md` workflows
+discovered from `.revenant/skills/` (project) and `~/.config/revenant/skills/`
+(user).
+
+- `skills list` — all discovered skills with their descriptions.
+- `skills show <name>` — a skill's full procedure body.
+
+Invoke a skill inside `chat` with `/skill <name>`.
+
+---
+
+## `resume`
+
+```bash
+revenant resume [SESSION_ID] [common options]
+revenant resume list
+```
+
+Resume a saved session — the transcript is re-hydrated into a REPL so the agent
+keeps its prior context. Sessions are saved automatically by `chat` and `loop`
+under `<workspace>/.aibot/sessions/`.
+
+- `resume list` — recent sessions for the workspace (newest first).
+- `resume` — resume the most recent session.
+- `resume <id>` — resume a specific session.
+
+```bash
+revenant resume list
+revenant resume            # continue where you left off
+```
 
 ---
 
 ## Next steps
 
-- [Tools reference](tools.md) — the tools the agent can call.
-- [Configuration reference](config.md) — settings and environment variables.
-- [Configure model routing](../guides/model-routing.md)
+- [Tools reference](tools.md) — every tool the agent can call, including the code graph.
+- [Configuration reference](config.md) — settings, `[[mcp.servers]]`, and `SKILL.md`.
+- [Extending Revenant](../guides/extending.md) — MCP, skills, loops, and the code graph.

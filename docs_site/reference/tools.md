@@ -39,6 +39,42 @@ All tools are **path-confined to the workspace** set by `--workspace`.
     `write`, `edit`, and `bash` prompt for approval unless you pass `--yolo`.
     Destructive shell commands are hard-blocked in all modes.
 
+## Code-graph tools
+
+Revenant indexes your workspace into a symbol/dependency graph (stdlib `ast` for
+Python; a regex fallback for other languages) and exposes read-only tools so the
+agent reasons about the repo **by structure, not text search**. Skip indexing
+with `--no-graph`.
+
+| Tool | Purpose | Key arguments |
+|------|---------|---------------|
+| `defn_of` | Where a symbol is defined (file:line + snippet). | `symbol` |
+| `who_calls` | Real call sites of a function/method. | `symbol` |
+| `neighbors` | A file's imports, importers, and defined symbols. | `path` |
+| `impact_of` | Blast radius: transitive callers by hop distance. | `symbol` |
+
+!!! example "Ask what calls a function"
+    ```json
+    {"tool": "who_calls", "args": {"symbol": "dispatch"}}
+    ```
+    Returns the actual call sites from the graph — not a grep guess.
+
+## Sub-agent tool (approval-gated)
+
+| Tool | Purpose | Key arguments |
+|------|---------|---------------|
+| `spawn_subagent` | Delegate a self-contained sub-goal to a fresh, budgeted agent; returns a short summary. | `goal`, `tools` *(optional)* |
+
+The sub-agent runs its own loop with its own tool scope and budget, then reports
+back a summary — keeping the parent's context small. Recursion is depth-capped.
+
+## MCP tools
+
+When you configure [MCP servers](config.md#mcp-servers), each remote tool appears
+in the registry namespaced as `<server>.<tool>` (e.g. `git.status`). Remote tools
+are approval-gated by default; a server entry may mark specific tools `read_only`
+to relax that. See [Extending Revenant](../guides/extending.md#mcp-servers).
+
 ## The tool-call protocol
 
 Revenant accepts tool calls in two forms and auto-detects which a model supports:
@@ -81,6 +117,11 @@ The engine that implements these tools lives in `nerva-agent`:
 | `agent_router` | Per-turn model routing. |
 | `agent_capacity` | RAM-based `max_steps` / context tuning. |
 | `agent_native_tools` | Per-model native-tool detection (probe + cache). |
+| `mcp_client` / `mcp_tools` | MCP client (stdio JSON-RPC) and remote-tool adapter. |
+| `skills` | `SKILL.md` discovery, progressive disclosure, tool scoping. |
+| `loop_driver` | Iterate-until-done driver for `revenant loop`. |
+| `code_graph.indexer` / `code_graph.tools` | Symbol/dependency index + retrieval tools. |
+| `subagent` | The `spawn_subagent` tool. |
 
 ---
 

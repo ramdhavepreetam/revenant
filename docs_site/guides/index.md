@@ -11,6 +11,9 @@ numbered walkthrough you can follow start to finish.
 - :material-shield-check: **[Approve, edit, and run commands safely](approvals-and-safety.md)**
   How approvals, read-only mode, and destructive-command blocking work.
 
+- :material-puzzle: **[Extending Revenant](extending.md)**
+  MCP servers, reusable skills, autonomous loops, and the code graph.
+
 - :material-directions-fork: **[Configure model routing](model-routing.md)**
   Assign models to roles and understand how a model is picked per turn.
 
