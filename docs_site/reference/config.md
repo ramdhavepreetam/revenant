@@ -101,6 +101,30 @@ Only a skill's one-line `description` sits in context until it is invoked (with
 `/skill <name>` in `chat`), when its full body loads. List/show with
 [`revenant skills`](cli.md#skills).
 
+### Verify → repair
+
+When `[verify]` is enabled, Revenant checks every edit and, if a check fails,
+feeds the exact error back to the model so it repairs the code **before the run
+finishes** — instead of shipping something that looks right but is broken. This
+is the harness catching the model's mistakes for you. Off unless configured.
+
+```toml
+[verify]
+enabled = true
+pycompile = true                              # byte-compile changed .py (on by default)
+commands = ["ruff check {paths}", "pytest -q"]  # {paths} → the changed files
+max_repair_attempts = 3                        # then revert the edit and stop
+```
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `false` | Turn verify→repair on. |
+| `pycompile` | `true` | Byte-compile changed Python files (stdlib; catches syntax). |
+| `commands` | `[]` | Shell checks run in order; `{paths}`/`{tests}` → changed files. First non-zero exit is the failure fed back. |
+| `max_repair_attempts` | `3` | Consecutive failed repairs before the edit is reverted (via [`undo`](cli.md#undo)) and the model is told to stop. |
+
+A check whose binary is missing degrades to a pass (it never blocks an edit).
+
 ## Environment variables
 
 | Variable | Default | Description |

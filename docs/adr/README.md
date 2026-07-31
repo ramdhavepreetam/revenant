@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-31 · **Tests:** 366 green · **Shipped: v0.2.0 on PyPI** · **Next: H-series (0.3.0)**
+**Last updated:** 2026-07-31 · **Tests:** 393 green · **Shipped: v0.2.0 on PyPI** · **Building: H-series (0.3.0)**
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -16,10 +16,12 @@
   git-native undo. All 14 PRs merged.
 - **📦 Shipped to PyPI: v0.2.0** (`pip install -U revenant-cli`) — tag `v0.2.0`.
 - **Suite:** 366 tests green (`python3 -m pytest tests/ -q`).
-- **⏭ NEXT — the H-series (0.3.0): make the small local model punch above its
-  weight.** Strategy [ADR-0011](0011-harness-carries-the-model.md); lead phase
-  **H1 verify→repair** [ADR-0012](0012-verify-repair-loop.md). Stand up **H0 eval**
-  [ADR-0015](0015-eval-harness.md) early to measure the lift. Then H2/H3.
+- **🔨 Building the H-series (0.3.0): make the small local model punch above its
+  weight.** Strategy [ADR-0011](0011-harness-carries-the-model.md).
+  **H1 verify→repair is SHIPPED** [ADR-0012](0012-verify-repair-loop.md) — edits
+  are now checked and repaired before the user sees them. **⏭ NEXT: H0 eval**
+  [ADR-0015](0015-eval-harness.md) (measure H1's lift) or **H2** context injection
+  [ADR-0013](0013-proactive-context-injection.md).
 - **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
   one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
   (P8); persisting the code graph (P7).
@@ -62,7 +64,7 @@
 | [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Implemented |
 | [0009](0009-subagents-and-git-undo.md) | Sub-agents & git-native undo | P8 | Implemented |
 | [0011](0011-harness-carries-the-model.md) | **The harness carries the model** (H-series strategy) | 0.3.0 | Accepted |
-| [0012](0012-verify-repair-loop.md) | Verify → repair loop | H1 | Proposed |
+| [0012](0012-verify-repair-loop.md) | Verify → repair loop | H1 | Implemented (targeted-tests deferred) |
 | [0013](0013-proactive-context-injection.md) | Proactive context injection | H2 | Proposed |
 | [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Proposed |
 | [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Proposed |
@@ -97,7 +99,7 @@ model and into deterministic machinery. Strategy: [ADR-0011](0011-harness-carrie
 
 | Phase | Pillar | Fixes | Reuses | Status |
 |-------|--------|-------|--------|--------|
-| **H1** | **Verify → repair loop** | plausible-but-broken edits | `before_tool` seam, loop-driver, undo, code-graph | ⬜ **Lead** |
+| **H1** | **Verify → repair loop** | plausible-but-broken edits | `before_tool` seam, loop-driver, undo, code-graph | ✅ Shipped (targeted-tests deferred) |
 | **H2** | Proactive context injection | edits in the dark | `pack_symbol_context` (F14.3) | ⬜ Next |
 | **H3** | Decompose + per-step verify | can't hold a long plan | sub-agents (P8), H1 | ⬜ Next |
 | **H0** | Eval harness | — (measures the lift) | new; small | ⬜ Early, cross-cutting |
@@ -171,7 +173,17 @@ plugs into one — it is not greenfield:
 
 > One entry per working session touching the roadmap. Newest first.
 
-### 2026-07-31 — v0.2.0 released; H-series (0.3.0) planned
+### 2026-07-31 (b) — H1 verify→repair shipped
+- `nerva_agent/verify.py`: verifier abstraction (PyCompile + Command + Composite).
+- `agent_loop.py`: `after_tool` hook (mirrors `before_tool`) appends verify
+  feedback to the observation the model repairs from.
+- `revenant_cli/verify_hook.py` + `config.verify_config`: `[verify]` config,
+  hook wiring in write mode, per-target repair budget with undo revert.
+- **27 tests → suite 393.** Verified end-to-end: a fake model wrote broken Python,
+  got the exact SyntaxError back, and repaired it — broken code never shipped.
+- H1.4 (graph-targeted test selection) deferred. **The core of ADR-0011 is live.**
+
+### 2026-07-31 (a) — v0.2.0 released; H-series (0.3.0) planned
 - **Released 0.2.0 to PyPI** (nerva-core / nerva-agent / revenant-cli), tag
   `v0.2.0`; verified via a real-PyPI clean-venv install.
 - **Planned the H-series** — the 0.3.0 theme: *the harness carries the model*.

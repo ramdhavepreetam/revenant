@@ -355,3 +355,87 @@ class LoopTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AfterToolHookTests(unittest.TestCase):
+    """H1.2: the after_tool hook fires post-dispatch for mutating tools and its
+    return is appended to the observation the model sees next (ADR-0012)."""
+
+    def _mutating_reg(self, calls):
+        return ToolRegistry([
+            Tool("write_file", "Write a file.",
+                 [ToolParam("path"), ToolParam("content")],
+                 run=lambda path, content: (calls.append(path) or "wrote it"),
+                 mutating=True, requires_approval=False),
+            Tool("read_file", "Read a file.", [ToolParam("path")],
+                 run=lambda path: "contents", parallel_safe=True),
+        ])
+
+    def test_after_tool_appends_feedback_on_mutating_tool(self):
+        seen = {}
+
+        def after(tool, args, obs):
+            seen["call"] = (tool, args["path"], obs)
+            return "VERIFICATION FAILED (py_compile): boom"
+
+        script = _scripted(
+            {"role": "assistant", "content": "",
+             "tool_calls": [{"function": {"name": "write_file",
+                                          "arguments": {"path": "a.py", "content": "x"}}}]},
+            {"role": "assistant", "content": "fixed."},
+        )
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=script):
+            result = AgentLoop(_config(), self._mutating_reg([]), max_steps=5,
+                               after_tool=after).run("write a.py")
+        # The hook saw the tool + its observation.
+        self.assertEqual(seen["call"][0], "write_file")
+        # The feedback is threaded into the transcript for the next turn.
+        obs_msgs = [m["content"] for m in result.messages if m["role"] == "user"]
+        self.assertTrue(any("VERIFICATION FAILED" in c for c in obs_msgs))
+
+    def test_after_tool_not_called_for_read_only(self):
+        calls = []
+
+        def after(tool, args, obs):
+            calls.append(tool)
+            return None
+
+        script = _scripted(
+            {"role": "assistant", "content": "",
+             "tool_calls": [{"function": {"name": "read_file", "arguments": {"path": "a.py"}}}]},
+            {"role": "assistant", "content": "done."},
+        )
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=script):
+            AgentLoop(_config(), self._mutating_reg([]), max_steps=5, after_tool=after).run("read")
+        self.assertEqual(calls, [])  # read_file is not mutating -> hook skipped
+
+    def test_after_tool_none_appends_nothing(self):
+        script = _scripted(
+            {"role": "assistant", "content": "",
+             "tool_calls": [{"function": {"name": "write_file",
+                                          "arguments": {"path": "a.py", "content": "x"}}}]},
+            {"role": "assistant", "content": "ok."},
+        )
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=script):
+            result = AgentLoop(_config(), self._mutating_reg([]), max_steps=5,
+                               after_tool=lambda *a: None).run("write")
+        obs = next(m["content"] for m in result.messages
+                   if m["role"] == "user" and "write_file" in m["content"])
+        self.assertIn("wrote it", obs)
+        self.assertNotIn("VERIFICATION", obs)
+
+    def test_after_tool_error_is_swallowed(self):
+        def boom(tool, args, obs):
+            raise RuntimeError("verifier crashed")
+
+        script = _scripted(
+            {"role": "assistant", "content": "",
+             "tool_calls": [{"function": {"name": "write_file",
+                                          "arguments": {"path": "a.py", "content": "x"}}}]},
+            {"role": "assistant", "content": "ok."},
+        )
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=script):
+            result = AgentLoop(_config(), self._mutating_reg([]), max_steps=5,
+                               after_tool=boom).run("write")
+        # The run completes despite the hook raising.
+        self.assertEqual(result.stopped_reason, "final")

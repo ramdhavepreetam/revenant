@@ -130,6 +130,25 @@ globs). On a very large repo, skip it with `--no-graph`.
 
 ---
 
+## Verify → repair (catch broken edits)
+
+A local model will sometimes write code that *looks* right but doesn't compile or
+fails the tests. With `[verify]` enabled, Revenant checks every edit and feeds any
+failure straight back to the model to fix — so broken code is caught and repaired
+inside the run, not shipped to you:
+
+```toml
+[verify]
+enabled = true
+commands = ["pytest -q"]
+max_repair_attempts = 3
+```
+
+On each edit the harness byte-compiles changed Python and runs your configured
+checks; a failure is fed back with the exact error, and the model repairs it. If
+it still can't pass after `max_repair_attempts`, the edit is reverted (via undo)
+and the model is told to stop. See [configuration](../reference/config.md#verify--repair).
+
 ## Undo — always reversible
 
 Every mutating run is reversible with [`revenant undo`](../reference/cli.md#undo).

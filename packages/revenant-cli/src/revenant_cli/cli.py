@@ -42,10 +42,11 @@ from nerva_agent.code_graph.tools import build_code_graph_tools
 from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
-    load_config, resolve, mcp_server_specs, user_config_path,
+    load_config, resolve, mcp_server_specs, user_config_path, verify_config,
 )
 from revenant_cli import session_store
 from revenant_cli.git_checkpoint import GitCheckpointer, is_git_repo
+from revenant_cli.verify_hook import build_verifier, make_verify_hook
 from revenant_cli.project_context import compose_preamble, find_project_doc
 from revenant_cli.checkpoint import Checkpointer
 
@@ -378,6 +379,23 @@ def _build_agent(args: argparse.Namespace):
         preamble = f"{preamble}\n\n{index}"
         print(f"{color['dim']}skills: {len(skills)} available{color['reset']}")
 
+    # H1 (0.3.0): verify → repair. When [verify] is enabled, check each edit and
+    # feed failures back so the model repairs before shipping broken code. Off by
+    # default (no [verify] section = no behavior change).
+    after_tool = None
+    if not read_only:
+        vcfg = verify_config(cfg)
+        verifier = build_verifier(workspace, vcfg)
+        if verifier is not None:
+            after_tool = make_verify_hook(
+                workspace, verifier,
+                max_repair_attempts=vcfg["max_repair_attempts"],
+                checkpointer=checkpointer,
+                emit=lambda m: print(f"{color['dim']}{m}{color['reset']}"),
+            )
+            print(f"{color['dim']}verify: on ({vcfg['max_repair_attempts']} repair "
+                  f"attempts){color['reset']}")
+
     loop = AgentLoop(
         config, registry,
         system_preamble=preamble,
@@ -390,6 +408,7 @@ def _build_agent(args: argparse.Namespace):
         max_context_tokens=max_context,
         summarizer_config=summarizer,
         before_tool=(checkpointer.snapshot if checkpointer else None),
+        after_tool=after_tool,
     )
     # Stash MCP clients on the loop so the command handler can close them on exit.
     loop._mcp_clients = mcp_clients

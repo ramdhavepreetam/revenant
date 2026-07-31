@@ -129,6 +129,34 @@ def mcp_server_specs(config: dict[str, Any]):
     return list(by_name.values())
 
 
+def verify_config(config: dict[str, Any]) -> dict[str, Any]:
+    """Read the `[verify]` section (H1, ADR-0012) from the merged config.
+
+    Project overrides user. Returns a normalized dict:
+        {enabled: bool, commands: list[str], max_repair_attempts: int,
+         pycompile: bool}
+    A missing section means verification is OFF (no behavior change), so the
+    feature is strictly opt-in.
+    """
+    def _section(raw: dict[str, Any]) -> dict:
+        v = raw.get("verify") if isinstance(raw, dict) else None
+        return v if isinstance(v, dict) else {}
+
+    merged: dict[str, Any] = {}
+    for raw in (config.get("_raw_user", {}), config.get("_raw_project", {})):
+        merged.update(_section(raw))
+
+    commands = merged.get("commands") or []
+    if not isinstance(commands, list):
+        commands = []
+    return {
+        "enabled": bool(merged.get("enabled", False)),
+        "commands": [c for c in commands if isinstance(c, str) and c.strip()],
+        "max_repair_attempts": int(merged.get("max_repair_attempts", 3) or 0),
+        "pycompile": bool(merged.get("pycompile", True)),  # on by default when enabled
+    }
+
+
 def resolve(key: str, flag_value: Any, config: dict[str, Any], default: Any) -> Any:
     """Apply precedence for one setting: flag > config > default.
 
