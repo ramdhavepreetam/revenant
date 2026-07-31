@@ -37,6 +37,8 @@ from nerva_agent.loop_driver import (
     loop_until, Budget, model_final_predicate, command_predicate,
     file_exists_predicate,
 )
+from nerva_agent.code_graph.indexer import build_index
+from nerva_agent.code_graph.tools import build_code_graph_tools
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path,
@@ -166,6 +168,8 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
                    help="Disable mutating tools (write/edit/bash); investigate only.")
     p.add_argument("--yolo", action="store_true",
                    help="Auto-approve mutating tools (skips the y/N prompt; footgun guards still apply).")
+    p.add_argument("--no-graph", action="store_true",
+                   help="Skip building the code graph (defn_of/who_calls/… tools).")
     p.add_argument("--no-color", action="store_true")
 
 
@@ -325,6 +329,19 @@ def _build_agent(args: argparse.Namespace):
             if mcp_tools:
                 print(f"{color['dim']}mcp: loaded {len(mcp_tools)} tool(s) "
                       f"from {len(mcp_clients)} server(s){color['reset']}")
+
+    # F14 (P7): index the workspace into a code graph and expose read-only
+    # structural retrieval tools (defn_of / who_calls / neighbors / impact_of).
+    # Read-only, so available in every mode. Opt out with --no-graph on big repos.
+    if not getattr(args, "no_graph", False):
+        try:
+            graph = build_index(workspace)
+            tools += build_code_graph_tools(graph)
+            st = graph.stats()
+            print(f"{color['dim']}graph: {st['symbols']} symbols across "
+                  f"{st['files']} files{color['reset']}")
+        except Exception as exc:  # noqa: BLE001 - indexing must never block a run
+            print(f"{color['dim']}graph: skipped ({exc}){color['reset']}")
     registry = ToolRegistry(tools)
 
     # F6 (tier a): ground the agent on the project's own instruction file if present.

@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-30 · **Tests:** 309 green
+**Last updated:** 2026-07-30 · **Tests:** 332 green
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -12,16 +12,17 @@
 ## ▶ START HERE — current state (resume point)
 
 - **Done:** P0, **P2.5** undo+ADRs, **P3** MCP, **P4** Skills, **P6** Resume,
-  **P5** Loops.
-- **PRs open (stacked #4→#5→#6→#7):** P2.5→master, P3→P2.5, P4→P3, P6→P4.
-  **P5 (`phase5-loops`) is committed; open its PR (targets `phase6-resume`).**
-- **Suite:** 309 tests green (`python3 -m pytest tests/ -q`).
-- **⏭ NEXT: P7 — Code graph** → [ADR-0008](0008-code-graph.md) (the deep bet:
-  repo-scale reasoning), or **P8** → [ADR-0009](0009-subagents-and-git-undo.md)
-  (sub-agents + git-native undo). Either is a fine next step.
-- **Deferred, don't forget:** loop **triggers** F13.3 `--every`/`--watch` (P5);
-  one-shot `run` autosave (P6); `run --skill` (P4); `mcp add` + MCP HTTP
-  transport (P3); F9 git-native undo → P8.
+  **P5** Loops, **P7** Code graph. **Every next-level pillar (MCP, Skills, Loops,
+  Graph) is now built.**
+- **PRs open (stacked #4→#5→#6→#7→#8):** through P5 Loops. **P7
+  (`phase7-code-graph`) is committed; open its PR (targets `phase5-loops`).**
+- **Suite:** 332 tests green (`python3 -m pytest tests/ -q`).
+- **⏭ NEXT: P8** → [ADR-0009](0009-subagents-and-git-undo.md) (sub-agents +
+  git-native undo) — the last horizon phase. Or clear the deferred backlog below.
+- **Deferred, don't forget:** graph **F14.3** structure-aware packing + **F14.4**
+  incremental re-index (P7); loop **triggers** F13.3 `--every`/`--watch` (P5);
+  one-shot `run` autosave (P6); `run --skill` (P4); `mcp add` + MCP HTTP (P3);
+  F9 git-native undo → **part of P8**.
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
@@ -56,7 +57,7 @@
 | [0005](0005-skills.md) | Skills — reusable packaged workflows | P4 | Implemented |
 | [0006](0006-loops.md) | Loops — autonomous & recurring runs | P5 | Implemented (triggers deferred) |
 | [0007](0007-resume-session-persistence.md) | Resume & session persistence | P6 | Implemented |
-| [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Proposed |
+| [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Implemented (packing/re-index deferred) |
 | [0009](0009-subagents-and-git-undo.md) | Sub-agents & git-native undo | P8 | Proposed |
 
 ---
@@ -76,8 +77,8 @@ capability jump.
 | **P4** | **Skills** | project_context patterns | Low–Med | ✅ Shipped (run --skill deferred) |
 | **P5** | **Loops** (autonomous) | P2.5 hardened, P6 journal | Med | ✅ Shipped (triggers deferred) |
 | **P6** | Resume / persistence | aibot_storage hooks | Low | ✅ Shipped (per-ws JSON) |
-| **P7** | **Code graph** | agent_ignore | High | ⬜ **Next up** (deep bet) |
-| **P8** | Sub-agents + git-undo | agent_router, P4 | High | ⬜ Horizon |
+| **P7** | **Code graph** | agent_ignore | High | ✅ Shipped (ast; packing/re-index deferred) |
+| **P8** | Sub-agents + git-undo | agent_router, P4 | High | ⬜ **Next up** (last phase) |
 
 Visual roadmap artifact: see the shared Revenant roadmap page.
 
@@ -131,15 +132,30 @@ plugs into one — it is not greenfield:
   autosave deferred.
 - ~~P5 Loops.~~ **Shipped 2026-07-30** — 19 tests, suite 309. `revenant loop`
   with predicates + budgets + dry-run + run journal. **Triggers (F13.3
-  `--every`/`--watch`) deferred** — a clean follow-up (watch pairs with P7).
-- Next actionable phase: **P7 Code graph** ([ADR-0008](0008-code-graph.md)),
-  or **P8** ([ADR-0009](0009-subagents-and-git-undo.md)).
+  `--every`/`--watch`) deferred.**
+- ~~P7 Code graph.~~ **Shipped 2026-07-30** — 23 tests, suite 332. stdlib-`ast`
+  indexer + `defn_of`/`who_calls`/`neighbors`/`impact_of` tools. **F14.3 packing
+  + F14.4 incremental re-index deferred.**
+- Next actionable phase: **P8** ([ADR-0009](0009-subagents-and-git-undo.md)) —
+  the last horizon phase.
 
 ---
 
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-07-30 (g) — P7 Code graph shipped
+- `nerva_agent/code_graph/indexer.py`: stdlib-`ast` indexer (Python exact, regex
+  fallback for other langs) → `CodeGraph` of file/symbol nodes + defines/imports/
+  calls edges; ignore-aware; never raises. Chosen over tree-sitter (zero deps).
+- `code_graph/tools.py`: `defn_of`, `who_calls`, `neighbors`, `impact_of` as
+  read-only registry tools. Wired into `_build_agent` in every mode; `--no-graph`
+  opts out; indexing failure degrades to a warning.
+- **23 new tests → suite 332.** Verified on THIS repo: `who_calls('dispatch')` →
+  `AgentLoop.run`; 148 symbols / 18 files / 0 parse errors.
+- **F14.3 (structure-aware packing) + F14.4 (incremental re-index) deferred.**
+  ADR-0008 → Implemented. **Next: P8 (ADR-0009) — the last phase.**
 
 ### 2026-07-30 (f) — P5 Loops shipped
 - `nerva_agent/loop_driver.py`: `loop_until` (inject `run_fn`, thread history,
