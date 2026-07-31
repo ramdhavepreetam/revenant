@@ -4,26 +4,27 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-30 · **Tests:** 352 green · **Roadmap: P0–P8 all Implemented** 🎉
+**Last updated:** 2026-07-31 · **Tests:** 366 green · **Shipped: v0.2.0 on PyPI** · **Next: H-series (0.3.0)**
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
 
 ## ▶ START HERE — current state (resume point)
 
-- **🎉 ROADMAP COMPLETE — P0 through P8 all Implemented.** Every next-level
-  pillar (MCP, Skills, Loops, Graph) plus Resume, hardened undo, sub-agents, and
-  git-native undo is built and tested.
-- **PRs open (stacked #4→#5→#6→#7→#8→#9):** through P7. **P8
-  (`phase8-subagents-git-undo`) is committed; open its PR (targets
-  `phase7-code-graph`).** Then merge the whole stack top-down into `master`.
-- **Suite:** 352 tests green (`python3 -m pytest tests/ -q`).
-- **⏭ Remaining deferred backlog** (all optional polish, no phase blocked on them):
-  loop **`--every`** schedule trigger (P5); one-shot `run` autosave (P6);
-  `mcp add` + MCP HTTP transport (P3); role-routed sub-agents (P8); persisting the
-  code graph across invocations (P7).
+- **🎉 P0–P8 all Implemented and merged to `master`.** Every next-level pillar
+  (MCP, Skills, Loops, Graph) plus Resume, hardened undo, sub-agents, and
+  git-native undo. All 14 PRs merged.
+- **📦 Shipped to PyPI: v0.2.0** (`pip install -U revenant-cli`) — tag `v0.2.0`.
+- **Suite:** 366 tests green (`python3 -m pytest tests/ -q`).
+- **⏭ NEXT — the H-series (0.3.0): make the small local model punch above its
+  weight.** Strategy [ADR-0011](0011-harness-carries-the-model.md); lead phase
+  **H1 verify→repair** [ADR-0012](0012-verify-repair-loop.md). Stand up **H0 eval**
+  [ADR-0015](0015-eval-harness.md) early to measure the lift. Then H2/H3.
+- **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
+  one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
+  (P8); persisting the code graph (P7).
 - **Done since the roadmap:** user docs refreshed (#11); `run --skill` + loop
-  `--watch` (#12); graph **F14.3 packing + F14.4 incremental re-index** — all merged.
+  `--watch` (#12); graph F14.3/F14.4 (#13); **0.2.0 released to PyPI** (#14).
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
@@ -60,6 +61,11 @@
 | [0007](0007-resume-session-persistence.md) | Resume & session persistence | P6 | Implemented |
 | [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Implemented |
 | [0009](0009-subagents-and-git-undo.md) | Sub-agents & git-native undo | P8 | Implemented |
+| [0011](0011-harness-carries-the-model.md) | **The harness carries the model** (H-series strategy) | 0.3.0 | Accepted |
+| [0012](0012-verify-repair-loop.md) | Verify → repair loop | H1 | Proposed |
+| [0013](0013-proactive-context-injection.md) | Proactive context injection | H2 | Proposed |
+| [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Proposed |
+| [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Proposed |
 
 ---
 
@@ -82,6 +88,23 @@ capability jump.
 | **P8** | Sub-agents + git-undo | agent_router, P4 | High | ✅ Shipped (closes F9) |
 
 Visual roadmap artifact: see the shared Revenant roadmap page.
+
+### 0.3.0 — the H-series: harness carries the model
+
+P0–P8 built the feature surface; the **H-series** makes a *small local model*
+(targeted at a 14B) perform above its weight, by moving correctness out of the
+model and into deterministic machinery. Strategy: [ADR-0011](0011-harness-carries-the-model.md).
+
+| Phase | Pillar | Fixes | Reuses | Status |
+|-------|--------|-------|--------|--------|
+| **H1** | **Verify → repair loop** | plausible-but-broken edits | `before_tool` seam, loop-driver, undo, code-graph | ⬜ **Lead** |
+| **H2** | Proactive context injection | edits in the dark | `pack_symbol_context` (F14.3) | ⬜ Next |
+| **H3** | Decompose + per-step verify | can't hold a long plan | sub-agents (P8), H1 | ⬜ Next |
+| **H0** | Eval harness | — (measures the lift) | new; small | ⬜ Early, cross-cutting |
+
+**Governing rule:** the model proposes; the harness verifies and repairs. A model
+mistake that reaches the user is a *harness* failure. Stand up **H0 early** so
+**H1**'s impact is a number, not a vibe.
 
 ---
 
@@ -147,6 +170,15 @@ plugs into one — it is not greenfield:
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-07-31 — v0.2.0 released; H-series (0.3.0) planned
+- **Released 0.2.0 to PyPI** (nerva-core / nerva-agent / revenant-cli), tag
+  `v0.2.0`; verified via a real-PyPI clean-venv install.
+- **Planned the H-series** — the 0.3.0 theme: *the harness carries the model*.
+  Strategy ADR-0011 + phase ADRs 0012 (H1 verify→repair, lead), 0013 (H2 context
+  injection), 0014 (H3 decompose), 0015 (H0 eval). Grounded in a real assessment:
+  the loop has no post-edit verification and the code graph is pull-only.
+- Next: stand up H0 eval + build H1 verify→repair.
 
 ### 2026-07-30 (h) — P8 Sub-agents + git-native undo shipped → ROADMAP COMPLETE
 - `nerva_agent/subagent.py`: `spawn_subagent` tool — delegates a scoped sub-goal
