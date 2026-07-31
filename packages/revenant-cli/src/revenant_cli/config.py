@@ -157,6 +157,33 @@ def verify_config(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def context_config(config: dict[str, Any]) -> dict[str, Any]:
+    """Read the `[context]` section (H2, ADR-0013) from the merged config.
+
+    Project overrides user. Returns a normalized dict:
+        {inject_on_edit: bool, resolve_errors: bool, max_callers: int}
+    A missing section means both H2.1 (pre-edit injection) and H2.2 (error-symbol
+    resolution) default to on — they are additive/no-op-safe by construction (an
+    absent graph or unresolved symbol yields empty text either way), matching the
+    ADR's "identical to today when the graph is absent" guarantee even when the
+    section itself is absent. Set `inject_on_edit`/`resolve_errors` to false to
+    opt out explicitly.
+    """
+    def _section(raw: dict[str, Any]) -> dict:
+        v = raw.get("context") if isinstance(raw, dict) else None
+        return v if isinstance(v, dict) else {}
+
+    merged: dict[str, Any] = {}
+    for raw in (config.get("_raw_user", {}), config.get("_raw_project", {})):
+        merged.update(_section(raw))
+
+    return {
+        "inject_on_edit": bool(merged.get("inject_on_edit", True)),
+        "resolve_errors": bool(merged.get("resolve_errors", True)),
+        "max_callers": int(merged.get("max_callers", 5) or 0),
+    }
+
+
 def resolve(key: str, flag_value: Any, config: dict[str, Any], default: Any) -> Any:
     """Apply precedence for one setting: flag > config > default.
 
