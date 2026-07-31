@@ -189,6 +189,9 @@ def build_parser() -> argparse.ArgumentParser:
                        help="What you want the agent to do. Optional when --skill is given.")
     p_run.add_argument("--skill", metavar="NAME",
                        help="Run a skill's procedure as the goal (see `revenant skills`).")
+    p_run.add_argument("--plan", action="store_true",
+                       help="Decompose the goal into small steps and run them one "
+                            "at a time, each verified before the next (H3).")
     _add_common_flags(p_run)
 
     p_chat = sub.add_parser("chat", help="Interactive multi-turn session (REPL).")
@@ -512,6 +515,53 @@ def _mode_label(args: argparse.Namespace) -> str:
     return "read-only" if args.read_only else ("yolo" if args.yolo else "approval-gated")
 
 
+def _make_plan(loop, goal: str):
+    """Ask the model for a step checklist and parse it (H3.1, ADR-0014).
+
+    Uses the same loop's model config for one constrained call. Any failure
+    degrades to a single-step plan (the whole goal) — never worse than today.
+    """
+    from nerva_agent.planner import parse_plan, PLANNING_PROMPT
+    from nerva_core.local_llm_writer import call_model, LocalLLMError
+
+    prompt = [{"role": "user", "content": PLANNING_PROMPT.format(goal=goal)}]
+    try:
+        text = call_model(loop.config, prompt)
+    except (LocalLLMError, Exception):  # noqa: BLE001 - never fail planning
+        text = ""
+    return parse_plan(text, goal)
+
+
+def _run_planned(loop, goal: str, color) -> int:
+    """Decompose the goal and drive each step, threading history (H3.2, ADR-0014).
+
+    Each step runs through the same loop (so H1 verify + H2 context hooks apply);
+    only the transcript is threaded forward, keeping the model focused on one
+    small step at a time. Stops early if a step doesn't reach a final answer.
+    """
+    from nerva_agent.planner import render_plan
+
+    plan = _make_plan(loop, goal)
+    print(f"{color['dim']}{render_plan(plan)}{color['reset']}")
+    if plan.single:
+        # Nothing to decompose — behave like a normal single-goal run.
+        result = loop.run(goal)
+        return 0 if result.stopped_reason == "final" else 3
+
+    history: list[dict] = []
+    for step in plan.steps:
+        print(f"{color['bold']}[step {step.index}/{len(plan)}]{color['reset']} "
+              f"{color['dim']}{step.goal}{color['reset']}")
+        result = loop.run(step.goal, history=history or None)
+        history = result.messages
+        if result.stopped_reason != "final":
+            print(f"{color['dim']}step {step.index} stopped ({result.stopped_reason}); "
+                  f"halting the plan.{color['reset']}")
+            return 3
+    print(f"{color['dim']}plan complete: {len(plan)} step(s).{color['reset']}")
+    return 0
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     skill_name = getattr(args, "skill", None)
     if not args.goal and not skill_name:
@@ -542,6 +592,14 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     print(f"{color['dim']}revenant · model={config.model} · workspace={workspace} · {_mode_label(args)}{color['reset']}")
     print(f"{color['dim']}capacity: {rec.note}{color['reset']}")
+
+    # H3 (ADR-0014): --plan decomposes the goal into small, verified steps so the
+    # model only reasons about one at a time. Without it, a normal single run.
+    if getattr(args, "plan", False):
+        try:
+            return _run_planned(loop, goal, color)
+        finally:
+            _close_mcp(loop)
 
     try:
         result = loop.run(goal)

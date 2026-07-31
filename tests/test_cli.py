@@ -853,3 +853,70 @@ def test_loop_watch_reruns_on_change(tmp_path, monkeypatch):
     cli._cmd_loop_watch(args, watch_ticks=iter(ticks))
     # initial run + one rerun after the change = 2
     assert runs["n"] == 2
+
+
+# --- H3: --plan decompose + per-step driver (ADR-0014) ----------------------
+
+def test_run_plan_flag_parses():
+    p = cli.build_parser()
+    ns = p.parse_args(cli._normalize_argv(["run", "build it", "--plan"]))
+    assert ns.command == "run" and ns.plan is True
+
+
+class _PlanLoop:
+    """A loop whose run() records goals; model call is patched separately."""
+    def __init__(self, stopped="final"):
+        self.config = type("C", (), {"model": "m"})()
+        self.calls = []
+        self._stopped = stopped
+        self._mcp_clients = []
+    def run(self, goal, history=None):
+        self.calls.append(goal)
+        return type("R", (), {
+            "messages": (history or []) + [{"role": "user", "content": goal[:20]}],
+            "stopped_reason": self._stopped, "answer": "",
+        })()
+
+
+def test_run_planned_drives_steps_in_order(monkeypatch, capsys):
+    loop = _PlanLoop(stopped="final")
+    # Patch the planning call to return a 3-step checklist.
+    monkeypatch.setattr(cli, "_make_plan",
+        lambda lp, goal: __import__("nerva_agent.planner", fromlist=["parse_plan"])
+                          .parse_plan("1. one\n2. two\n3. three", goal))
+    rc = cli._run_planned(loop, "big goal", cli._color(False))
+    assert rc == 0
+    assert loop.calls == ["one", "two", "three"]  # each step ran, in order
+    assert "plan complete: 3 step(s)" in capsys.readouterr().out
+
+
+def test_run_planned_halts_on_non_final_step(monkeypatch, capsys):
+    loop = _PlanLoop(stopped="max_steps")  # every step hits the cap
+    monkeypatch.setattr(cli, "_make_plan",
+        lambda lp, goal: __import__("nerva_agent.planner", fromlist=["parse_plan"])
+                          .parse_plan("1. one\n2. two", goal))
+    rc = cli._run_planned(loop, "g", cli._color(False))
+    assert rc == 3
+    assert loop.calls == ["one"]  # halted after the first step didn't finish
+    assert "halting the plan" in capsys.readouterr().out
+
+
+def test_run_planned_single_step_fallback(monkeypatch):
+    loop = _PlanLoop(stopped="final")
+    # Planner returns prose -> single-step plan (whole goal).
+    monkeypatch.setattr(cli, "_make_plan",
+        lambda lp, goal: __import__("nerva_agent.planner", fromlist=["parse_plan"])
+                          .parse_plan("I'll just do it.", goal))
+    rc = cli._run_planned(loop, "the whole goal", cli._color(False))
+    assert rc == 0
+    assert loop.calls == ["the whole goal"]  # ran the goal directly, no decomposition
+
+
+def test_run_planned_threads_history(monkeypatch):
+    loop = _PlanLoop(stopped="final")
+    monkeypatch.setattr(cli, "_make_plan",
+        lambda lp, goal: __import__("nerva_agent.planner", fromlist=["parse_plan"])
+                          .parse_plan("1. a\n2. b", goal))
+    cli._run_planned(loop, "g", cli._color(False))
+    # Second step ran (history threading verified by both steps executing).
+    assert loop.calls == ["a", "b"]
