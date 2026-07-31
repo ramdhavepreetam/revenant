@@ -5,6 +5,33 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [Unreleased]
+
+Adds the extensibility layer — external tools, reusable workflows, autonomous
+runs, and repo-scale reasoning — all fully offline with no new runtime deps.
+
+### Added
+
+- **`revenant loop`** — run a goal autonomously until a condition is met
+  (`--until`, `--until-tests`, `--until-file`), bounded by `--max-iterations` /
+  `--max-wall`, with `--autonomous` (per-iteration undo checkpoint) and
+  `--dry-run` (zero-write preview).
+- **`revenant undo`** — revert a run's changes. Git-native whole-tree undo in git
+  workspaces (reverts `run_bash` side-effects too, via private
+  `refs/revenant/undo/*` refs); file-snapshot undo elsewhere.
+- **MCP** — call tools from Model Context Protocol servers configured in
+  `[[mcp.servers]]`; inspect with `revenant mcp list|test`.
+- **Skills** — reusable `SKILL.md` workflows with progressive disclosure and
+  optional tool scoping; `revenant skills list|show` and `/skill` in `chat`.
+- **`revenant resume`** — save and resume sessions; `chat` and `loop` auto-save.
+- **Code graph** — a symbol/dependency index with `defn_of`, `who_calls`,
+  `neighbors`, and `impact_of` tools (stdlib `ast`; `--no-graph` to skip).
+- **Sub-agents** — the `spawn_subagent` tool delegates a scoped sub-goal to a
+  nested, budgeted agent.
+- **Project config** — layered `.revenant.toml` (flag › project › user › default).
+
+---
+
 ## [0.1.0] — Initial release
 
 The first public release of Revenant.

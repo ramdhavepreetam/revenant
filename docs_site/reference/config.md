@@ -35,6 +35,72 @@ Set in `.aibot/profiles.json` under `model_roles`.
 }
 ```
 
+## Project config: `.revenant.toml`
+
+A `.revenant.toml` at (or above) your workspace sets repo-specific defaults, found
+by walking up like `.git`. A user file at `~/.config/revenant/config.toml` sets
+personal defaults. Precedence: **flag › project `.revenant.toml` › user config ›
+built-in default**. Unknown keys are ignored; a malformed file is skipped with a
+warning rather than breaking the CLI.
+
+```toml title=".revenant.toml"
+# Scalar defaults (any subset)
+base_url = "http://localhost:11434"
+model = "qwen2.5-coder:7b"
+read_only = false
+max_steps = 20
+max_context_tokens = 8000
+ignore = ["build/", "*.gen.py"]   # extra ignore globs
+
+# MCP servers (see below)
+[[mcp.servers]]
+name = "git"
+transport = "stdio"
+command = "mcp-server-git"
+args = ["--repo", "."]
+read_only = ["status", "log"]     # these tools skip the approval gate
+```
+
+### MCP servers
+
+Each `[[mcp.servers]]` table connects a [Model Context
+Protocol](../guides/extending.md#mcp-servers) server whose tools the agent can
+call. Only the **stdio** transport is supported today (a local subprocess).
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| `name` | Yes | Server name; tools appear as `<name>.<tool>`. |
+| `transport` | — | `"stdio"` (default). |
+| `command` | Yes (stdio) | The server executable. |
+| `args` | — | Arguments passed to the command. |
+| `env` | — | Extra environment variables. |
+| `read_only` | — | Tool names that skip the approval gate. |
+| `alias` | — | Override the `<name>` prefix on tool names. |
+
+Inspect configured servers with [`revenant mcp list`](cli.md#mcp).
+
+### Skills
+
+Reusable workflows live in `SKILL.md` files, discovered from
+`.revenant/skills/<name>/SKILL.md` (project) and
+`~/.config/revenant/skills/<name>/SKILL.md` (user). Frontmatter is **TOML fenced
+by `+++`**:
+
+```markdown title=".revenant/skills/run-tests/SKILL.md"
++++
+name = "run-tests"
+description = "Run the suite and summarize failures."
+trigger = "/run-tests"                       # optional
+tools = ["run_bash", "read_file"]            # optional tool scope
++++
+1. Run `pytest -q`.
+2. If it fails, read the failing file and propose a fix.
+```
+
+Only a skill's one-line `description` sits in context until it is invoked (with
+`/skill <name>` in `chat`), when its full body loads. List/show with
+[`revenant skills`](cli.md#skills).
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -58,7 +124,11 @@ Set in `.aibot/profiles.json` under `model_roles`.
 | `--read-only` | off | Disable mutating tools. |
 | `--no-native-tools` | off | Force prompt-based tool protocol. |
 | `--yolo` | off | Auto-approve mutations (destructive commands still blocked). |
+| `--no-graph` | off | Skip building the code graph. |
 | `--no-color` | off | Disable colored output. |
+
+See the [CLI reference](cli.md) for subcommand-specific flags (`loop`, `undo`,
+`mcp`, `skills`, `resume`).
 
 ## Data directory layout
 
@@ -66,6 +136,10 @@ Set in `.aibot/profiles.json` under `model_roles`.
 |------|----------|
 | `.aibot/profiles.json` | Model roles and overrides. |
 | `.aibot/conversations.sqlite3` | Local conversation history. |
+| `.aibot/checkpoints.json` | File-snapshot undo store (non-git workspaces). |
+| `.aibot/sessions/*.json` | Saved sessions for `revenant resume`. |
+| `.revenant/skills/*/SKILL.md` | Project skills. |
+| `refs/revenant/undo/*` | Git-native undo snapshots (git workspaces; git refs, not files). |
 
 !!! warning "CWD-relative"
     `.aibot/` is resolved from the current working directory. Run from a

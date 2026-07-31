@@ -79,6 +79,7 @@ nav:
       - Overview: guides/index.md
       - Run your first coding task: guides/first-task.md
       - Approve, edit, and run commands safely: guides/approvals-and-safety.md
+      - Extending Revenant (MCP, skills, loops, graph): guides/extending.md
       - Configure model routing: guides/model-routing.md
       - Work in read-only mode: guides/read-only.md
   - Reference:
