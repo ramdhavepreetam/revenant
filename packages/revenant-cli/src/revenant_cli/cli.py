@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from nerva_core.aibot_profiles import load_profiles
@@ -36,6 +37,7 @@ from nerva_agent.skills import (
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path,
 )
+from revenant_cli import session_store
 from revenant_cli.project_context import compose_preamble, find_project_doc
 from revenant_cli.checkpoint import Checkpointer
 
@@ -223,9 +225,14 @@ def build_parser() -> argparse.ArgumentParser:
     _add_skills_flags(p_skills_show, suppress=True)
     p_skills_show.add_argument("name", help="Skill name to show.")
 
-    # Skeleton subcommands wired in later slices (F3 resume).
+    # F3 (P6): resume a saved session.
+    p_resume = sub.add_parser("resume", help="Resume a saved session (or list them).")
+    p_resume.add_argument("session_id", nargs="?",
+                          help="Session to resume (default: the most recent).")
+    _add_common_flags(p_resume)
+
+    # Skeleton subcommands wired in later slices.
     sub.add_parser("config", help="Show/edit configuration (coming soon).")
-    sub.add_parser("resume", help="Resume a saved session (coming soon).")
     return parser
 
 
@@ -389,12 +396,17 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 1
 
 
-def cmd_chat(args: argparse.Namespace, input_fn=input) -> int:
+def cmd_chat(args: argparse.Namespace, input_fn=input,
+             initial_history: list[dict] | None = None) -> int:
     """Interactive multi-turn REPL.
 
     One AgentLoop is built once; each user line calls loop.run(line, history),
     threading the returned transcript back in so the agent keeps prior context.
     `input_fn` is injectable for testing. REPL commands: /exit, /reset, /help.
+
+    `initial_history` seeds the transcript when resuming a saved session (F3). The
+    session is auto-saved after every turn under `<ws>/.aibot/sessions/` so it can
+    be resumed later; the id is stable for the REPL's lifetime.
     """
     built = _build_agent(args)
     if built is None:
@@ -405,7 +417,9 @@ def cmd_chat(args: argparse.Namespace, input_fn=input) -> int:
     print(f"{c['dim']}capacity: {rec.note}{c['reset']}")
     print(f"{c['dim']}Type your goal. Commands: /exit, /reset, /help.{c['reset']}")
 
-    history: list[dict] = []
+    history: list[dict] = list(initial_history) if initial_history else []
+    session_id: str | None = getattr(args, "session_id", None) or None
+    first_goal = ""
     try:
         while True:
             try:
@@ -437,9 +451,61 @@ def cmd_chat(args: argparse.Namespace, input_fn=input) -> int:
             result = loop.run(line, history=history or None)
             # Thread the transcript forward so the next turn keeps context.
             history = result.messages
+            # F3: persist the session after each turn so it can be resumed later.
+            first_goal = first_goal or line
+            session_id = session_store.save_session(
+                workspace, goal=first_goal, model=config.model,
+                messages=history, session_id=session_id,
+            ) or session_id
     finally:
         _close_mcp(loop)
+    if session_id:
+        print(f"{c['dim']}session saved: {session_id} "
+              f"(revenant resume {session_id}){c['reset']}")
     return 0
+
+
+def cmd_resume(args: argparse.Namespace, input_fn=input) -> int:
+    """Resume a saved session, or list sessions (F3, ADR-0007).
+
+    `revenant resume list`  → list this workspace's sessions (newest first).
+    `revenant resume [<id>]` → re-hydrate a session's transcript into a REPL;
+                               defaults to the most recent when no id is given.
+    """
+    workspace = Path(args.workspace).resolve()
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    sid = getattr(args, "session_id", None)
+
+    if sid == "list":
+        metas = session_store.list_sessions(workspace)
+        if not metas:
+            print(f"{color['dim']}no saved sessions for {workspace}.{color['reset']}")
+            return 0
+        for m in metas:
+            when = time.strftime("%Y-%m-%d %H:%M", time.localtime(m["updated_at"]))
+            print(f"{color['bold']}{m['id']}{color['reset']} "
+                  f"{color['dim']}{when} · {m['message_count']} msgs · "
+                  f"{m['goal'][:60]}{color['reset']}")
+        return 0
+
+    if sid is None:
+        sid = session_store.latest_session_id(workspace)
+        if sid is None:
+            print(f"{color['dim']}no saved sessions to resume for {workspace}. "
+                  f"Start one with `revenant chat`.{color['reset']}")
+            return 0
+
+    session = session_store.load_session(workspace, sid)
+    if session is None:
+        print(f"error: no session {sid!r} for {workspace}. "
+              f"Try `revenant resume list`.", file=sys.stderr)
+        return 2
+
+    print(f"{color['dim']}resuming session {sid} "
+          f"({len(session.messages)} messages)…{color['reset']}")
+    # Continue the same session id so further turns update it in place.
+    args.session_id = sid
+    return cmd_chat(args, input_fn=input_fn, initial_history=session.messages)
 
 
 def cmd_undo(args: argparse.Namespace) -> int:
@@ -617,7 +683,9 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_mcp(args)
     if args.command == "skills":
         return cmd_skills(args)
-    if args.command in ("config", "resume"):
+    if args.command == "resume":
+        return cmd_resume(args)
+    if args.command == "config":
         print(f"'{args.command}' is not implemented yet — coming in a later release.",
               file=sys.stderr)
         return 2
