@@ -69,6 +69,12 @@ ApproveHook = Callable[[str, dict], bool]
 # (used to snapshot files for undo). Its return value is ignored; exceptions are
 # swallowed so a checkpoint failure never aborts the tool call.
 BeforeToolHook = Callable[[str, dict], None]
+# after_tool(tool_name, args, observation) -> str | None. Fires right AFTER a
+# mutating tool runs (used to verify the result — H1, ADR-0012). A returned
+# string is APPENDED to the observation the model sees (e.g. a verification
+# failure to repair); None appends nothing. Exceptions are swallowed so a
+# verifier error never breaks the loop.
+AfterToolHook = Callable[[str, dict, str], "str | None"]
 
 
 class AgentLoop:
@@ -90,6 +96,7 @@ class AgentLoop:
         keep_recent_steps: int = 3,
         summarizer_config: ChatConfig | None = None,
         before_tool: "BeforeToolHook | None" = None,
+        after_tool: "AfterToolHook | None" = None,
     ) -> None:
         self.config = config
         self.registry = registry
@@ -121,6 +128,10 @@ class AgentLoop:
         # (after approval), so a checkpointer can snapshot files for undo (F8).
         # A hook error is logged as an observation but never blocks the tool.
         self.before_tool = before_tool
+        # after_tool(tool_name, args, observation) runs just AFTER a mutating tool
+        # and may APPEND to the observation (e.g. a verification failure to repair,
+        # H1/ADR-0012). A hook error is swallowed so a verifier can't break a run.
+        self.after_tool = after_tool
 
     # --- helpers -----------------------------------------------------------
     def _emit(self, event: AgentEvent, sink_events: list[AgentEvent]) -> None:
@@ -333,6 +344,18 @@ class AgentLoop:
                 observation = self.registry.dispatch(action.tool, action.args)
             except ToolError as exc:
                 observation = f"ERROR: {exc}"
+
+            # Verify the result of a mutating tool and append any feedback (H1).
+            # A returned string (e.g. "VERIFICATION FAILED …") is appended so the
+            # model's next turn repairs the edit with the exact error in hand.
+            if self.after_tool is not None and tool is not None and tool.mutating:
+                try:
+                    extra = self.after_tool(action.tool, action.args, observation)
+                except Exception:  # noqa: BLE001 - a verifier error never blocks the loop
+                    extra = None
+                if extra:
+                    observation = f"{observation}\n\n{extra}"
+
             self._emit(
                 AgentEvent("observation", text=observation, tool=action.tool, step=step), events
             )

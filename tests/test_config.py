@@ -129,3 +129,34 @@ def test_mcp_specs_skips_entry_without_name(capsys):
     specs = mcp_server_specs(cfg)
     assert [s.name for s in specs] == ["ok"]
     assert "without a name" in capsys.readouterr().err
+
+
+# --- [verify] section (H1, ADR-0012) ----------------------------------------
+
+from revenant_cli.config import verify_config
+
+
+def test_verify_config_defaults_off():
+    v = verify_config({"_raw_project": {}, "_raw_user": {}})
+    assert v["enabled"] is False
+    assert v["commands"] == []
+    assert v["max_repair_attempts"] == 3
+    assert v["pycompile"] is True
+
+
+def test_verify_config_parses_section():
+    cfg = {"_raw_project": {"verify": {
+        "enabled": True, "commands": ["ruff check {paths}", "pytest -q"],
+        "max_repair_attempts": 2, "pycompile": False}},
+        "_raw_user": {}}
+    v = verify_config(cfg)
+    assert v["enabled"] is True
+    assert v["commands"] == ["ruff check {paths}", "pytest -q"]
+    assert v["max_repair_attempts"] == 2
+    assert v["pycompile"] is False
+
+
+def test_verify_config_project_overrides_user():
+    cfg = {"_raw_user": {"verify": {"enabled": False}},
+           "_raw_project": {"verify": {"enabled": True}}}
+    assert verify_config(cfg)["enabled"] is True

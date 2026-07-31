@@ -1,8 +1,8 @@
 # ADR-0012 — Verify → repair loop (H1)
 
-- **Status:** Proposed
+- **Status:** Implemented (H1.4 targeted test-selection deferred)
 - **Phase:** H1 (0.3.0 lead) · **F-slices:** H1.1 verifier, H1.2 after_tool hook, H1.3 repair budget, H1.4 targeted verification
-- **Date proposed:** 2026-07-31 · **Date implemented:** —
+- **Date proposed:** 2026-07-31 · **Date implemented:** 2026-07-31
 - **Depends on:** ADR-0011 (strategy), ADR-0003 (`before_tool` seam), ADR-0006 (loop-driver), ADR-0010 (undo), ADR-0008 (code graph)
 - **Blocks:** ADR-0014 (H3 per-step verify)
 
@@ -87,26 +87,55 @@ the full configured command when the graph can't narrow it.
 - Non-git, no-undo workspace → repair still works; revert falls back to
   file-snapshots (ADR-0010).
 
-## Test plan
-`tests/test_verify.py`:
-- [ ] `PyCompileVerifier` flags a syntax error, passes clean code.
-- [ ] `CommandVerifier` maps exit 0 → ok, non-zero → errors (captured tail).
-- [ ] `CompositeVerifier` fails fast at the first failing checker.
-- [ ] `{paths}` / `{tests}` substitution; missing checker tool degrades.
-`tests/test_agent_loop.py` (after_tool):
-- [ ] `after_tool` fires after a mutating tool and its return is appended to the
-      observation; not called for read-only tools; a hook error doesn't crash.
-`tests/test_cli.py` (repair):
-- [ ] a failing verify triggers a repair turn with the error text in-context.
-- [ ] budget exhaustion reverts the edit and stops with a clear message.
+## Test plan — DONE (27 tests, 2026-07-31)
+`tests/test_verify.py` (13):
+- [x] `PyCompileVerifier` flags a syntax error, passes clean code, ignores non-py.
+- [x] `CommandVerifier` maps exit 0 → ok, non-zero → errors (captured tail);
+      `{paths}` substitution; missing-binary degrades; output clipped.
+- [x] `CompositeVerifier` fails fast at the first failing checker; empty passes.
+- [x] `format_failure` is actionable.
+`tests/test_agent_loop.py` (4):
+- [x] `after_tool` fires after a mutating tool and its return is appended to the
+      observation; not called for read-only tools; None appends nothing; a hook
+      error is swallowed (run still completes).
+`tests/test_config.py` (3) + `tests/test_verify_hook.py` (7):
+- [x] `verify_config` defaults off; parses `[verify]`; project overrides user.
+- [x] `build_verifier` None when disabled; composes pycompile + commands.
+- [x] hook passes → appends nothing; fails → repair message; **budget exhaustion
+      reverts via checkpointer + stops**; a pass resets the counter; a new target
+      resets the counter.
 
 ## Acceptance criteria
-- [ ] With `[verify]` configured, an edit that breaks compilation/tests is caught
-      and the model gets the exact error back to repair — verified end-to-end.
-- [ ] Repair is bounded; exhaustion reverts via undo and never ships broken code.
-- [ ] Verification is off by default-safe (no config → no behavior change).
-- [ ] Offline; tests green; ADR-0011/0012 + README updated.
+- [x] With `[verify]` configured, an edit that breaks compilation is caught and
+      the model gets the **exact error back to repair** — verified end-to-end: a
+      fake model wrote `def f(:`, got the SyntaxError+caret back, and fixed it;
+      the broken code never shipped.
+- [x] Repair is bounded; exhaustion reverts via undo and never ships broken code.
+- [x] Verification is off by default-safe (no `[verify]` → no behavior change).
+- [x] Offline; tests green (366 → 393); ADR-0011/0012 + README updated.
+- [ ] *(H1.4)* graph-driven **targeted test selection** — **deferred** (the
+      `{tests}` substitution primitive is in place; graph-based narrowing isn't).
+
+## Implementation notes (what actually shipped)
+- **H1.1** `nerva_agent/verify.py`: `VerifyResult`, `PyCompileVerifier`,
+  `CommandVerifier` (`{paths}`/`{tests}` substitution, output clipped to 2k tail,
+  missing-binary degrades to pass), `CompositeVerifier` (fail-fast), and
+  `format_failure` (the direct repair instruction).
+- **H1.2** `agent_loop.py`: `AfterToolHook` type + `after_tool` param; fires right
+  after `dispatch` for mutating tools, appends its return to the observation;
+  hook errors swallowed (mirrors `before_tool`).
+- **H1.3** `revenant_cli/verify_hook.py` + `config.verify_config`: builds the
+  verifier from `[verify]`, wires the hook in `_build_agent` (write-mode only),
+  and tracks a per-target repair budget — on exhaustion it reverts the edit via
+  the existing checkpointer (P2.5/P8 undo) and tells the model to stop retrying.
+- **Deviation — H1.4 deferred:** targeted test selection via the code graph isn't
+  wired; a configured command runs as-is. The `{tests}` hook exists for when it
+  lands. Also: `run_bash` verification runs the configured project-wide checks
+  (no per-path scoping, since a shell command can touch anything).
 
 ## Progress log
 - 2026-07-31 — Proposed. Seam confirmed at `agent_loop.py` dispatch (mirrors
   `before_tool`); reuses loop-driver + undo + code-graph test selection.
+- 2026-07-31 — **Implemented** (H1.1–H1.3; H1.4 deferred). 27 tests, suite
+  366 → 393. Verified end-to-end: broken edit caught → exact error fed back →
+  model repaired → clean. **The core of "the harness carries the model" is live.**
