@@ -4,7 +4,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from revenant_cli import config
-from revenant_cli.config import resolve, find_project_config, load_config
+from revenant_cli.config import (
+    resolve, find_project_config, load_config, mcp_server_specs,
+)
 
 
 # --- resolve() precedence ----------------------------------------------------
@@ -88,3 +90,42 @@ def test_load_config_no_files(tmp_path: Path, monkeypatch):
     # Only the bookkeeping keys, no scalar settings.
     assert not any(k in merged for k in ("model", "base_url", "read_only"))
     assert merged["_project_path"] is None
+
+
+# --- [[mcp.servers]] reader (F11.3, ADR-0004) -------------------------------
+
+def test_mcp_specs_parses_project_entry():
+    cfg = {"_raw_project": {"mcp": {"servers": [
+        {"name": "git", "transport": "stdio", "command": "mcp-server-git",
+         "args": ["--repo", "."], "read_only": ["status", "log"], "alias": "g"},
+    ]}}, "_raw_user": {}}
+    (spec,) = mcp_server_specs(cfg)
+    assert spec.name == "git"
+    assert spec.command == "mcp-server-git"
+    assert spec.args == ["--repo", "."]
+    assert spec.read_only == ["status", "log"]
+    assert spec.alias == "g"
+
+
+def test_mcp_specs_empty_when_no_section():
+    assert mcp_server_specs({"_raw_project": {}, "_raw_user": {}}) == []
+
+
+def test_mcp_specs_project_overrides_user_by_name():
+    cfg = {
+        "_raw_user": {"mcp": {"servers": [
+            {"name": "git", "command": "user-git"}]}},
+        "_raw_project": {"mcp": {"servers": [
+            {"name": "git", "command": "project-git"}]}},
+    }
+    (spec,) = mcp_server_specs(cfg)
+    assert spec.command == "project-git"
+
+
+def test_mcp_specs_skips_entry_without_name(capsys):
+    cfg = {"_raw_project": {"mcp": {"servers": [
+        {"command": "no-name"}, {"name": "ok", "command": "c"}]}},
+        "_raw_user": {}}
+    specs = mcp_server_specs(cfg)
+    assert [s.name for s in specs] == ["ok"]
+    assert "without a name" in capsys.readouterr().err
