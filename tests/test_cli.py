@@ -649,3 +649,46 @@ def test_loop_journals_a_resumable_session(tmp_path, monkeypatch):
     cli.cmd_loop(_loop_args(tmp_path))
     # A session was persisted (the run journal) and is resumable.
     assert len(_ss.list_sessions(tmp_path)) == 1
+
+
+# --- code graph tools wiring (F14, ADR-0008) --------------------------------
+
+def _capture_registry_build(monkeypatch):
+    """Patch _build_agent's deps and capture the ToolRegistry the loop is built with."""
+    captured = {}
+
+    def fake_loop(config, registry, **k):
+        captured["names"] = registry.names()
+        return type("L", (), {})()
+
+    class _Rec:
+        max_steps = 5; max_context_tokens = 6000; keep_recent_steps = 3; note = "n"
+
+    monkeypatch.setattr(cli, "AgentLoop", fake_loop)
+    monkeypatch.setattr(cli, "recommend", lambda *a, **k: _Rec())
+    monkeypatch.setattr(cli, "load_config", lambda ws: {})
+    monkeypatch.setattr(cli, "load_profiles", lambda *a, **k: {})
+    monkeypatch.setattr(cli, "build_config",
+                        lambda *a, **k: type("C", (), {"model": "m", "base_url": "x"})())
+    monkeypatch.setattr(cli, "find_project_doc", lambda *a, **k: None)
+    return captured
+
+
+def _graph_ws(tmp_path):
+    (tmp_path / "m.py").write_text("def helper():\n    return 1\n\ndef top():\n    return helper()\n")
+    return tmp_path
+
+
+def test_graph_tools_registered_in_readonly(tmp_path, monkeypatch):
+    captured = _capture_registry_build(monkeypatch)
+    cli._build_agent(_agent_args(_graph_ws(tmp_path), read_only=True))
+    for name in ("defn_of", "who_calls", "neighbors", "impact_of"):
+        assert name in captured["names"]
+
+
+def test_no_graph_flag_skips_graph_tools(tmp_path, monkeypatch):
+    captured = _capture_registry_build(monkeypatch)
+    args = _agent_args(_graph_ws(tmp_path), read_only=True)
+    args.no_graph = True
+    cli._build_agent(args)
+    assert "defn_of" not in captured["names"]
