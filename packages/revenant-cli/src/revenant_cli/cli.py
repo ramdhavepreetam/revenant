@@ -30,6 +30,7 @@ from nerva_agent.agent_capacity import recommend
 
 from revenant_cli.config import load_config, resolve
 from revenant_cli.project_context import compose_preamble, find_project_doc
+from revenant_cli.checkpoint import Checkpointer
 
 CODING_PREAMBLE = (
     "You are Revenant, a precise local coding assistant working inside a code "
@@ -129,7 +130,7 @@ def build_config(profiles: dict, base_url: str, model: str | None) -> ChatConfig
     return config
 
 
-_SUBCOMMANDS = ("run", "chat", "config", "mcp", "resume")
+_SUBCOMMANDS = ("run", "chat", "undo", "config", "mcp", "resume")
 
 
 _DEFAULT_BASE_URL = "http://localhost:11434"
@@ -168,7 +169,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_chat = sub.add_parser("chat", help="Interactive multi-turn session (REPL).")
     _add_common_flags(p_chat)
 
-    # Skeleton subcommands wired in later slices (F2 config, F11 MCP, F3 resume).
+    p_undo = sub.add_parser("undo", help="Revert file changes the agent made.")
+    p_undo.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
+    p_undo.add_argument("--all", action="store_true",
+                        help="Revert all recorded changes (default: just the last).")
+    p_undo.add_argument("--no-color", action="store_true")
+
+    # Skeleton subcommands wired in later slices (F11 MCP, F3 resume).
     sub.add_parser("config", help="Show/edit configuration (coming soon).")
     sub.add_parser("mcp", help="Manage MCP servers (coming soon).")
     sub.add_parser("resume", help="Resume a saved session (coming soon).")
@@ -222,9 +229,12 @@ def _build_agent(args: argparse.Namespace):
     max_context = resolve("max_context_tokens", args.max_context_tokens, cfg, 0) or rec.max_context_tokens
 
     tools = build_fs_tools(workspace)
+    checkpointer = None
     if not read_only:
         tools += build_edit_tools(workspace)
         tools.append(build_bash_tool(workspace))
+        # F8: snapshot files before mutating tools so `revenant undo` can revert.
+        checkpointer = Checkpointer(workspace, store_path=_checkpoint_store(workspace))
     registry = ToolRegistry(tools)
 
     # F6 (tier a): ground the agent on the project's own instruction file if present.
@@ -244,8 +254,18 @@ def _build_agent(args: argparse.Namespace):
         auto_approve=yolo,
         max_context_tokens=max_context,
         summarizer_config=summarizer,
+        before_tool=(checkpointer.snapshot if checkpointer else None),
     )
     return workspace, config, rec, loop, color
+
+
+def _checkpoint_store(workspace: Path) -> Path:
+    """Where a workspace's undo snapshots are persisted.
+
+    Kept under the workspace's own data dir so `revenant undo` (a separate
+    invocation) can reconstruct the checkpointer for exactly this repo.
+    """
+    return workspace / default_data_dir() / "checkpoints.json"
 
 
 def _mode_label(args: argparse.Namespace) -> str:
@@ -309,6 +329,28 @@ def cmd_chat(args: argparse.Namespace, input_fn=input) -> int:
     return 0
 
 
+def cmd_undo(args: argparse.Namespace) -> int:
+    """Revert file changes recorded by a prior session's checkpointer (F8)."""
+    workspace = Path(args.workspace).resolve()
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    store = _checkpoint_store(workspace)
+    checkpointer = Checkpointer.load(workspace, store)
+
+    if not checkpointer.snapshots:
+        print(f"{color['dim']}nothing to undo (no recorded changes for {workspace}).{color['reset']}")
+        return 0
+
+    if args.all:
+        done = checkpointer.undo_all()
+        for desc in done:
+            print(f"{color['bold']}↶{color['reset']} {desc}")
+        print(f"{color['dim']}reverted {len(done)} change(s).{color['reset']}")
+    else:
+        desc = checkpointer.undo_last()
+        print(f"{color['bold']}↶{color['reset']} {desc}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = argv if argv is not None else sys.argv[1:]
     parser = build_parser()
@@ -318,6 +360,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_run(args)
     if args.command == "chat":
         return cmd_chat(args)
+    if args.command == "undo":
+        return cmd_undo(args)
     if args.command in ("config", "mcp", "resume"):
         print(f"'{args.command}' is not implemented yet — coming in a later release.",
               file=sys.stderr)

@@ -65,6 +65,10 @@ class AgentResult:
 EventSink = Callable[[AgentEvent], None]
 # approve(tool_name, args) -> True to allow the call, False to deny it.
 ApproveHook = Callable[[str, dict], bool]
+# before_tool(tool_name, args) -> None. Fires right before a mutating tool runs
+# (used to snapshot files for undo). Its return value is ignored; exceptions are
+# swallowed so a checkpoint failure never aborts the tool call.
+BeforeToolHook = Callable[[str, dict], None]
 
 
 class AgentLoop:
@@ -85,6 +89,7 @@ class AgentLoop:
         max_context_tokens: int = 6000,
         keep_recent_steps: int = 3,
         summarizer_config: ChatConfig | None = None,
+        before_tool: "BeforeToolHook | None" = None,
     ) -> None:
         self.config = config
         self.registry = registry
@@ -112,6 +117,10 @@ class AgentLoop:
         # NOT the damage guards inside the tools themselves (e.g. bash footgun block).
         self.approve = approve
         self.auto_approve = auto_approve
+        # before_tool(tool_name, args) is called just before a mutating tool runs
+        # (after approval), so a checkpointer can snapshot files for undo (F8).
+        # A hook error is logged as an observation but never blocks the tool.
+        self.before_tool = before_tool
 
     # --- helpers -----------------------------------------------------------
     def _emit(self, event: AgentEvent, sink_events: list[AgentEvent]) -> None:
@@ -312,6 +321,13 @@ class AgentLoop:
                     messages.append({"role": "assistant", "content": content or f"(calling {action.tool})"})
                     messages.append({"role": "user", "content": f"Result of {action.tool}:\n{observation}"})
                     continue
+
+            # Snapshot for undo before a mutating tool changes anything (F8).
+            if self.before_tool is not None and tool is not None and tool.mutating:
+                try:
+                    self.before_tool(action.tool, action.args)
+                except Exception:  # noqa: BLE001 - a checkpoint failure never blocks the tool
+                    pass
 
             try:
                 observation = self.registry.dispatch(action.tool, action.args)
