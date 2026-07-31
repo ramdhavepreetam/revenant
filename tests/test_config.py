@@ -160,3 +160,38 @@ def test_verify_config_project_overrides_user():
     cfg = {"_raw_user": {"verify": {"enabled": False}},
            "_raw_project": {"verify": {"enabled": True}}}
     assert verify_config(cfg)["enabled"] is True
+
+
+# --- [context] section (H2, ADR-0013) ----------------------------------------
+
+from revenant_cli.config import context_config
+
+
+def test_context_config_defaults_on():
+    c = context_config({"_raw_project": {}, "_raw_user": {}})
+    assert c["inject_on_edit"] is True
+    assert c["resolve_errors"] is True
+    assert c["max_callers"] == 5
+
+
+def test_context_config_parses_section():
+    cfg = {"_raw_project": {"context": {
+        "inject_on_edit": False, "resolve_errors": True, "max_callers": 2}},
+        "_raw_user": {}}
+    c = context_config(cfg)
+    assert c["inject_on_edit"] is False
+    assert c["resolve_errors"] is True
+    assert c["max_callers"] == 2
+
+
+def test_context_config_project_overrides_user():
+    cfg = {"_raw_user": {"context": {"inject_on_edit": True}},
+           "_raw_project": {"context": {"inject_on_edit": False}}}
+    assert context_config(cfg)["inject_on_edit"] is False
+
+
+def test_context_config_ignores_malformed_section():
+    cfg = {"_raw_project": {"context": "not-a-table"}, "_raw_user": {}}
+    c = context_config(cfg)
+    assert c["inject_on_edit"] is True
+    assert c["max_callers"] == 5

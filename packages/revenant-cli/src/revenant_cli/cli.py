@@ -43,10 +43,12 @@ from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
+    context_config,
 )
 from revenant_cli import session_store
 from revenant_cli.git_checkpoint import GitCheckpointer, is_git_repo
 from revenant_cli.verify_hook import build_verifier, make_verify_hook
+from revenant_cli.context_hook import make_context_hook, compose_after_tool_hooks
 from revenant_cli.project_context import compose_preamble, find_project_doc
 from revenant_cli.checkpoint import Checkpointer
 
@@ -353,6 +355,9 @@ def _build_agent(args: argparse.Namespace):
     # F14 (P7): index the workspace into a code graph and expose read-only
     # structural retrieval tools (defn_of / who_calls / neighbors / impact_of).
     # Read-only, so available in every mode. Opt out with --no-graph on big repos.
+    # `graph` stays None when disabled/failed so H2 context injection below is a
+    # clean no-op too (same "absent graph -> identical to today" degrade, ADR-0013).
+    graph = None
     if not getattr(args, "no_graph", False):
         try:
             graph = build_index(workspace)
@@ -382,12 +387,12 @@ def _build_agent(args: argparse.Namespace):
     # H1 (0.3.0): verify → repair. When [verify] is enabled, check each edit and
     # feed failures back so the model repairs before shipping broken code. Off by
     # default (no [verify] section = no behavior change).
-    after_tool = None
+    verify_hook = None
     if not read_only:
         vcfg = verify_config(cfg)
         verifier = build_verifier(workspace, vcfg)
         if verifier is not None:
-            after_tool = make_verify_hook(
+            verify_hook = make_verify_hook(
                 workspace, verifier,
                 max_repair_attempts=vcfg["max_repair_attempts"],
                 checkpointer=checkpointer,
@@ -395,6 +400,23 @@ def _build_agent(args: argparse.Namespace):
             )
             print(f"{color['dim']}verify: on ({vcfg['max_repair_attempts']} repair "
                   f"attempts){color['reset']}")
+
+    # H2 (0.3.0): proactive context injection. Auto-attach a symbol's def+callers
+    # after an edit touches it (H2.1), and auto-resolve symbols named in an error
+    # observation (H2.2) — pushing what pack_symbol_context/defn_of would return,
+    # instead of waiting for the model to ask. No-op when the graph is absent
+    # (--no-graph or indexing failed) or [context] disables both sub-features.
+    ccfg = context_config(cfg)
+    context_hook = make_context_hook(
+        graph,
+        inject_on_edit=ccfg["inject_on_edit"],
+        resolve_errors=ccfg["resolve_errors"],
+        max_callers=ccfg["max_callers"],
+    )
+    if context_hook is not None:
+        print(f"{color['dim']}context: proactive injection on (max_callers="
+              f"{ccfg['max_callers']}){color['reset']}")
+    after_tool = compose_after_tool_hooks(verify_hook, context_hook)
 
     loop = AgentLoop(
         config, registry,

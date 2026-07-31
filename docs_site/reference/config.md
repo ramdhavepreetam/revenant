@@ -125,6 +125,23 @@ max_repair_attempts = 3                        # then revert the edit and stop
 
 A check whose binary is missing degrades to a pass (it never blocks an edit).
 
+### Proactive context
+
+With `[context]` on, Revenant **pushes** the code context the model needs instead
+of waiting for it to ask: when the agent edits a symbol, its definition and
+callers are surfaced automatically, and symbols named in an error/traceback are
+resolved to their definitions. Requires the code graph (on unless `--no-graph`).
+
+```toml
+[context]
+inject_on_edit = true    # surface a symbol's def + callers when it's edited
+resolve_errors = true    # resolve symbols in a traceback to their definitions
+max_callers = 5          # cap on injected callers
+```
+
+Both default on, but they only add anything when the graph resolves a symbol —
+so with `--no-graph` or a symbol the graph doesn't know, behavior is unchanged.
+
 ## Environment variables
 
 | Variable | Default | Description |

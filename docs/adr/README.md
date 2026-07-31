@@ -65,7 +65,7 @@
 | [0009](0009-subagents-and-git-undo.md) | Sub-agents & git-native undo | P8 | Implemented |
 | [0011](0011-harness-carries-the-model.md) | **The harness carries the model** (H-series strategy) | 0.3.0 | Accepted |
 | [0012](0012-verify-repair-loop.md) | Verify → repair loop | H1 | Implemented (targeted-tests deferred) |
-| [0013](0013-proactive-context-injection.md) | Proactive context injection | H2 | Proposed |
+| [0013](0013-proactive-context-injection.md) | Proactive context injection | H2 | Implemented |
 | [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Proposed |
 | [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Implemented |
 
@@ -100,7 +100,7 @@ model and into deterministic machinery. Strategy: [ADR-0011](0011-harness-carrie
 | Phase | Pillar | Fixes | Reuses | Status |
 |-------|--------|-------|--------|--------|
 | **H1** | **Verify → repair loop** | plausible-but-broken edits | `before_tool` seam, loop-driver, undo, code-graph | ✅ Shipped (targeted-tests deferred) |
-| **H2** | Proactive context injection | edits in the dark | `pack_symbol_context` (F14.3) | ⬜ Next |
+| **H2** | Proactive context injection | edits in the dark | `pack_symbol_context` (F14.3) | ✅ Shipped (via `after_tool`) |
 | **H3** | Decompose + per-step verify | can't hold a long plan | sub-agents (P8), H1 | ⬜ Next |
 | **H0** | Eval harness | — (measures the lift) | new; small | ✅ Shipped (5 tasks + `--compare`) |
 
