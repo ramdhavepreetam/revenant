@@ -9,6 +9,23 @@
 
 ---
 
+## ▶ START HERE — current state (resume point)
+
+- **Done & committed:** P0 (engine), **P2.5** undo+ADRs (branch
+  `phase2.5-undo-and-adr-roadmap`, commit `7fc5fa9`), **P3** MCP (branch
+  `phase3-mcp-integration`, commit `6226776`). Both branches are **committed but
+  not yet pushed / no PR opened**.
+- **Suite:** 247 tests green (`python3 -m pytest tests/ -q`).
+- **⏭ NEXT: P4 — Skills** → [ADR-0005](0005-skills.md). Start with F12.1
+  (`SKILL.md` format + `discover_skills` loader in `nerva_agent/skills.py`).
+- **Deferred, don't forget:** `mcp add` subcommand + MCP HTTP/SSE transport
+  (P3 shipped stdio + list/test only); F9 git-native undo → P8.
+
+> How to resume: read this banner → open the NEXT phase's ADR → check its
+> "Progress log" (bottom) for any partial work → implement to its test plan.
+
+---
+
 ## How this directory works
 
 - Every significant decision gets an **ADR** (Architecture Decision Record): a
