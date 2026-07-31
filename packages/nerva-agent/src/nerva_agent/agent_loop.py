@@ -23,7 +23,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from nerva_core.local_llm_writer import ChatConfig, call_model_message, LocalLLMError, estimate_tokens
+from nerva_core.local_llm_writer import (
+    ChatConfig, call_model, call_model_message, LocalLLMError, estimate_tokens,
+)
 from nerva_agent.agent_tools import ToolRegistry, ToolError
 from nerva_agent.agent_protocol import (
     FinalAnswer,
@@ -82,6 +84,7 @@ class AgentLoop:
         auto_approve: bool = False,
         max_context_tokens: int = 6000,
         keep_recent_steps: int = 3,
+        summarizer_config: ChatConfig | None = None,
     ) -> None:
         self.config = config
         self.registry = registry
@@ -100,6 +103,10 @@ class AgentLoop:
         # always retained verbatim. This is the loop's local analog of compaction.
         self.max_context_tokens = max_context_tokens
         self.keep_recent_steps = keep_recent_steps
+        # Optional small/fast model used to summarize the folded portion during
+        # compaction. When None (or the call fails), compaction falls back to a
+        # cheap first-line recap so the loop stays robust offline.
+        self.summarizer_config = summarizer_config
         # approve(tool_name, args) -> bool. Called before any tool whose
         # requires_approval flag is set. auto_approve (yolo) skips the prompt but
         # NOT the damage guards inside the tools themselves (e.g. bash footgun block).
@@ -145,17 +152,10 @@ class AgentLoop:
             return messages                       # nothing old enough to fold
         old, recent = middle[:-keep_tail], middle[-keep_tail:]
 
-        # Summarize the folded portion: pull the tool actions/observations into a
-        # terse recap so the model keeps situational awareness without the bulk.
-        lines: list[str] = []
-        for msg in old:
-            content = (msg.get("content") or "").strip()
-            if not content:
-                continue
-            # Observation turns are prefixed "Result of <tool>:"; keep a one-line gist.
-            first = content.splitlines()[0]
-            lines.append(first[:200])
-        recap = "\n".join(lines[-40:]) or "(earlier steps)"
+        # Summarize the folded portion. Prefer an LLM recap (a small summary model)
+        # for real situational awareness; fall back to a cheap first-line recap when
+        # no summarizer is configured or the call fails (keeps the loop offline-robust).
+        recap = self._summarize_old(old) or self._heuristic_recap(old)
         summary_turn = {
             "role": "user",
             "content": (
@@ -164,6 +164,51 @@ class AgentLoop:
             ),
         }
         return head + [summary_turn] + recent
+
+    @staticmethod
+    def _heuristic_recap(old: list[dict[str, Any]]) -> str:
+        """Cheap fallback recap: one line per folded turn (no model call)."""
+        lines: list[str] = []
+        for msg in old:
+            content = (msg.get("content") or "").strip()
+            if not content:
+                continue
+            # Observation turns are prefixed "Result of <tool>:"; keep a one-line gist.
+            lines.append(content.splitlines()[0][:200])
+        return "\n".join(lines[-40:]) or "(earlier steps)"
+
+    def _summarize_old(self, old: list[dict[str, Any]]) -> str | None:
+        """LLM-summarize the folded turns into a terse progress recap.
+
+        Returns None (so the caller uses the heuristic) when no summarizer is
+        configured or the model call fails — compaction must never crash the loop.
+        """
+        if self.summarizer_config is None:
+            return None
+        transcript = "\n".join(
+            f"{m.get('role', '?')}: {(m.get('content') or '').strip()}"
+            for m in old
+            if (m.get("content") or "").strip()
+        )
+        if not transcript:
+            return None
+        prompt = [
+            {
+                "role": "system",
+                "content": (
+                    "You compress an AI coding agent's earlier steps into a terse "
+                    "progress recap. Preserve concrete facts the agent needs to avoid "
+                    "repeating work: files read, findings, edits made, commands run and "
+                    "their outcomes. Use short bullet lines. No preamble, no advice."
+                ),
+            },
+            {"role": "user", "content": f"Summarize these steps:\n\n{transcript}"},
+        ]
+        try:
+            recap = call_model(self.summarizer_config, prompt).strip()
+        except Exception:  # noqa: BLE001 - any failure (incl. LocalLLMError) -> heuristic fallback
+            return None
+        return recap or None
 
     # --- main loop ---------------------------------------------------------
     def run(

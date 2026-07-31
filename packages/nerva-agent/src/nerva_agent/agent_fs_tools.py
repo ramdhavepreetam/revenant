@@ -20,6 +20,7 @@ import subprocess
 from pathlib import Path
 
 from nerva_agent.agent_tools import Tool, ToolParam, ToolError
+from nerva_agent.agent_ignore import IgnoreMatcher, load_ignore_matcher
 
 # Cap file/search output so a huge file can't blow the model's context window.
 MAX_FILE_BYTES = 64_000
@@ -71,7 +72,7 @@ def _read_file(root: Path, path: str) -> str:
     return text
 
 
-def _list_dir(root: Path, path: str = ".") -> str:
+def _list_dir(root: Path, path: str, ignore: IgnoreMatcher) -> str:
     target = _resolve_in_root(root, path or ".")
     if not target.exists():
         raise WorkspaceError(f"no such directory: {path}")
@@ -79,22 +80,31 @@ def _list_dir(root: Path, path: str = ".") -> str:
         raise WorkspaceError(f"{path} is not a directory")
     entries = []
     for child in sorted(target.iterdir(), key=lambda p: (p.is_file(), p.name)):
-        if child.name.startswith(".") and child.name not in (".gitignore",):
+        # Hidden files stay hidden (except .gitignore, which is useful to see);
+        # ignore-file rules cull build/vendor noise.
+        if child.name.startswith(".") and child.name not in (".gitignore", ".revenantignore"):
+            continue
+        if ignore.match(_rel(root, child), child.is_dir()):
             continue
         entries.append(child.name + ("/" if child.is_dir() else ""))
     return "\n".join(entries) if entries else "(empty)"
 
 
-def _glob(root: Path, pattern: str) -> str:
+def _glob(root: Path, pattern: str, ignore: IgnoreMatcher) -> str:
     root = root.resolve()
     matches: list[str] = []
     # Walk once; match basename or relative path against the glob.
     for dirpath, dirnames, filenames in os.walk(root):
-        # Skip dotdirs and common noise.
-        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d not in ("node_modules", "__pycache__", "site")]
+        # Prune ignored directories in place so we never descend into them.
+        dirnames[:] = [
+            d for d in dirnames
+            if not ignore.match(_rel(root, Path(dirpath) / d), True)
+        ]
         for name in filenames:
             full = Path(dirpath) / name
             rel = _rel(root, full)
+            if ignore.match(rel, False):
+                continue
             if fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(name, pattern):
                 matches.append(rel)
                 if len(matches) >= MAX_GLOB_RESULTS:
@@ -103,7 +113,7 @@ def _glob(root: Path, pattern: str) -> str:
     return "\n".join(sorted(matches)) if matches else "(no matches)"
 
 
-def _grep(root: Path, pattern: str, path: str = ".") -> str:
+def _grep(root: Path, pattern: str, path: str, ignore: IgnoreMatcher) -> str:
     base = _resolve_in_root(root, path or ".")
     rg = shutil.which("rg")
     if rg:
@@ -116,10 +126,16 @@ def _grep(root: Path, pattern: str, path: str = ".") -> str:
             out = proc.stdout.strip()
             if proc.returncode not in (0, 1):  # 1 = no matches (not an error)
                 raise WorkspaceError(f"grep failed: {proc.stderr.strip()[:200]}")
-            # Make paths workspace-relative for readability.
+            # Make paths workspace-relative and drop hits in ignored files. (rg has
+            # its own .gitignore handling, but we apply ours for .revenantignore
+            # + consistency with glob/list_dir.)
             lines = []
             for line in out.splitlines()[:MAX_GREP_MATCHES]:
-                lines.append(line.replace(str(root.resolve()) + os.sep, ""))
+                rel_line = line.replace(str(root.resolve()) + os.sep, "")
+                hit_path = rel_line.split(":", 1)[0]
+                if ignore.match(hit_path, False):
+                    continue
+                lines.append(rel_line)
             return "\n".join(lines) if lines else "(no matches)"
         except subprocess.TimeoutExpired:
             raise WorkspaceError("grep timed out")
@@ -134,7 +150,7 @@ def _grep(root: Path, pattern: str, path: str = ".") -> str:
         p for p in base.rglob("*") if p.is_file()
     )
     for f in targets:
-        if any(part.startswith(".") or part in ("node_modules", "__pycache__", "site") for part in f.parts):
+        if ignore.match(_rel(root, f), False):
             continue
         try:
             for i, line in enumerate(f.read_text(errors="replace").splitlines(), 1):
@@ -153,6 +169,10 @@ def build_fs_tools(root: str | Path) -> list[Tool]:
     if not root_path.is_dir():
         raise WorkspaceError(f"workspace root is not a directory: {root}")
 
+    # Build the ignore matcher once (.revenantignore + .gitignore + defaults) so
+    # glob/grep/list_dir all cull the same build/vendor noise from the model's view.
+    ignore = load_ignore_matcher(root_path)
+
     return [
         Tool(
             "read_file",
@@ -165,14 +185,14 @@ def build_fs_tools(root: str | Path) -> list[Tool]:
             "list_dir",
             "List the entries of a directory in the workspace.",
             [ToolParam("path", "string", "Directory path (default: workspace root).", required=False)],
-            run=lambda path=".": _list_dir(root_path, path),
+            run=lambda path=".": _list_dir(root_path, path, ignore),
             parallel_safe=True,
         ),
         Tool(
             "glob",
             "Find files by glob pattern (e.g. '**/*.py' or 'core/*.py').",
             [ToolParam("pattern", "string", "A glob pattern matched against relative paths.")],
-            run=lambda pattern: _glob(root_path, pattern),
+            run=lambda pattern: _glob(root_path, pattern, ignore),
             parallel_safe=True,
         ),
         Tool(
@@ -182,7 +202,7 @@ def build_fs_tools(root: str | Path) -> list[Tool]:
                 ToolParam("pattern", "string", "A regular expression to search for."),
                 ToolParam("path", "string", "File or directory to search (default: whole workspace).", required=False),
             ],
-            run=lambda pattern, path=".": _grep(root_path, pattern, path),
+            run=lambda pattern, path=".": _grep(root_path, pattern, path, ignore),
             parallel_safe=True,
         ),
     ]

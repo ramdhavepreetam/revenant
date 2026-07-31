@@ -73,6 +73,45 @@ class ContextManagementTests(unittest.TestCase):
         msgs = self._long_transcript(3)  # exactly keep_recent_steps pairs
         self.assertEqual(loop._compact_messages(msgs), msgs)
 
+    # --- F5: LLM-backed compaction ----------------------------------------
+    def test_compaction_uses_heuristic_without_summarizer(self):
+        # No summarizer_config -> no model call, first-line recap used.
+        loop = self._loop(max_context_tokens=300, keep_recent_steps=2)
+        msgs = self._long_transcript(8)
+        with mock.patch.object(agent_loop, "call_model") as m:
+            out = loop._compact_messages(msgs)
+        m.assert_not_called()
+        # The heuristic recap keeps first-line gists (observation prefixes).
+        self.assertIn("Result of read_file", out[2]["content"])
+
+    def test_compaction_uses_llm_when_summarizer_set(self):
+        loop = self._loop(max_context_tokens=300, keep_recent_steps=2,
+                          summarizer_config=_config())
+        msgs = self._long_transcript(8)
+        with mock.patch.object(agent_loop, "call_model",
+                               return_value="- read files\n- made an edit") as m:
+            out = loop._compact_messages(msgs)
+        m.assert_called_once()
+        self.assertIn("made an edit", out[2]["content"])
+
+    def test_compaction_falls_back_when_summarizer_raises(self):
+        loop = self._loop(max_context_tokens=300, keep_recent_steps=2,
+                          summarizer_config=_config())
+        msgs = self._long_transcript(8)
+        with mock.patch.object(agent_loop, "call_model",
+                               side_effect=LocalLLMError("no server")):
+            out = loop._compact_messages(msgs)
+        # Must not crash; falls back to the heuristic recap.
+        self.assertIn("Result of read_file", out[2]["content"])
+
+    def test_compaction_falls_back_when_summarizer_returns_empty(self):
+        loop = self._loop(max_context_tokens=300, keep_recent_steps=2,
+                          summarizer_config=_config())
+        msgs = self._long_transcript(8)
+        with mock.patch.object(agent_loop, "call_model", return_value="   "):
+            out = loop._compact_messages(msgs)
+        self.assertIn("Result of read_file", out[2]["content"])
+
     def test_compaction_fires_during_run(self):
         # A run that grows past budget must compact before a later model call.
         seen_lens = []
