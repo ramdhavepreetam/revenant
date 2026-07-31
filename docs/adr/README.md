@@ -4,25 +4,25 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-30 · **Tests:** 332 green
+**Last updated:** 2026-07-30 · **Tests:** 352 green · **Roadmap: P0–P8 all Implemented** 🎉
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
 
 ## ▶ START HERE — current state (resume point)
 
-- **Done:** P0, **P2.5** undo+ADRs, **P3** MCP, **P4** Skills, **P6** Resume,
-  **P5** Loops, **P7** Code graph. **Every next-level pillar (MCP, Skills, Loops,
-  Graph) is now built.**
-- **PRs open (stacked #4→#5→#6→#7→#8):** through P5 Loops. **P7
-  (`phase7-code-graph`) is committed; open its PR (targets `phase5-loops`).**
-- **Suite:** 332 tests green (`python3 -m pytest tests/ -q`).
-- **⏭ NEXT: P8** → [ADR-0009](0009-subagents-and-git-undo.md) (sub-agents +
-  git-native undo) — the last horizon phase. Or clear the deferred backlog below.
-- **Deferred, don't forget:** graph **F14.3** structure-aware packing + **F14.4**
-  incremental re-index (P7); loop **triggers** F13.3 `--every`/`--watch` (P5);
-  one-shot `run` autosave (P6); `run --skill` (P4); `mcp add` + MCP HTTP (P3);
-  F9 git-native undo → **part of P8**.
+- **🎉 ROADMAP COMPLETE — P0 through P8 all Implemented.** Every next-level
+  pillar (MCP, Skills, Loops, Graph) plus Resume, hardened undo, sub-agents, and
+  git-native undo is built and tested.
+- **PRs open (stacked #4→#5→#6→#7→#8→#9):** through P7. **P8
+  (`phase8-subagents-git-undo`) is committed; open its PR (targets
+  `phase7-code-graph`).** Then merge the whole stack top-down into `master`.
+- **Suite:** 352 tests green (`python3 -m pytest tests/ -q`).
+- **⏭ NEXT: the deferred backlog** (all optional polish, no phase blocked on them):
+  graph **F14.3** structure-aware packing + **F14.4** incremental re-index (P7);
+  loop **triggers** F13.3 `--every`/`--watch` (P5); one-shot `run` autosave (P6);
+  `run --skill` (P4); `mcp add` + MCP HTTP transport (P3); role-routed sub-agents
+  (P8). Or refresh the user-facing `docs_site/` for the new commands.
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
@@ -58,7 +58,7 @@
 | [0006](0006-loops.md) | Loops — autonomous & recurring runs | P5 | Implemented (triggers deferred) |
 | [0007](0007-resume-session-persistence.md) | Resume & session persistence | P6 | Implemented |
 | [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Implemented (packing/re-index deferred) |
-| [0009](0009-subagents-and-git-undo.md) | Sub-agents & git-native undo | P8 | Proposed |
+| [0009](0009-subagents-and-git-undo.md) | Sub-agents & git-native undo | P8 | Implemented |
 
 ---
 
@@ -78,7 +78,7 @@ capability jump.
 | **P5** | **Loops** (autonomous) | P2.5 hardened, P6 journal | Med | ✅ Shipped (triggers deferred) |
 | **P6** | Resume / persistence | aibot_storage hooks | Low | ✅ Shipped (per-ws JSON) |
 | **P7** | **Code graph** | agent_ignore | High | ✅ Shipped (ast; packing/re-index deferred) |
-| **P8** | Sub-agents + git-undo | agent_router, P4 | High | ⬜ **Next up** (last phase) |
+| **P8** | Sub-agents + git-undo | agent_router, P4 | High | ✅ Shipped (closes F9) |
 
 Visual roadmap artifact: see the shared Revenant roadmap page.
 
@@ -136,14 +136,29 @@ plugs into one — it is not greenfield:
 - ~~P7 Code graph.~~ **Shipped 2026-07-30** — 23 tests, suite 332. stdlib-`ast`
   indexer + `defn_of`/`who_calls`/`neighbors`/`impact_of` tools. **F14.3 packing
   + F14.4 incremental re-index deferred.**
-- Next actionable phase: **P8** ([ADR-0009](0009-subagents-and-git-undo.md)) —
-  the last horizon phase.
+- ~~P8 Sub-agents + git-undo.~~ **Shipped 2026-07-30** — 20 tests, suite 352.
+  `spawn_subagent` tool + git-native whole-tree undo (**closes F9**). Role-routed
+  sub-agents deferred.
+- **No phase remains.** Remaining items are the optional deferred backlog above.
 
 ---
 
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-07-30 (h) — P8 Sub-agents + git-native undo shipped → ROADMAP COMPLETE
+- `nerva_agent/subagent.py`: `spawn_subagent` tool — delegates a scoped sub-goal
+  to a nested `AgentLoop` (injected `loop_factory`), returns a bounded summary;
+  depth cap prevents runaway recursion; mutating ⇒ approval-gated.
+- `revenant_cli/git_checkpoint.py`: `GitCheckpointer` — whole-tree undo via
+  `git stash create` shadow-commits under `refs/revenant/undo/*`; reverts tracked
+  edits + removes `run_bash` artifacts (`checkout` + `clean -fd`). `_build_agent`
+  and `cmd_undo` use it when the workspace is a git repo, else file-snapshots.
+  **Closes F9.**
+- **20 new tests → suite 352.** Verified end-to-end via the real CLI: an edit AND
+  a run_bash-created file both reverted; user branches untouched.
+- ADR-0009 → Implemented. **P0–P8 are all Implemented — the roadmap is done.**
 
 ### 2026-07-30 (g) — P7 Code graph shipped
 - `nerva_agent/code_graph/indexer.py`: stdlib-`ast` indexer (Python exact, regex

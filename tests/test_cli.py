@@ -692,3 +692,55 @@ def test_no_graph_flag_skips_graph_tools(tmp_path, monkeypatch):
     args.no_graph = True
     cli._build_agent(args)
     assert "defn_of" not in captured["names"]
+
+
+# --- P8: sub-agent tool + git-native undo wiring (ADR-0009) -----------------
+
+import subprocess as _sp
+
+
+def test_spawn_subagent_registered_in_write_mode(tmp_path, monkeypatch):
+    captured = _capture_registry_build(monkeypatch)
+    args = _agent_args(tmp_path, read_only=False)
+    args.no_graph = True
+    cli._build_agent(args)
+    assert "spawn_subagent" in captured["names"]
+
+
+def test_spawn_subagent_absent_in_read_only(tmp_path, monkeypatch):
+    captured = _capture_registry_build(monkeypatch)
+    args = _agent_args(tmp_path, read_only=True)
+    args.no_graph = True
+    cli._build_agent(args)
+    assert "spawn_subagent" not in captured["names"]
+
+
+def _make_git_repo(path):
+    _sp.run(["git", "init", "-q"], cwd=path, check=True)
+    _sp.run(["git", "config", "user.email", "t@e.com"], cwd=path, check=True)
+    _sp.run(["git", "config", "user.name", "T"], cwd=path, check=True)
+    (path / "f.txt").write_text("v1\n")
+    _sp.run(["git", "add", "."], cwd=path, check=True)
+    _sp.run(["git", "commit", "-qm", "init"], cwd=path, check=True)
+
+
+def test_cmd_undo_uses_git_when_repo(tmp_path, capsys):
+    _make_git_repo(tmp_path)
+    from revenant_cli.git_checkpoint import GitCheckpointer
+    cp = GitCheckpointer(tmp_path)
+    cp.snapshot("run_bash", {"command": "x"})
+    (tmp_path / "f.txt").write_text("MUTATED\n")
+    (tmp_path / "shell_artifact.txt").write_text("from bash\n")
+
+    rc = cli.cmd_undo(_undo_args(tmp_path, all_=True))
+    assert rc == 0
+    # git-native undo reverts the tracked edit AND removes the shell artifact.
+    assert (tmp_path / "f.txt").read_text() == "v1\n"
+    assert not (tmp_path / "shell_artifact.txt").exists()
+
+
+def test_cmd_undo_git_nothing_to_undo(tmp_path, capsys):
+    _make_git_repo(tmp_path)
+    rc = cli.cmd_undo(_undo_args(tmp_path))
+    assert rc == 0
+    assert "nothing to undo" in capsys.readouterr().out
