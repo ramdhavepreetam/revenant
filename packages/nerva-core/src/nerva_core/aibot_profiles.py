@@ -34,6 +34,9 @@ DEFAULT_PROFILES: dict[str, Any] = {
         "code": "qwen2.5-coder-14b",
         "language": "qwen2.5-14b",
         "router": "qwen2.5-7b",
+        # Small/fast model for context compaction (F5); reuses the 7b already
+        # pulled for routing so no extra download is required.
+        "summary": "qwen2.5-7b",
         "fallback": "language",
     },
     "generation_presets": {

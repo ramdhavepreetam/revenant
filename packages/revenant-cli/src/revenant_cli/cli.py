@@ -29,6 +29,7 @@ from nerva_agent.agent_loop import AgentLoop, AgentEvent
 from nerva_agent.agent_capacity import recommend
 
 from revenant_cli.config import load_config, resolve
+from revenant_cli.project_context import compose_preamble, find_project_doc
 
 CODING_PREAMBLE = (
     "You are Revenant, a precise local coding assistant working inside a code "
@@ -211,6 +212,10 @@ def _build_agent(args: argparse.Namespace):
     profiles = load_profiles(default_data_dir() / "profiles.json")
     config = build_config(profiles, base_url, model or None)
 
+    # A small/fast model for LLM-backed context compaction (F5). Resolved from the
+    # 'summary' role; None if unmapped, in which case compaction uses the heuristic.
+    summarizer = config_for_role("summary", base_url, profiles, base=None)
+
     # Hardware-aware defaults; explicit flag or config value overrides.
     rec = recommend(config.model, base_url=config.base_url)
     max_steps = resolve("max_steps", args.max_steps, cfg, 0) or rec.max_steps
@@ -222,9 +227,15 @@ def _build_agent(args: argparse.Namespace):
         tools.append(build_bash_tool(workspace))
     registry = ToolRegistry(tools)
 
+    # F6 (tier a): ground the agent on the project's own instruction file if present.
+    preamble = compose_preamble(CODING_PREAMBLE, workspace)
+    doc = find_project_doc(workspace)
+    if doc is not None:
+        print(f"{color['dim']}context: loaded {doc.name}{color['reset']}")
+
     loop = AgentLoop(
         config, registry,
-        system_preamble=CODING_PREAMBLE,
+        system_preamble=preamble,
         max_steps=max_steps,
         # None -> auto-detect native tool support per model; --no-native-tools forces off.
         use_native_tools=False if args.no_native_tools else None,
@@ -232,6 +243,7 @@ def _build_agent(args: argparse.Namespace):
         approve=make_approver(color),
         auto_approve=yolo,
         max_context_tokens=max_context,
+        summarizer_config=summarizer,
     )
     return workspace, config, rec, loop, color
 
