@@ -40,6 +40,30 @@ def _unknown(name: str) -> str:
             f"dynamically defined, or in an unindexed language — try the `search` tool.")
 
 
+def pack_symbol_context(graph: CodeGraph, symbol: str, *, max_callers: int = 5) -> str:
+    """Structure-aware context for a symbol being edited (F14.3, ADR-0008).
+
+    Returns the symbol's definition (file:line + snippet) plus its immediate
+    callers, so a driver can proactively surface the blast-neighborhood of an
+    edit instead of relying on recency alone. Empty string when the symbol is
+    unknown — the caller then falls back to its normal (recency) selection, so
+    this is strictly additive to F5 compaction.
+    """
+    syms = graph.resolve(symbol)
+    if not syms:
+        return ""
+    parts: list[str] = []
+    for s in syms:
+        snip = _snippet(graph, s)
+        parts.append(f"Definition: {_fmt(s)}" + (f"\n    {snip}" if snip else ""))
+    callers = graph.callers_of(symbol)
+    if callers:
+        lines = [f"  - {c.qualname} ({c.file}:{c.line})" for c in callers[:max_callers]]
+        more = "" if len(callers) <= max_callers else f"\n  … and {len(callers) - max_callers} more"
+        parts.append(f"Called by {len(callers)} site(s):\n" + "\n".join(lines) + more)
+    return f"[code-graph context for '{symbol}']\n" + "\n".join(parts)
+
+
 def build_code_graph_tools(graph: CodeGraph) -> list[Tool]:
     """Read-only tools bound to `graph`, for the agent's registry."""
 

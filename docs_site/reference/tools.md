@@ -59,6 +59,10 @@ with `--no-graph`.
     ```
     Returns the actual call sites from the graph — not a grep guess.
 
+The graph also powers **structure-aware context** (a symbol's definition plus its
+immediate callers surfaced together) and supports **incremental re-indexing** of
+a single changed file, so it stays accurate as code evolves.
+
 ## Sub-agent tool (approval-gated)
 
 | Tool | Purpose | Key arguments |

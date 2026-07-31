@@ -97,6 +97,46 @@ class CodeGraph:
             "parse_errors": sum(1 for f in self.files.values() if f.parse_error),
         }
 
+    # --- mutation (used by build + incremental re-index) -------------------
+    def _add_file(self, fnode: FileNode, symbols: list[Symbol]) -> None:
+        """Insert a parsed file's node + symbols, updating the name index."""
+        self.files[fnode.path] = fnode
+        for sym in symbols:
+            self.symbols[sym.qualname] = sym
+            bucket = self._by_name.setdefault(sym.name, [])
+            if sym.qualname not in bucket:
+                bucket.append(sym.qualname)
+
+    def remove_file(self, rel_path: str) -> None:
+        """Drop a file and every symbol it defined (F14.4).
+
+        Cleans the qualname → Symbol map and the name → qualnames index so no
+        stale nodes/edges survive after a file is deleted or before a re-parse.
+        """
+        fnode = self.files.pop(rel_path, None)
+        if fnode is None:
+            return
+        for qual in fnode.symbols:
+            sym = self.symbols.pop(qual, None)
+            if sym is None:
+                continue
+            bucket = self._by_name.get(sym.name)
+            if bucket and qual in bucket:
+                bucket.remove(qual)
+                if not bucket:
+                    del self._by_name[sym.name]
+
+    def reindex_file(self, rel_path: str) -> None:
+        """Re-parse a single file in place (F14.4): remove old, add fresh.
+
+        Cheap enough to run on every change during a session/loop so the graph
+        stays live. A deleted file (no longer on disk) is simply removed.
+        """
+        self.remove_file(rel_path)
+        if (self.root / rel_path).is_file():
+            fnode, symbols = _index_file(self.root, rel_path)
+            self._add_file(fnode, symbols)
+
 
 # --- Python parsing (exact) --------------------------------------------------
 
@@ -228,11 +268,5 @@ def build_index(root: str | Path) -> CodeGraph:
         if matcher.match(rel, is_dir=False):
             continue
         fnode, symbols = _index_file(root, rel)
-        graph.files[rel] = fnode
-        for sym in symbols:
-            # Last definition of a qualname wins; record every name -> qualname.
-            graph.symbols[sym.qualname] = sym
-            graph._by_name.setdefault(sym.name, [])
-            if sym.qualname not in graph._by_name[sym.name]:
-                graph._by_name[sym.name].append(sym.qualname)
+        graph._add_file(fnode, symbols)
     return graph

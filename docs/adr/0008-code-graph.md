@@ -1,6 +1,6 @@
 # ADR-0008 — Code graph: repo-scale reasoning (Phase 7)
 
-- **Status:** Implemented (F14.3 packing + F14.4 re-index deferred)
+- **Status:** Implemented
 - **Phase:** P7 (horizon, the deep bet) · **F-slices:** F14.1 indexer, F14.2 retrieval tools, F14.3 structure-aware packing, F14.4 incremental re-index
 - **Date proposed:** 2026-07-30 · **Date implemented:** 2026-07-30
 - **Depends on:** ADR-0003 (registry, compaction), `agent_ignore` · **Blocks:** —
@@ -86,8 +86,12 @@ backend behind the same indexer interface without changing the retrieval tools.
       symbols / 18 files / 0 parse errors).
 - [x] Offline (stdlib `ast`, zero deps); ignore-aware; tests green (309 → 332);
       ADR + README updated; F14.1/F14.2 marked Implemented.
-- [ ] *(F14.3)* Editing a function pulls its callers into context automatically — **deferred**.
-- [ ] *(F14.4)* Index re-indexes incrementally on change — **deferred**.
+- [x] *(F14.3)* `pack_symbol_context(graph, symbol)` returns a symbol's
+      definition + immediate callers (verified on this repo: `dispatch` → def at
+      `agent_tools.py:163` + its 2 callers). Additive helper; empty on unknown.
+- [x] *(F14.4)* `CodeGraph.reindex_file(rel)` / `remove_file(rel)` re-parse a
+      single file in place; a test proves the incremental result equals a full
+      rebuild.
 
 ## Implementation notes (what actually shipped)
 - **Parser:** stdlib `ast`, Python-first (decision box above), regex fallback for
@@ -101,13 +105,21 @@ backend behind the same indexer interface without changing the retrieval tools.
 - **CLI:** `_build_agent` indexes the workspace and adds the tools in **every**
   mode (read-only, so no approval); `--no-graph` opts out on large repos;
   indexing failure degrades to a warning, never blocks a run.
-- **Deferred:** F14.3 structure-aware context packing (touches loop compaction)
-  and F14.4 incremental re-index (pairs with the deferred P5 `--watch`). The
-  index is rebuilt per invocation; not yet persisted to `.aibot/graph/` — a fast
-  in-memory build (≈0.03s on this repo) made persistence unnecessary for v1.
+- **F14.3 / F14.4 (added 2026-07-31):** `pack_symbol_context` (def + immediate
+  callers) is an additive helper a driver can surface when editing a symbol —
+  falls back to recency when the symbol is unknown, so it never regresses F5
+  compaction. `reindex_file`/`remove_file` re-parse one file in place (refactored
+  `build_index` onto a shared `_add_file`); proven equal to a full rebuild.
+  The index is still rebuilt per invocation (fast, ≈0.03s here) and not persisted
+  to `.aibot/graph/` — the incremental API is the primitive a future long-lived
+  session/`--watch` graph would use; today `--watch` rebuilds the agent per run.
 
 ## Progress log
 - 2026-07-30 — Proposed. Substrate exists in nerva-core (Chroma + graph layer).
 - 2026-07-30 — **Implemented** (F14.1 + F14.2 + CLI wiring; F14.3/F14.4 deferred).
   Chose stdlib `ast` over tree-sitter. 23 tests, suite 309 → 332. Verified on
   this repo. Next: P8 (ADR-0009), or the deferred F14.3/F14.4 + P5 triggers.
+- 2026-07-31 — **F14.3 + F14.4 added** (deferred follow-ups): `pack_symbol_context`
+  (structure-aware context) and `reindex_file`/`remove_file` (incremental
+  re-index, proven == full rebuild). 7 tests, suite 359 → 366. **ADR-0008 now
+  fully Implemented.**

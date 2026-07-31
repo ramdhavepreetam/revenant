@@ -96,3 +96,22 @@ def test_impact_of_leaf_symbol(tools_and_graph):
 def test_impact_of_unknown(tools_and_graph):
     tools, _ = tools_and_graph
     assert "No symbol named" in tools["impact_of"].invoke({"symbol": "ghost"})
+
+
+# --- structure-aware packing (F14.3) ----------------------------------------
+
+from nerva_agent.code_graph.tools import pack_symbol_context
+
+
+def test_pack_symbol_context_includes_def_and_callers(tools_and_graph):
+    _tools, graph = tools_and_graph
+    out = pack_symbol_context(graph, "base")
+    assert "Definition:" in out
+    assert "b.py:1" in out
+    assert "Called by" in out
+    assert "mid" in out  # mid() calls base()
+
+
+def test_pack_symbol_context_unknown_is_empty(tools_and_graph):
+    _tools, graph = tools_and_graph
+    assert pack_symbol_context(graph, "ghost") == ""

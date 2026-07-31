@@ -18,12 +18,12 @@
   (`phase8-subagents-git-undo`) is committed; open its PR (targets
   `phase7-code-graph`).** Then merge the whole stack top-down into `master`.
 - **Suite:** 352 tests green (`python3 -m pytest tests/ -q`).
-- **⏭ NEXT: the deferred backlog** (all optional polish, no phase blocked on them):
-  graph **F14.3** structure-aware packing + **F14.4** incremental re-index (P7);
+- **⏭ Remaining deferred backlog** (all optional polish, no phase blocked on them):
   loop **`--every`** schedule trigger (P5); one-shot `run` autosave (P6);
-  `mcp add` + MCP HTTP transport (P3); role-routed sub-agents (P8).
-- **Done since the roadmap:** user docs refreshed (PR #11, merged); `run --skill`
-  + loop `--watch` (deferred follow-ups) shipped.
+  `mcp add` + MCP HTTP transport (P3); role-routed sub-agents (P8); persisting the
+  code graph across invocations (P7).
+- **Done since the roadmap:** user docs refreshed (#11); `run --skill` + loop
+  `--watch` (#12); graph **F14.3 packing + F14.4 incremental re-index** — all merged.
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
@@ -58,7 +58,7 @@
 | [0005](0005-skills.md) | Skills — reusable packaged workflows | P4 | Implemented |
 | [0006](0006-loops.md) | Loops — autonomous & recurring runs | P5 | Implemented (triggers deferred) |
 | [0007](0007-resume-session-persistence.md) | Resume & session persistence | P6 | Implemented |
-| [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Implemented (packing/re-index deferred) |
+| [0008](0008-code-graph.md) | Code graph — repo-scale reasoning | P7 | Implemented |
 | [0009](0009-subagents-and-git-undo.md) | Sub-agents & git-native undo | P8 | Implemented |
 
 ---
@@ -78,7 +78,7 @@ capability jump.
 | **P4** | **Skills** | project_context patterns | Low–Med | ✅ Shipped (run --skill deferred) |
 | **P5** | **Loops** (autonomous) | P2.5 hardened, P6 journal | Med | ✅ Shipped (triggers deferred) |
 | **P6** | Resume / persistence | aibot_storage hooks | Low | ✅ Shipped (per-ws JSON) |
-| **P7** | **Code graph** | agent_ignore | High | ✅ Shipped (ast; packing/re-index deferred) |
+| **P7** | **Code graph** | agent_ignore | High | ✅ Shipped (ast; packing + re-index done) |
 | **P8** | Sub-agents + git-undo | agent_router, P4 | High | ✅ Shipped (closes F9) |
 
 Visual roadmap artifact: see the shared Revenant roadmap page.

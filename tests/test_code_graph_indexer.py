@@ -129,3 +129,52 @@ def test_stats(tmp_path):
     assert s["files"] == 2
     assert s["symbols"] >= 3
     assert s["parse_errors"] == 0
+
+
+# --- incremental re-index (F14.4) -------------------------------------------
+
+def test_reindex_file_picks_up_new_symbol(tmp_path):
+    g = build_index(_repo(tmp_path))
+    assert g.resolve("added") == []
+    # Add a new function and re-index just that file.
+    (tmp_path / "pkg" / "util.py").write_text(
+        "def helper(x):\n    return x\n\ndef added():\n    return helper(1)\n")
+    g.reindex_file("pkg/util.py")
+    assert [s.qualname for s in g.resolve("added")] == ["added"]
+    # The new call edge is present too.
+    assert "helper" in g.symbols["added"].calls
+
+
+def test_reindex_removes_stale_symbols(tmp_path):
+    g = build_index(_repo(tmp_path))
+    assert g.resolve("main")  # present initially
+    # Rewrite core.py without main().
+    (tmp_path / "pkg" / "core.py").write_text("def only():\n    return 1\n")
+    g.reindex_file("pkg/core.py")
+    assert g.resolve("main") == []       # stale symbol gone
+    assert g.resolve("Registry") == []   # and its class
+    assert [s.qualname for s in g.resolve("only")] == ["only"]
+
+
+def test_remove_file_drops_all_its_symbols(tmp_path):
+    g = build_index(_repo(tmp_path))
+    g.remove_file("pkg/util.py")
+    assert "pkg/util.py" not in g.files
+    assert g.resolve("helper") == []
+
+
+def test_reindex_deleted_file_removes_it(tmp_path):
+    g = build_index(_repo(tmp_path))
+    (tmp_path / "pkg" / "util.py").unlink()
+    g.reindex_file("pkg/util.py")  # file gone on disk
+    assert "pkg/util.py" not in g.files
+    assert g.resolve("helper") == []
+
+
+def test_reindex_matches_full_rebuild(tmp_path):
+    g = build_index(_repo(tmp_path))
+    (tmp_path / "pkg" / "core.py").write_text("def fresh():\n    return 2\n")
+    g.reindex_file("pkg/core.py")
+    rebuilt = build_index(tmp_path)
+    assert set(g.symbols) == set(rebuilt.symbols)
+    assert g.stats() == rebuilt.stats()
