@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-01 · **Tests:** 573 green · **V-series (0.5.0 — interactive Textual TUI) RELEASED to PyPI + GitHub** 🎉 — [ADR-0017](0017-interactive-tui.md) · **▶ NOW: W-series (0.6.0) — faster to watch, deeper, measurably better** — strategy [ADR-0018](0018-w-series-strategy.md); Phase A [ADR-0019](0019-w-series-phase-a-measure-and-stream.md); starting W0 (eval metrics backbone)
+**Last updated:** 2026-08-01 · **Tests:** 610 green · **V-series (0.5.0) RELEASED to PyPI + GitHub** 🎉 — [ADR-0017](0017-interactive-tui.md) · **▶ NOW: W-series (0.6.0) — faster to watch, deeper, measurably better** — strategy [ADR-0018](0018-w-series-strategy.md) · **Phase A [ADR-0019](0019-w-series-phase-a-measure-and-stream.md) COMPLETE (W0 metrics/gate · W1 content streaming · W2 tool-turn streaming + live TUI)** · ⏭ Phase B next (ADR-0020: W3/W4)
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -53,13 +53,15 @@
   themes — streaming responsiveness, deeper capability, quality/measurement —
   shipped as **Phase A → B → C** (three PRs), then a 0.6.0 release. Strategy
   [ADR-0018](0018-w-series-strategy.md). **Branch `w-series-phase-a`.**
-  - **Phase A — Measure & Stream (W0/W1/W2)** · [ADR-0019](0019-w-series-phase-a-measure-and-stream.md).
-    W0 = expand the eval harness (step-count/token-cost/edit-precision metrics +
-    project-wide-rename tasks + a regression gate) — the backbone that scores every
-    later slice, so it lands **first**. W1 = stream plain-content assistant text via
-    a new additive `token` event kind (wire the orphaned `stream_model`). W2 =
-    tool-call turns under streaming (stream content, buffer, dispatch as today) +
-    live TUI/console render. **⏭ implementing W0 now.**
+  - **✅ Phase A — Measure & Stream (W0/W1/W2) COMPLETE** · [ADR-0019](0019-w-series-phase-a-measure-and-stream.md).
+    **W0** ✅ eval harness gains step-count/token-cost/edit-precision metrics +
+    3 project-wide-rename tasks + a `--gate` regression gate (the backbone that
+    scores every later slice). **W1** ✅ streams plain-content assistant text via a
+    new additive `token` event (PlainConsole renders deltas inline, byte-parity
+    preserved). **W2** ✅ streams tool-call turns too via a new `stream_message`
+    (content prefix streams live; `tool_calls` arrive whole for byte-identical
+    dispatch) + a live in-place `StreamLine` in the TUI. Tests 573 → **610**.
+    Commits `614ef97` (W0), `a9e8c9e` (W1), `225fcd1` (W2) on `w-series-phase-a`.
   - **Phase B — Deeper capability (W3/W4a/W4b/W4c)** · ADR-0020 (to write). `loop
     --every` + persist/incremental code-graph cache; `edit_file replace_all` +
     single-file graph rename; relax `ToolParam` to one array param; atomic
