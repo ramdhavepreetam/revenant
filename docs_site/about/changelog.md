@@ -5,6 +5,42 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [Unreleased]
+
+The **H-series**: making a small local model (targeted at a 14B) perform above
+its weight by moving correctness out of the model and into deterministic
+machinery — "the model proposes; the harness verifies and repairs." Fully
+offline, no new runtime dependencies. Existing `run`/`chat` usage is unchanged;
+every new feature is opt-in.
+
+### Added
+
+- **Verify → repair** — with `[verify]` enabled, every edit is checked
+  (byte-compile + your configured commands, e.g. `pytest -q`); a failure is fed
+  back to the model to fix before the run finishes, bounded by
+  `max_repair_attempts` and reverted via undo on exhaustion. Broken code is
+  caught, not shipped.
+- **Proactive context** — with `[context]` enabled, a symbol's definition and
+  callers are surfaced automatically when it's edited, and symbols in an
+  error/traceback are resolved to their definitions — the harness pushes the code
+  context instead of waiting for the model to ask.
+- **`revenant run --plan`** — decompose a larger goal into small steps and run
+  them one at a time, each verified before the next, so the model isn't asked to
+  hold the whole task in its head.
+- **Eval harness** (`evals/`) — a task suite + runner to measure harness lift on
+  a fixed model, with `--compare` (on-vs-off) and `--repeat N` (average out model
+  non-determinism, reporting per-task and attempt-level pass-rates).
+
+### Fixed
+
+- **Verifier no longer false-fails on a path-scoped check with no changed files.**
+  A `[verify]` command containing `{paths}`/`{tests}` (e.g. `py_compile {paths}`)
+  ran with an empty substitution after a shell step and reported a bogus failure;
+  it is now skipped when there are no changed paths (a checker invoked wrong
+  degrades, it does not fail the edit).
+
+---
+
 ## [0.2.0] — Extensibility release
 
 Adds the extensibility layer — external tools, reusable workflows, autonomous
