@@ -109,8 +109,10 @@ consumes it). Each mutating tool stays approval-gated + undo-covered + verify-ch
 - [x] The code graph persists under `.aibot/`, loads incrementally (only changed
       files reindexed), and falls back to a full rebuild on a bad cache. **(W3 —
       verified end-to-end: reindex-changed, drop-deleted, corrupt→rebuild.)**
-- [ ] `edit_file` gains `replace_all` (default off = byte-identical); a single-file
-      graph-guided rename rewrites every in-file call site.
+- [x] `edit_file` gains `replace_all` (default off = byte-identical); a single-file
+      graph-guided rename rewrites every in-file call site. **(W4a — `all` param;
+      `edit_file(all=True)` renames def + all in-file call sites; default still
+      errors on ambiguous match.)**
 - [ ] `ToolParam` can express one array-of-objects param; scalar tools unchanged.
 - [ ] `apply_edits` performs an atomic multi-file rename (all-or-nothing revert),
       approval-gated + undo-covered + verify-checked; the W0 rename tasks pass.
@@ -147,3 +149,19 @@ consumes it). Each mutating tool stays approval-gated + undo-covered + verify-ch
     `test_cli.py` +3 (`--every` parse, re-run-each-interval, dispatch). Suite
     **610 → 620**. Verified end-to-end: cache lifecycle (create → reload →
     incremental reindex → drop-deleted → corrupt-survives). **Next: W4a.**
+- 2026-08-01 — **W4a Implemented** — `edit_file` `replace_all` (scalar-safe).
+  - `_edit_file` gains an `all` flag (`agent_edit_tools.py`): `all=True` replaces
+    **every** occurrence; default `False` keeps the exactly-one contract (a
+    non-unique match without the flag still errors, so a careless edit can't
+    silently touch multiple spots). 0-match still errors either way. A
+    `_coerce_bool` handles weak models passing `all="true"`. The observation
+    reports the replacement count.
+  - The `edit_file` Tool gains an optional scalar `all: boolean` param — renders as
+    `boolean`, excluded from `required`, `all?` in the prompt doc line (verified).
+    No new param shape, so the scalar-only `ToolParam` contract is untouched (the
+    array relaxation is W4b). A single-file symbol rename is naturally
+    `edit_file(old=name, new=newname, all=True)` on one file.
+  - **Tests.** `test_agent_mutating_tools.py` +5 (replace-all renames every
+    occurrence; default/`all=False` still errors on ambiguous — byte-parity;
+    0-match still errors; string-bool coercion; single-match unaffected). Suite
+    **620 → 625**. **Next: W4b (relax `ToolParam` to one array-of-objects param).**

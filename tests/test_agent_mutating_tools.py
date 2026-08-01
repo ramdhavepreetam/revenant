@@ -59,6 +59,48 @@ class WriteEditTests(unittest.TestCase):
         with self.assertRaises(WorkspaceError):
             self.reg.dispatch("edit_file", {"path": "ghost.py", "old": "a", "new": "b"})
 
+    # --- W4a (ADR-0020): replace_all ---------------------------------------
+    def test_edit_replace_all_renames_every_occurrence(self):
+        # An in-file rename: the symbol `greet` appears 3x (def + 2 calls).
+        (self.root / "m.py").write_text(
+            "def greet(n):\n    return n\n\n"
+            "print(greet(1))\nprint(greet(2))\n"
+        )
+        obs = self.reg.dispatch("edit_file",
+                                {"path": "m.py", "old": "greet", "new": "hail", "all": True})
+        text = (self.root / "m.py").read_text()
+        self.assertNotIn("greet", text)
+        self.assertEqual(text.count("hail"), 3)
+        self.assertIn("3 replacements", obs)
+
+    def test_edit_default_still_errors_on_ambiguous(self):
+        # Without all=True, a non-unique match still errors (byte-parity contract).
+        (self.root / "b.py").write_text("a\na\n")
+        with self.assertRaises(WorkspaceError):
+            self.reg.dispatch("edit_file", {"path": "b.py", "old": "a", "new": "b"})
+        # all=False explicitly is the same.
+        with self.assertRaises(WorkspaceError):
+            self.reg.dispatch("edit_file", {"path": "b.py", "old": "a", "new": "b", "all": False})
+
+    def test_edit_replace_all_still_errors_on_no_match(self):
+        (self.root / "b.py").write_text("x = 1\n")
+        with self.assertRaises(WorkspaceError):
+            self.reg.dispatch("edit_file", {"path": "b.py", "old": "nope", "new": "z", "all": True})
+
+    def test_edit_replace_all_accepts_string_bool(self):
+        # Weak models pass all="true"; it must be coerced, not treated as a name.
+        (self.root / "b.py").write_text("a\na\n")
+        self.reg.dispatch("edit_file", {"path": "b.py", "old": "a", "new": "b", "all": "true"})
+        self.assertEqual((self.root / "b.py").read_text(), "b\nb\n")
+
+    def test_edit_single_match_unchanged_by_all_flag(self):
+        # A unique match still yields "1 replacement" regardless of all.
+        (self.root / "b.py").write_text("x = 1\ny = 2\n")
+        obs = self.reg.dispatch("edit_file",
+                                {"path": "b.py", "old": "y = 2", "new": "y = 3", "all": True})
+        self.assertEqual((self.root / "b.py").read_text(), "x = 1\ny = 3\n")
+        self.assertIn("1 replacement", obs)
+
     # --- confinement -------------------------------------------------------
     def test_write_escape_blocked(self):
         with self.assertRaises(WorkspaceError):

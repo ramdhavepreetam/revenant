@@ -30,7 +30,17 @@ def _write_file(root: Path, path: str, content: str) -> str:
     return f"{verb} {_rel(root, target)} ({lines} lines, {len(content)} bytes)"
 
 
-def _edit_file(root: Path, path: str, old: str, new: str) -> str:
+def _coerce_bool(value: object) -> bool:
+    """Weak models pass booleans as strings ('true'/'1'); coerce leniently."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes", "y", "all")
+    return bool(value)
+
+
+def _edit_file(root: Path, path: str, old: str, new: str,
+               replace_all: object = False) -> str:
     target = _resolve_in_root(root, path)
     if not target.exists():
         raise WorkspaceError(f"no such file: {path}")
@@ -45,13 +55,19 @@ def _edit_file(root: Path, path: str, old: str, new: str) -> str:
             "old string not found. Provide the exact text to replace, including "
             "whitespace and surrounding context."
         )
-    if count > 1:
+    all_ = _coerce_bool(replace_all)
+    # W4a (ADR-0020): replace_all replaces every occurrence; the default (False)
+    # keeps the exactly-one contract — a non-unique match without the flag errors,
+    # so a careless edit can't silently touch multiple spots.
+    if count > 1 and not all_:
         raise WorkspaceError(
             f"old string is not unique ({count} matches). Add surrounding context "
-            "so it matches exactly one location."
+            "so it matches exactly one location, or pass all=true to replace every "
+            "occurrence."
         )
-    target.write_text(text.replace(old, new, 1), encoding="utf-8")
-    return f"edited {_rel(root, target)} (1 replacement)"
+    n = count if all_ else 1
+    target.write_text(text.replace(old, new, n), encoding="utf-8")
+    return f"edited {_rel(root, target)} ({n} replacement{'s' if n != 1 else ''})"
 
 
 def build_edit_tools(root: str | Path) -> list[Tool]:
@@ -73,14 +89,18 @@ def build_edit_tools(root: str | Path) -> list[Tool]:
         ),
         Tool(
             "edit_file",
-            "Replace exactly one occurrence of `old` with `new` in a file. `old` "
-            "must match a unique span (include surrounding context if needed).",
+            "Replace occurrences of `old` with `new` in a file. By default `old` "
+            "must match exactly one span (include surrounding context if needed); "
+            "pass all=true to replace every occurrence in the file.",
             [
                 ToolParam("path", "string", "File path relative to the workspace root."),
-                ToolParam("old", "string", "Exact text to replace (must occur exactly once)."),
+                ToolParam("old", "string", "Exact text to replace."),
                 ToolParam("new", "string", "Replacement text."),
+                ToolParam("all", "boolean",
+                          "Replace every occurrence (default: false = exactly one).",
+                          required=False),
             ],
-            run=lambda path, old, new: _edit_file(root_path, path, old, new),
+            run=lambda path, old, new, all=False: _edit_file(root_path, path, old, new, all),
             mutating=True,
         ),
     ]
