@@ -4,7 +4,7 @@
 - **Phase:** V-series (0.5.0) · **F-slices:** V0 event-model extension, V1 context/
   capacity events, V2 sub-agent visibility, V3 Textual app shell, V4 slash-command
   palette, V5 keybindings/interrupt + mode/status bar
-- **Date proposed:** 2026-08-01 · **Date implemented:** —
+- **Date proposed:** 2026-08-01 · **Date implemented:** 2026-08-01 · **Released:** 2026-08-01 (v0.5.0)
 - **Depends on:** ADR-0016 (Console abstraction + `on_event` render seam),
   ADR-0009/P8 (sub-agents), ADR-0013 (context injection), ADR-0002 (placement:
   terminal UX → `revenant-cli`) · **Relates to:** ADR-0001 (offline — the TUI is

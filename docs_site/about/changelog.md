@@ -5,7 +5,7 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased] — 0.5.0: the interactive terminal (V-series)
+## [0.5.0] — 2026-08-01: the interactive terminal (V-series)
 
 A **Claude-Code-like full-screen terminal** for `revenant chat`. Backward
 compatible: the TUI is opt-in via an optional dependency, and everything falls

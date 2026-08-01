@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-01 · **Tests:** 573 green · **Shipped: v0.3.0 on PyPI** · **U-series (0.4.0 — CLI UX) complete** 🎉 · **V-series (0.5.0 — interactive Textual TUI) COMPLETE — Phase A (V0–V2) + Phase B (V3–V5) done** 🎉 — [ADR-0017](0017-interactive-tui.md); ship 0.5.0 next
+**Last updated:** 2026-08-01 · **Tests:** 573 green · **Shipped: v0.3.0 on PyPI** · **U-series (0.4.0 — CLI UX) complete** 🎉 · **V-series (0.5.0 — interactive Textual TUI) COMPLETE + RELEASING** 🎉 — [ADR-0017](0017-interactive-tui.md); versions bumped to 0.5.0, changelog dated, tag/publish in flight
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -40,8 +40,11 @@
     approval modal, worker-thread streaming, and cooperative `ctrl-c` interrupt
     (new `AgentLoop.run(should_stop=…)`). CLI `--tui`/`--no-tui`/`REVENANT_TUI`;
     `[tui]` packaging + installer/spec wired. Tests 532 → **573**.
-  - **⏭ NEXT: ship 0.5.0** (both phases are on one branch, unmerged) — bump
-    versions, changelog, tag, build installers. Same flow as the 0.4.0 release.
+  - **✅ Release 0.5.0** — versions bumped 0.4.0 → 0.5.0 on all three packages
+    (inter-package deps pinned `>=0.5.0`), changelog `[Unreleased]` → `[0.5.0]`
+    (2026-08-01), 573 tests + `mkdocs --strict` green, all 6 dists built and
+    `twine check` PASSED. **⏭ Merge to master, tag `v0.5.0`, `make publish` +
+    build installers** (same flow as the 0.4.0 release).
 - **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
   one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
   (P8); persisting the code graph (P7).
@@ -87,7 +90,7 @@
 | [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Implemented (tighter-schemas deferred) |
 | [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Implemented |
 | [0016](0016-cli-ux-console-and-setup.md) | **Make the CLI usable** (U-series: setup UX + rich console) | 0.4.0 | Implemented |
-| [0017](0017-interactive-tui.md) | **Claude-Code-like interactive terminal** (V-series: Textual TUI, slash palette, multi-agent + context view) | 0.5.0 | Implemented |
+| [0017](0017-interactive-tui.md) | **Claude-Code-like interactive terminal** (V-series: Textual TUI, slash palette, multi-agent + context view) | 0.5.0 | Implemented (released v0.5.0) |
 
 ---
 
@@ -211,6 +214,17 @@ plugs into one — it is not greenfield:
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-08-01 (b) — Release 0.5.0 (V-series)
+- Bumped all three packages **0.4.0 → 0.5.0** (`nerva-core`/`nerva-agent`/
+  `revenant-cli`), inter-package deps pinned `>=0.5.0`; the `[tui]` and `[rich]`
+  extras preserved. No other hardcoded version strings (versions come from
+  pyproject only).
+- Changelog `[Unreleased] — 0.5.0` → `[0.5.0] — 2026-08-01`. ADR-0017 dated
+  Released; README banner/index/roadmap flipped to "releasing".
+- **Verified:** 573 tests + `mkdocs build --strict` green; `make build` +
+  `make check` (twine) PASSED for all 6 dists at 0.5.0.
+- **Next: merge to master, tag `v0.5.0`, `make publish` + build installers.**
 
 ### 2026-08-01 (a) — U-series complete (Phase B: rich console)
 - Phase A (U0/U1/U2) merged (#29, CI green). Then **Phase B (U3/U4)**: a
