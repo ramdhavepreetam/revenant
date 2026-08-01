@@ -5,28 +5,41 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased]
+## [0.4.0] — Usability release
 
-Release-pipeline fixes only — no change to the installed `revenant` (the 0.3.0
-packages on PyPI and the CLI behavior are unaffected).
+The **U-series**: making the CLI genuinely usable — a live console that shows
+what the agent is doing, and a friction-free first-run setup. Backward-compatible
+with 0.3.0; the rich console is opt-in and everything else degrades gracefully.
+
+### Added
+
+- **Live rich console** — `pip install "revenant-cli[rich]"` adds a
+  "thinking…" spinner while the model works, **real syntax-highlighted diffs** in
+  the approval prompt, and a session header. `rich` is an **optional dependency**;
+  without it the CLI produces the same plain-ANSI output as before. The standalone
+  `.dmg` / `.exe` installers bundle it.
+- **`revenant doctor`** — checks Ollama reachability, lists pulled models, shows
+  the config a run will resolve, and tells you if you're ready. Exit `0`/`1`.
+- **`revenant models`** — lists the models pulled on the Ollama server.
+- **Pre-flight setup check** — before each run, if Ollama isn't running or the
+  model isn't pulled, the CLI stops with the exact fix (`ollama serve` /
+  `ollama pull …`) and offers a picker of your pulled models. `--skip-preflight`
+  bypasses; `OLLAMA_HOST` and `NO_COLOR` are honored.
 
 ### Fixed
 
-- **macOS / Windows installers now attach to the GitHub Release.** The
-  `build-installers` workflow built both binaries but its release step failed
-  with a 403 (`Resource not accessible by integration`) on 0.2.0 and 0.3.0 — the
-  job lacked `contents: write`. Granting it fixes the attach, so tagged releases
-  publish their `.dmg` / `.exe` automatically. (The 0.3.0 installers were
-  re-published to its Release with this fix.)
+- **First run now works by the docs.** The default `code` model resolved to a 14b
+  the quickstart never told you to pull; `code`/`router`/`summary` now default to
+  `qwen2.5-coder:7b`, so one `ollama pull qwen2.5-coder:7b` is enough.
+- **Actionable model errors** — a connection failure or missing-model error now
+  appends the fix (`ollama serve` / `ollama pull`).
+- **macOS / Windows installers attach to the GitHub Release** (the release job
+  gained `contents: write`; had failed on 0.2.0/0.3.0).
 
 ### Changed
 
-- **Release CI now gates on the Windows installer working end-to-end.** The
-  smoke-test asserts on real output (a subcommand plus the current feature flag)
-  instead of only exit code, and a new step silently installs
-  `Revenant-windows-x64-setup.exe` and runs the *installed* `revenant.exe` —
-  failing the build if the installer doesn't install or the binary doesn't
-  launch. Every future release now proves the installers run before publishing.
+- **Release CI gates on the Windows installer** installing + running end-to-end
+  before publishing.
 
 ---
 
@@ -131,6 +144,7 @@ The first public release of Revenant.
 
 ---
 
+[0.4.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.4.0
 [0.3.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.1.0
