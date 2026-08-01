@@ -124,6 +124,7 @@
 | [0018](0018-w-series-strategy.md) | **Faster, deeper, measurable** (W-series strategy: streaming + capability + quality) | 0.6.0 | Accepted |
 | [0019](0019-w-series-phase-a-measure-and-stream.md) | W-series Phase A — measure (eval metrics/gate) + stream (token events, live render) | W0/W1/W2 | Implemented |
 | [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Implemented |
+| [0021](0021-w-series-phase-c-reach.md) | W-series Phase C — reach (role-routed sub-agents; mcp add + HTTP/SSE transport) | W5/W6 | Accepted (W5 in progress) |
 
 ---
 
