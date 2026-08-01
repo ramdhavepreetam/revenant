@@ -104,10 +104,11 @@ consumes it). Each mutating tool stays approval-gated + undo-covered + verify-ch
   pass under this tool.
 
 ## Acceptance criteria
-- [ ] `revenant loop --every <interval>` re-runs the goal on a fixed interval within
-      the budget (parallel to `--watch`).
-- [ ] The code graph persists under `.aibot/`, loads incrementally (only changed
-      files reindexed), and falls back to a full rebuild on a bad cache.
+- [x] `revenant loop --every <interval>` re-runs the goal on a fixed interval within
+      the budget (parallel to `--watch`). **(W3.)**
+- [x] The code graph persists under `.aibot/`, loads incrementally (only changed
+      files reindexed), and falls back to a full rebuild on a bad cache. **(W3 —
+      verified end-to-end: reindex-changed, drop-deleted, corrupt→rebuild.)**
 - [ ] `edit_file` gains `replace_all` (default off = byte-identical); a single-file
       graph-guided rename rewrites every in-file call site.
 - [ ] `ToolParam` can express one array-of-objects param; scalar tools unchanged.
@@ -129,3 +130,20 @@ consumes it). Each mutating tool stays approval-gated + undo-covered + verify-ch
   / the series workflow). Seams re-verified in code (`--watch`/`_tree_signature`,
   `CodeGraph` dataclasses + `reindex_file`/`remove_file`, `edit_file` single-match,
   `ToolParam` scalar-only + `native_schema`). Implementation begins with W3.
+- 2026-08-01 — **W3 Implemented** — `loop --every` + persisted/incremental graph.
+  - **`--every <interval>`.** New arg + `_cmd_loop_every` branch in `cmd_loop`
+    (`cli.py`), parallel to `--watch`: sleeps the interval, re-runs `_cmd_loop_once`,
+    repeats until Ctrl-C, within the existing per-iteration budget/journal/undo.
+    Injectable tick source for tests.
+  - **Graph cache.** `CodeGraph.to_dict`/`from_dict` (JSON-friendly; rebuilds the
+    name index on load) + `index_signature` (mtime map of indexable files) +
+    `load_or_build_index(root, cache_path)` in `indexer.py`: loads the cache and
+    reindexes only changed files (via `reindex_file`) / drops deleted
+    (`remove_file`); missing/corrupt/version-mismatch cache → full `build_index`
+    (never raises). Wired at the `_build_agent` graph seam (`cli.py:472`) to load
+    from `<ws>/.aibot/code_graph.json`; `--no-graph-cache` forces a fresh build.
+  - **Tests.** `test_code_graph_indexer.py` +7 (round-trip, version-mismatch,
+    cache-create, reindex-only-changed, drop-deleted, corrupt→rebuild, signature);
+    `test_cli.py` +3 (`--every` parse, re-run-each-interval, dispatch). Suite
+    **610 → 620**. Verified end-to-end: cache lifecycle (create → reload →
+    incremental reindex → drop-deleted → corrupt-survives). **Next: W4a.**

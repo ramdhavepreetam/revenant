@@ -20,6 +20,7 @@ crashes the index); ignore globs (agent_ignore) keep vendored/generated code out
 from __future__ import annotations
 
 import ast
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -96,6 +97,50 @@ class CodeGraph:
             "symbols": len(self.symbols),
             "parse_errors": sum(1 for f in self.files.values() if f.parse_error),
         }
+
+    # --- persistence (W3, ADR-0020) ----------------------------------------
+    # The graph is JSON-friendly (plain dataclasses + dicts); serialize it so a
+    # run can load-if-fresh instead of re-walking the whole tree. `root` is stored
+    # relative-agnostic (the loader supplies the current root), and `mtimes`
+    # records each file's mtime at index time for the staleness check.
+    CACHE_VERSION = 1
+
+    def to_dict(self, mtimes: "dict[str, float] | None" = None) -> dict:
+        return {
+            "version": self.CACHE_VERSION,
+            "files": {
+                p: {"path": f.path, "language": f.language, "imports": f.imports,
+                    "symbols": f.symbols, "parse_error": f.parse_error}
+                for p, f in self.files.items()
+            },
+            "symbols": {
+                q: {"name": s.name, "qualname": s.qualname, "kind": s.kind,
+                    "file": s.file, "line": s.line, "calls": s.calls}
+                for q, s in self.symbols.items()
+            },
+            "mtimes": mtimes or {},
+        }
+
+    @classmethod
+    def from_dict(cls, root: "Path", data: dict) -> "CodeGraph":
+        if data.get("version") != cls.CACHE_VERSION:
+            raise ValueError(f"code-graph cache version mismatch: {data.get('version')}")
+        g = cls(root=Path(root))
+        for p, fd in data.get("files", {}).items():
+            g.files[p] = FileNode(
+                path=fd["path"], language=fd.get("language", "other"),
+                imports=list(fd.get("imports", [])), symbols=list(fd.get("symbols", [])),
+                parse_error=fd.get("parse_error", ""),
+            )
+        for q, sd in data.get("symbols", {}).items():
+            sym = Symbol(name=sd["name"], qualname=sd["qualname"], kind=sd["kind"],
+                         file=sd["file"], line=int(sd.get("line", 0)),
+                         calls=list(sd.get("calls", [])))
+            g.symbols[q] = sym
+            g._by_name.setdefault(sym.name, [])
+            if q not in g._by_name[sym.name]:
+                g._by_name[sym.name].append(q)
+        return g
 
     # --- mutation (used by build + incremental re-index) -------------------
     def _add_file(self, fnode: FileNode, symbols: list[Symbol]) -> None:
@@ -269,4 +314,74 @@ def build_index(root: str | Path) -> CodeGraph:
             continue
         fnode, symbols = _index_file(root, rel)
         graph._add_file(fnode, symbols)
+    return graph
+
+
+def index_signature(root: str | Path) -> dict:
+    """Map {rel_path: mtime} of every indexable, non-ignored file (W3, ADR-0020).
+
+    The basis for the incremental-reindex staleness check: comparing a fresh
+    signature to the one stored in the cache tells us exactly which files changed,
+    were added, or were deleted. Mirrors the CLI's `_tree_signature` but scoped to
+    indexable files and living in the engine (where the graph does).
+    """
+    root = Path(root).resolve()
+    matcher = load_ignore_matcher(root)
+    sig: dict[str, float] = {}
+    for path in root.rglob("*"):
+        if path.is_dir() or path.suffix not in _INDEXABLE_EXT:
+            continue
+        rel = path.relative_to(root).as_posix()
+        if matcher.match(rel, is_dir=False):
+            continue
+        try:
+            sig[rel] = path.stat().st_mtime
+        except OSError:
+            continue
+    return sig
+
+
+def load_or_build_index(root: str | Path, cache_path: "str | Path | None") -> CodeGraph:
+    """Load the cached graph and incrementally refresh it; else build from scratch.
+
+    (W3, ADR-0020) If `cache_path` exists and is a valid same-version cache, the
+    graph is deserialized and only the files whose mtime changed (or that were
+    added/deleted since) are re-indexed via the existing `reindex_file`/
+    `remove_file`. On any problem — no cache, corrupt JSON, version mismatch, read
+    error — it falls back to a full `build_index` (degrade gracefully, never
+    raises for cache reasons). The refreshed cache is written back best-effort.
+    """
+    root = Path(root).resolve()
+    current = index_signature(root)
+
+    graph: "CodeGraph | None" = None
+    cached_mtimes: dict = {}
+    if cache_path is not None:
+        cp = Path(cache_path)
+        if cp.is_file():
+            try:
+                data = json.loads(cp.read_text(encoding="utf-8"))
+                graph = CodeGraph.from_dict(root, data)
+                cached_mtimes = data.get("mtimes", {}) or {}
+            except Exception:  # noqa: BLE001 - a bad cache never blocks a run
+                graph = None
+
+    if graph is None:
+        graph = build_index(root)
+    else:
+        # Incremental refresh: reindex changed/added, drop deleted.
+        changed = [rel for rel, m in current.items() if cached_mtimes.get(rel) != m]
+        deleted = [rel for rel in cached_mtimes if rel not in current]
+        for rel in changed:
+            graph.reindex_file(rel)
+        for rel in deleted:
+            graph.remove_file(rel)
+
+    if cache_path is not None:
+        try:
+            cp = Path(cache_path)
+            cp.parent.mkdir(parents=True, exist_ok=True)
+            cp.write_text(json.dumps(graph.to_dict(mtimes=current)), encoding="utf-8")
+        except Exception:  # noqa: BLE001 - persisting is best-effort
+            pass
     return graph

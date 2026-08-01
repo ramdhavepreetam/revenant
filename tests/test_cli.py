@@ -855,6 +855,34 @@ def test_loop_watch_reruns_on_change(tmp_path, monkeypatch):
     assert runs["n"] == 2
 
 
+# --- loop --every trigger (W3, ADR-0020) ------------------------------------
+
+def test_loop_every_parser():
+    p = cli.build_parser()
+    ns = p.parse_args(cli._normalize_argv(["loop", "g", "--every", "5"]))
+    assert ns.every == 5.0
+
+
+def test_loop_every_reruns_each_interval(tmp_path, monkeypatch):
+    runs = {"n": 0}
+    monkeypatch.setattr(cli, "_cmd_loop_once", lambda a: runs.__setitem__("n", runs["n"] + 1) or 0)
+    # Three interval ticks -> initial run + 3 reruns = 4 (no change detection;
+    # time-triggered fires every interval unconditionally).
+    ticks = [lambda: None, lambda: None, lambda: None]
+    args = argparse.Namespace(workspace=str(tmp_path), every=0.0, no_color=True)
+    cli._cmd_loop_every(args, ticks=iter(ticks))
+    assert runs["n"] == 4
+
+
+def test_loop_dispatch_routes_every(tmp_path, monkeypatch):
+    # cmd_loop must dispatch to the --every branch when --every is set.
+    called = {"every": False}
+    monkeypatch.setattr(cli, "_cmd_loop_every", lambda a, t=None: called.__setitem__("every", True) or 0)
+    args = argparse.Namespace(workspace=str(tmp_path), every=5.0, watch=None, no_color=True)
+    cli.cmd_loop(args)
+    assert called["every"] is True
+
+
 # --- H3: --plan decompose + per-step driver (ADR-0014) ----------------------
 
 def test_run_plan_flag_parses():

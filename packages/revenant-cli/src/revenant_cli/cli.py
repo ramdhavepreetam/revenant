@@ -39,7 +39,7 @@ from nerva_agent.loop_driver import (
     loop_until, Budget, model_final_predicate, command_predicate,
     file_exists_predicate,
 )
-from nerva_agent.code_graph.indexer import build_index
+from nerva_agent.code_graph.indexer import build_index, load_or_build_index
 from nerva_agent.code_graph.tools import build_code_graph_tools
 from nerva_agent.subagent import build_spawn_tool
 
@@ -211,6 +211,9 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
                    help="Auto-approve mutating tools (skips the y/N prompt; footgun guards still apply).")
     p.add_argument("--no-graph", action="store_true",
                    help="Skip building the code graph (defn_of/who_calls/… tools).")
+    p.add_argument("--no-graph-cache", action="store_true",
+                   help="Rebuild the code graph from scratch (ignore the cached "
+                        ".aibot/code_graph.json; no persistence this run).")
     p.add_argument("--skip-preflight", action="store_true",
                    help="Skip the Ollama reachability / model-pulled check.")
     p.add_argument("--no-color", action="store_true")
@@ -267,6 +270,9 @@ def build_parser() -> argparse.ArgumentParser:
                              "changes (mtime poll; respects ignore globs). Ctrl-C to stop.")
     p_loop.add_argument("--watch-interval", type=float, default=1.0,
                         help="Seconds between --watch polls (default: 1.0).")
+    p_loop.add_argument("--every", type=float, metavar="SECONDS",
+                        help="Re-run the loop every SECONDS on a fixed interval "
+                             "(within the budget). Ctrl-C to stop.")
 
     p_undo = sub.add_parser("undo", help="Revert file changes the agent made.")
     p_undo.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
@@ -474,7 +480,14 @@ def _build_agent(args: argparse.Namespace):
     graph = None
     if not getattr(args, "no_graph", False):
         try:
-            graph = build_index(workspace)
+            # W3 (ADR-0020): load a persisted graph and refresh only changed files
+            # (falls back to a full build on a missing/corrupt cache). --no-graph-
+            # cache forces a from-scratch build (no persistence).
+            if getattr(args, "no_graph_cache", False):
+                graph = build_index(workspace)
+            else:
+                cache_path = workspace / ".aibot" / "code_graph.json"
+                graph = load_or_build_index(workspace, cache_path)
             tools += build_code_graph_tools(graph)
             st = graph.stats()
             print(f"{color['dim']}graph: {st['symbols']} symbols across "
@@ -788,6 +801,8 @@ def cmd_loop(args: argparse.Namespace, _watch_ticks=None) -> int:
     """
     if getattr(args, "watch", None):
         return _cmd_loop_watch(args, _watch_ticks)
+    if getattr(args, "every", None):
+        return _cmd_loop_every(args, _watch_ticks)
     return _cmd_loop_once(args)
 
 
@@ -815,6 +830,36 @@ def _cmd_loop_watch(args: argparse.Namespace, watch_ticks=None) -> int:
                 last = current
                 print(f"{color['dim']}watch: change detected — re-running{color['reset']}")
                 rc = _cmd_loop_once(args)
+    except KeyboardInterrupt:
+        print()
+    return rc
+
+
+def _cmd_loop_every(args: argparse.Namespace, ticks=None) -> int:
+    """Re-run the loop on a fixed time interval (W3, ADR-0020).
+
+    Parallel to `--watch` but time-triggered rather than change-triggered: sleep
+    `--every` seconds, re-run, repeat until Ctrl-C. `ticks` is an injectable
+    iterable of sleep callables for testing (each `next()` is one interval); in
+    normal use it sleeps on a timer. Each iteration is a full `_cmd_loop_once`,
+    so per-iteration budgets/journaling/undo boundaries still apply (ADR-0006).
+    """
+    import time as _time
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    interval = args.every
+    print(f"{color['dim']}every: re-runs every {interval}s · Ctrl-C to stop{color['reset']}")
+
+    def real_ticks():
+        while True:
+            yield lambda: _time.sleep(interval)
+    tick_source = ticks if ticks is not None else real_ticks()
+
+    rc = _cmd_loop_once(args)  # initial run
+    try:
+        for sleep in tick_source:
+            sleep()
+            print(f"{color['dim']}every: interval elapsed — re-running{color['reset']}")
+            rc = _cmd_loop_once(args)
     except KeyboardInterrupt:
         print()
     return rc
