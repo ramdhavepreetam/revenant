@@ -24,8 +24,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from nerva_core.local_llm_writer import (
-    ChatConfig, call_model, call_model_message, stream_model, LocalLLMError,
-    estimate_tokens,
+    ChatConfig, call_model, call_model_message, stream_message,
+    LocalLLMError, estimate_tokens,
 )
 from nerva_agent.agent_tools import ToolRegistry, ToolError
 from nerva_agent.agent_protocol import (
@@ -161,12 +161,12 @@ class AgentLoop:
         # and may APPEND to the observation (e.g. a verification failure to repair,
         # H1/ADR-0012). A hook error is swallowed so a verifier can't break a run.
         self.after_tool = after_tool
-        # stream (W1, ADR-0019): when True AND the prompt-based protocol is in use
-        # (no native tool schema), the assistant turn is streamed via stream_model
-        # and each delta is emitted as a "token" event. Native tool-calling turns
-        # (which need the whole message to read tool_calls) are handled in W2; any
-        # streaming error falls back to the non-streaming call for that turn. The
-        # buffered text is byte-identical to the non-streaming path.
+        # stream (W1/W2, ADR-0019): when True, the assistant turn is streamed via
+        # stream_message on BOTH the prompt-based and native tool-calling paths.
+        # Each content delta is emitted as a "token" event for a live view; the
+        # FULL message (incl. any tool_calls) is accumulated and returned, so tool
+        # dispatch is byte-identical to the non-streaming path (the tool call is
+        # never parsed partially). Any streaming error falls back to the plain call.
         self.stream = stream
 
     # --- helpers -----------------------------------------------------------
@@ -182,33 +182,29 @@ class AgentLoop:
         step: int,
         events: list[AgentEvent],
     ) -> dict[str, Any]:
-        """Get the next assistant message, streaming its content when possible (W1).
+        """Get the next assistant message, streaming its content when enabled.
 
-        Streaming applies only when `self.stream` is on AND we're on the
-        prompt-based path (`native_tools is None`) — there the whole reply is
-        plain content parsed by `parse_action`, so streaming the deltas loses
-        nothing. Each delta is emitted as a "token" event; the buffered text is
-        returned as `{"role": "assistant", "content": <full text>}`, byte-identical
-        to what `call_model_message` would return for that turn.
+        W1 streamed the prompt-based path; W2 (ADR-0019) streams BOTH paths via
+        `stream_message`, which passes each content delta to `on_delta` (emitted as
+        a "token" event) while accumulating the FULL message and returning it — so
+        `message["tool_calls"]` is available whole for native tool dispatch. The
+        tool call itself is never parsed partially: we stream the content prefix
+        for a live view, then dispatch from the completed message exactly as the
+        non-streaming path does.
 
-        Native tool-calling turns (which must read `message["tool_calls"]` from the
-        whole message) keep the non-streaming call — W2 handles them. Any streaming
-        error falls back to the non-streaming call for this turn, so a flaky stream
-        never fails a run.
+        When streaming is off, or on any streaming error, fall back to the
+        non-streaming `call_model_message` so a flaky stream never fails a run
+        (degrade gracefully, ADR-0001 invariant 4).
         """
-        if not self.stream or native_tools is not None:
+        if not self.stream:
             return call_model_message(self.config, messages, tools=native_tools)
         try:
-            buf: list[str] = []
-            for delta in stream_model(self.config, messages):
-                if not delta:
-                    continue
-                buf.append(delta)
-                self._emit(AgentEvent("token", text=delta, step=step), events)
-            return {"role": "assistant", "content": "".join(buf)}
+            def on_delta(text: str) -> None:
+                if text:
+                    self._emit(AgentEvent("token", text=text, step=step), events)
+            return stream_message(self.config, messages, tools=native_tools,
+                                  on_delta=on_delta)
         except LocalLLMError:
-            # Streaming transport failed mid-turn: fall back to the plain call so
-            # the run continues (degrade gracefully, ADR-0001 invariant 4).
             return call_model_message(self.config, messages, tools=native_tools)
 
     def _system_prompt(self) -> str:

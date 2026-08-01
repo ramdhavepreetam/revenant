@@ -1,6 +1,6 @@
 # ADR-0019 — W-series Phase A: measure, then stream (W0/W1/W2)
 
-- **Status:** Accepted — implementation starting with W0
+- **Status:** Implemented — W0/W1/W2 all done (Phase A complete)
 - **Phase:** W-series (0.6.0) Phase A · **W-slices:** W0 eval metrics + rename tasks
   + regression gate · W1 stream plain-content assistant text · W2 tool-call turns
   under streaming + live render
@@ -119,7 +119,12 @@ rich consoles keep byte-parity when they ignore the new `token` kind.
       path streams then parses the buffered action; native path unchanged.)**
 - [x] Plain console (ignoring `token`) keeps byte-parity; suite green (bare
       `pytest`), ADR-0019 + README updated. Streaming failure falls back cleanly.
-      **(W1.)** *(TUI in-place token render + native-tool-turn streaming = W2.)*
+      **(W1.)**
+- [x] Native tool-calling turns stream their content prefix live AND dispatch the
+      tool call whole (never parsed partially). **(W2 — `stream_message` returns
+      the full message incl. `tool_calls`; verified end-to-end.)**
+- [x] The TUI renders tokens live in-place (a mutable `StreamLine` above the
+      input), cleared when the turn completes. **(W2.)**
 
 ## Open questions
 - **Streaming scope for v1:** stream only the *final* content answer, or every
@@ -187,3 +192,27 @@ rich consoles keep byte-parity when they ignore the new `token` kind.
     Suite **591 → 601**. Verified end-to-end: 4 deltas render live through the real
     PlainConsole, answer not duplicated. **Next: W2 (tool-call turns under
     streaming + live TUI render).**
+- 2026-08-01 — **W2 Implemented — Phase A COMPLETE.**
+  - **`stream_message` (`local_llm_writer.py`).** New streaming call that passes
+    each content delta to an `on_delta` callback while accumulating the FULL
+    message, returning `{"content", optionally "tool_calls"}`. Ollama NDJSON +
+    OpenAI SSE; native `tool_calls` arrive whole (Ollama's final chunk), never
+    parsed partially. Raises `LocalLLMError` on transport failure.
+  - **Loop.** `_next_message` now streams **both** paths via `stream_message` when
+    `stream=True` (W1's prompt-only path replaced): content prefix streams as
+    `token` events, then tool dispatch reads `message["tool_calls"]` from the whole
+    message exactly as the non-streaming path — byte-identical dispatch. Error →
+    fall back to `call_model_message`. (`stream_model` no longer used by the loop.)
+  - **TUI live render.** New `StreamLine` widget (a mutable `Static` above the
+    input): `token` deltas feed it live; any non-token event clears it (the
+    finished text lands in the log). Root turns only — sub-agent tokens stay in
+    their lane. Solves RichLog's append-only limitation flagged in W1.
+  - **Tests.** `test_agent_loop.py` StreamingTests rewritten for `stream_message`
+    (7: content concatenation, byte-parity, token-ignoring-consumer, prompt-based
+    tool action, **native-turn-streams-then-dispatches-whole-tool-call**, error
+    fallback, stream-off). `test_stream_message.py` +5 (Ollama deltas, whole
+    tool_calls, OpenAI SSE, optional on_delta, transport error).
+    `test_tui_app.py` +3 (StreamLine feed/clear, partial mid-turn, sub-agent token
+    ignored). Suite **601 → 610**. Verified end-to-end: a native tool turn streams
+    its content prefix live and dispatches the whole tool call.
+  - **Phase A (W0/W1/W2) is done. Next: Phase B (ADR-0020) — W3/W4a/W4b/W4c.**

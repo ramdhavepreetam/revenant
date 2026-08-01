@@ -31,7 +31,7 @@ from nerva_agent.agent_loop import AgentEvent
 
 from revenant_cli.tui.commands import SlashRegistry
 from revenant_cli.tui.screens import ApprovalScreen, PaletteScreen
-from revenant_cli.tui.widgets import ActivityLog, ContextGauge, StatusBar
+from revenant_cli.tui.widgets import ActivityLog, ContextGauge, StatusBar, StreamLine
 
 
 class RevenantApp(App):
@@ -42,6 +42,7 @@ class RevenantApp(App):
     #status { height: 1; padding: 0 1; background: $panel; }
     #gauge  { height: 1; padding: 0 1; }
     ActivityLog { height: 1fr; border: round $primary-darken-2; padding: 0 1; }
+    #stream { height: auto; padding: 0 1; }
     #prompt { dock: bottom; }
     """
 
@@ -72,6 +73,7 @@ class RevenantApp(App):
                         mode=self.rv_mode, id="status")
         yield ContextGauge(id="gauge")
         yield ActivityLog(id="log")
+        yield StreamLine(id="stream")   # W2: live token line, above the input
         yield Input(placeholder="Ask revenant…  (type / for commands)", id="prompt")
 
     def on_mount(self) -> None:
@@ -196,6 +198,16 @@ class RevenantApp(App):
             g.used = ev.context.used_tokens
             g.budget = ev.context.max_tokens
             return
+        # W2 (ADR-0019): stream token deltas live on the StreamLine (root turns
+        # only; sub-agent tokens stay in their lane's log to keep the live line
+        # unambiguous). The completed turn's full text still lands in the log.
+        if ev.kind == "token":
+            if not ev.agent and ev.text:
+                self.query_one(StreamLine).feed(ev.text)
+            return
+        # Any non-token activity closes the live line — its finished text arrives
+        # as the "assistant"/"final"/"action" event we're about to log.
+        self.query_one(StreamLine).clear_line()
         if ev.kind == "agent_start" and ev.agent:
             self.rv_agents_seen.add(ev.agent)
             self.query_one(StatusBar).agents = len(self.rv_agents_seen)
