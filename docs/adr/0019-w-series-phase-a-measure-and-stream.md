@@ -106,10 +106,11 @@ rich consoles keep byte-parity when they ignore the new `token` kind.
   `call_model_message` and the run completes (monkeypatched).
 
 ## Acceptance criteria
-- [ ] `evals/run.py` records step-count, token-cost, and edit-precision per task;
-      `--compare` diffs them; `--gate baseline.json` fails CI on a regression.
-- [ ] 3–5 project-wide-rename tasks exist and fail against a no-op agent (ready to
-      score W4).
+- [x] `evals/run.py` records step-count, token-cost, and edit-precision per task;
+      `--compare` diffs them; `--gate baseline.json` fails CI on a regression. **(W0)**
+- [x] 3–5 project-wide-rename tasks exist and fail against a no-op agent (ready to
+      score W4). **(W0 — 3 added: rename_across_package, rename_class_across_modules,
+      rename_with_shadow.)**
 - [ ] `revenant chat`/TUI streams the assistant's answer token-by-token; the final
       answer is byte-identical to the non-streaming path.
 - [ ] A turn that ends in a tool call still dispatches, approves, and undoes exactly
@@ -130,3 +131,31 @@ rich consoles keep byte-parity when they ignore the new `token` kind.
 - 2026-08-01 — Proposed + Accepted. Phase-A spec written before code (per ADR-0018
   / the series workflow). W0 implementation starts next: the measurement backbone
   that scores every later slice.
+- 2026-08-01 — **W0 Implemented** — the measurement backbone.
+  - **Metrics.** New `RunMetrics` dataclass (`evals/tasks/base.py`): `steps`,
+    `tokens`, `edits`, `edits_kept` → `edit_precision` (edits that survived to the
+    final workspace; 1.0 when no edits). All optional/defaulted — existing tasks,
+    tests, and saved reports are untouched.
+  - **Plumbing.** `AgentRunner.run` may now return `RunMetrics | None` (historical
+    `None` still valid). The real `RevenantAgentRunner` derives them from the
+    finished `AgentResult` (`_metrics_from_result`): steps direct, edits by
+    counting `action` events for `write_file`/`edit_file`/`apply_edits`, `edits_kept`
+    by a target-still-exists check, tokens via the model layer's `estimate_tokens`.
+    `TaskOutcome` carries `metrics`; `run_task` averages across `--repeat`; `Report`
+    aggregates `total_steps`/`total_tokens`/`mean_edit_precision` and round-trips
+    them through JSON.
+  - **Compare + gate.** `compare_reports` gains `delta_steps`/`delta_tokens`/
+    `delta_edit_precision`; `format_compare` prints a cost line. New
+    `gate_regressions` + `--gate baseline.json` CLI flag → exit 1 on a pass-rate
+    drop or any task that passed before now failing (cost metrics inform, don't
+    gate). `format_report` shows a per-task + summary metrics line.
+  - **Rename tasks.** 3 project-wide-rename fixtures (the W4 scoring profile):
+    `rename_across_package` (fn across 4 files), `rename_class_across_modules`
+    (class as base/ctor/isinstance/annotation across 4 modules), `rename_with_shadow`
+    (precision — rename the real symbol, leave a same-named decoy). Each FAILS
+    before the fix and PASSES when correctly renamed (verified end-to-end).
+  - **Tests.** `tests/test_evals.py` +12 W0 tests (metrics ratio/round-trip,
+    aggregation, compare deltas, gate both directions, task registration); the two
+    parametrized per-task tests auto-cover the 3 new fixtures. Suite **573 → 591**.
+    Verified end-to-end model-free: `--compare` shows the cost line, `--gate`
+    exit-codes correctly, no-model run skips cleanly. **Next: W1 (content streaming).**

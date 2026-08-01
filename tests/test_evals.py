@@ -14,10 +14,10 @@ from pathlib import Path
 import pytest
 
 from evals.tasks import ALL_TASKS, get_task
-from evals.tasks.base import ScoreResult, Task
+from evals.tasks.base import RunMetrics, ScoreResult, Task
 from evals.run import (
     Report, TaskOutcome, compare_reports, format_compare, format_report,
-    model_server_reachable, run_suite, run_task,
+    gate_regressions, model_server_reachable, run_suite, run_task,
 )
 
 
@@ -38,6 +38,18 @@ class _FakeAgentRunner:
 class _ExplodingAgentRunner:
     def run(self, workspace: Path, goal: str) -> None:
         raise RuntimeError("model call blew up")
+
+
+class _MetricAgentRunner:
+    """A fake runner that applies an edit AND reports RunMetrics (W0)."""
+
+    def __init__(self, apply, metrics: RunMetrics):
+        self.apply = apply
+        self.metrics = metrics
+
+    def run(self, workspace: Path, goal: str) -> RunMetrics:
+        self.apply(workspace)
+        return self.metrics
 
 
 def _noop(_workspace: Path) -> None:
@@ -304,6 +316,116 @@ def test_report_round_trips_through_dict():
 def test_model_server_reachable_returns_false_for_a_bogus_url():
     # Nothing is listening on this port; must return False, not raise.
     assert model_server_reachable("http://127.0.0.1:1", timeout=0.2) is False
+
+
+# --- W0 (ADR-0019): metrics, aggregation, compare deltas, regression gate -------
+
+def test_run_metrics_edit_precision_ratio_and_empty_default():
+    assert RunMetrics(edits=4, edits_kept=3).edit_precision == pytest.approx(0.75)
+    # No edits -> precision is 1.0 (nothing to get wrong), never a divide-by-zero.
+    assert RunMetrics(edits=0, edits_kept=0).edit_precision == 1.0
+
+
+def test_run_task_carries_reported_metrics(tmp_path):
+    task = get_task("make_file_exist")
+
+    def apply(ws: Path) -> None:
+        (ws / "CHANGELOG.md").write_text("# Changelog\n\n## 0.1.0\n- init\n")
+
+    runner = _MetricAgentRunner(apply, RunMetrics(steps=5, tokens=1200, edits=2, edits_kept=2))
+    outcome = run_task(task, runner, tmp_root=tmp_path)
+    assert outcome.passed is True
+    assert isinstance(outcome.metrics, RunMetrics)
+    assert outcome.metrics.steps == 5
+    assert outcome.metrics.edit_precision == 1.0
+
+
+def test_metric_free_runner_leaves_outcome_metrics_none(tmp_path):
+    # The historical fake returns None -> the outcome simply has no metrics,
+    # and metric aggregates degrade to "no metrics" rather than crashing.
+    task = get_task("make_file_exist")
+    outcome = run_task(task, _FakeAgentRunner(_noop), tmp_root=tmp_path)
+    assert outcome.metrics is None
+
+
+def test_report_aggregates_metrics_across_tasks():
+    report = Report(model="m", outcomes=[
+        TaskOutcome("a", True, metrics=RunMetrics(steps=3, tokens=100, edits=2, edits_kept=2)),
+        TaskOutcome("b", True, metrics=RunMetrics(steps=5, tokens=200, edits=4, edits_kept=2)),
+    ])
+    assert report.total_steps == 8
+    assert report.total_tokens == 300
+    # mean of precision(1.0) and precision(0.5) = 0.75
+    assert report.mean_edit_precision == pytest.approx(0.75)
+
+
+def test_report_mean_edit_precision_none_when_no_metrics():
+    report = Report(model="m", outcomes=[TaskOutcome("a", True), TaskOutcome("b", False)])
+    assert report.mean_edit_precision is None
+    assert report.total_steps == 0
+
+
+def test_report_with_metrics_round_trips_through_dict():
+    report = Report(model="m", outcomes=[
+        TaskOutcome("t1", True, "ok", 1.5, metrics=RunMetrics(steps=4, tokens=500, edits=3, edits_kept=2)),
+    ])
+    restored = Report.from_dict(report.to_dict())
+    m = restored.outcomes[0].metrics
+    assert isinstance(m, RunMetrics)
+    assert (m.steps, m.tokens, m.edits, m.edits_kept) == (4, 500, 3, 2)
+    assert m.edit_precision == pytest.approx(2 / 3)
+    assert restored.total_steps == 4
+
+
+def test_format_report_shows_metrics_line_when_present():
+    report = Report(model="m", outcomes=[
+        TaskOutcome("a", True, metrics=RunMetrics(steps=3, tokens=90, edits=2, edits_kept=1)),
+    ])
+    text = format_report(report)
+    assert "steps" in text and "tokens" in text and "edit-precision" in text
+
+
+def test_compare_reports_metric_deltas():
+    baseline = Report(model="m", outcomes=[
+        TaskOutcome("t1", True, metrics=RunMetrics(steps=8, tokens=400, edits=4, edits_kept=2)),
+    ])
+    candidate = Report(model="m", outcomes=[
+        TaskOutcome("t1", True, metrics=RunMetrics(steps=5, tokens=300, edits=4, edits_kept=4)),
+    ])
+    cmp = compare_reports(baseline, candidate)
+    assert cmp.delta_steps == -3          # fewer steps = cheaper
+    assert cmp.delta_tokens == -100
+    assert cmp.delta_edit_precision == pytest.approx(0.5)  # 0.5 -> 1.0
+    assert "edit-precision" in format_compare(cmp)
+
+
+def test_compare_metric_deltas_none_when_a_side_lacks_metrics():
+    baseline = Report(model="m", outcomes=[TaskOutcome("t1", True)])  # no metrics
+    candidate = Report(model="m", outcomes=[
+        TaskOutcome("t1", True, metrics=RunMetrics(steps=5, tokens=300, edits=1, edits_kept=1)),
+    ])
+    assert compare_reports(baseline, candidate).delta_edit_precision is None
+
+
+def test_gate_passes_when_no_regression():
+    baseline = Report(model="m", outcomes=[TaskOutcome("t1", True), TaskOutcome("t2", False)])
+    candidate = Report(model="m", outcomes=[TaskOutcome("t1", True), TaskOutcome("t2", True)])
+    assert gate_regressions(baseline, candidate) == []  # improved -> no regression
+
+
+def test_gate_fails_on_a_dropped_task():
+    baseline = Report(model="m", outcomes=[TaskOutcome("t1", True), TaskOutcome("t2", True)])
+    candidate = Report(model="m", outcomes=[TaskOutcome("t1", True), TaskOutcome("t2", False)])
+    reasons = gate_regressions(baseline, candidate)
+    assert reasons  # non-empty -> gate fails
+    assert any("t2" in r for r in reasons)
+    assert any("pass-rate" in r for r in reasons)
+
+
+def test_the_three_w0_rename_tasks_are_registered():
+    names = {t.name for t in ALL_TASKS}
+    assert {"rename_across_package", "rename_class_across_modules",
+            "rename_with_shadow"} <= names
 
 
 def test_all_tasks_have_unique_names():
