@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-31 · **Tests:** 482 green · **Shipped: v0.3.0 on PyPI** · **Building: U-series (0.4.0 — CLI UX)**
+**Last updated:** 2026-08-01 · **Tests:** 532 green · **Shipped: v0.3.0 on PyPI** · **U-series (0.4.0 — CLI UX) complete** 🎉
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -19,13 +19,13 @@
 - **🎉 H-series (0.3.0) COMPLETE + RELEASED.** H0/H1/H2/H3 all Implemented;
   **v0.3.0 on PyPI + GitHub Release** (installers attached). Docs live at
   https://ramdhavepreetam.github.io/revenant/ (auto-deploy, token-free).
-- **🔨 NOW: U-series (0.4.0) — make the CLI usable.** Strategy + phases in
-  [ADR-0016](0016-cli-ux-console-and-setup.md). Two problems: setup friction
-  (no preflight, no model picker, a default-model-vs-docs **bug**, unhelpful
-  errors) and no live "what's going on" console. Plan: **U0** default-model fix →
-  **U1** preflight+errors+OLLAMA_HOST → **U2** doctor/models/picker (ships Phase A)
-  → **U3** Console abstraction (rich optional + ANSI fallback) → **U4** reroute
-  event/approval/diff/spinner/chrome (ships Phase B). Order: U0 first.
+- **🎉 U-series (0.4.0) COMPLETE — U0–U4 all Implemented.** The CLI is now
+  usable: pre-flight checks with actionable messages + model picker (`doctor`/
+  `models`), the default-model bug fixed, and a rich live console (`pip install
+  revenant-cli[rich]`) with a "thinking…" spinner, real edit diffs, and a session
+  header — with a byte-identical plain-ANSI fallback. Strategy
+  [ADR-0016](0016-cli-ux-console-and-setup.md). **⏭ NEXT: ship 0.4.0** (Phase A
+  merged as #29; Phase B in the next PR).
 - **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
   one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
   (P8); persisting the code graph (P7).
@@ -124,8 +124,8 @@ console. Strategy + phases: [ADR-0016](0016-cli-ux-console-and-setup.md).
 | **U0** | Default-model fix | first run fails ("model not found") — role ≠ docs | ✅ Shipped |
 | **U1** | Preflight + errors | Ollama down / model unpulled → cryptic failure; no `OLLAMA_HOST` | ✅ Shipped |
 | **U2** | `doctor`/`models`/picker | no diagnostics, no model discovery, `config` is a stub | ✅ Shipped |
-| **U3** | Console abstraction | `rich` optional + plain-ANSI fallback (byte-parity) | ⬜ **Next** |
-| **U4** | Reroute chrome | no live "thinking…", no real diffs, noisy startup | ⬜ |
+| **U3** | Console abstraction | `rich` optional + plain-ANSI fallback (byte-parity) | ✅ Shipped |
+| **U4** | Reroute chrome | no live "thinking…", no real diffs, noisy startup | ✅ Shipped |
 
 **Constraints:** `rich` is an *optional* dep (fallback = today's output, so zero
 required deps; ADR-0001/0002 hold); terminal UX lives in `revenant-cli` only.
@@ -194,6 +194,16 @@ plugs into one — it is not greenfield:
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-08-01 (a) — U-series complete (Phase B: rich console)
+- Phase A (U0/U1/U2) merged (#29, CI green). Then **Phase B (U3/U4)**: a
+  `Console` abstraction — `rich` optional (`revenant-cli[rich]`) + byte-identical
+  plain-ANSI fallback — with a live "thinking…" spinner, syntax-highlighted
+  real edit diffs in the approval prompt, and a session-header panel. Wired via
+  the loop's `on_event`/`approve` seams + a stashed `loop._console`; NO_COLOR
+  honored; installers bundle rich.
+- Verified end-to-end both ways (rich: header+spinner+diff interleave cleanly;
+  no-rich: byte-parity). Tests 507 → 532. **U-series done; ship 0.4.0 next.**
 
 ### 2026-07-31 (e) — U-series (0.4.0) planned + started
 - 0.3.0 fully released since (d): PyPI + GitHub Release (installers), docs live

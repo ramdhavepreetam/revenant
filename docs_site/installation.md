@@ -19,9 +19,16 @@ dependencies automatically.
 === "pip"
 
     ```bash
-    pip install revenant-cli
+    pip install revenant-cli          # base install
+    pip install "revenant-cli[rich]"  # + a polished live console (recommended)
     revenant --help
     ```
+
+    !!! tip "The `[rich]` extra"
+        `pip install "revenant-cli[rich]"` adds a live "thinking…" spinner, real
+        edit diffs in the approval prompt, and a session header. Without it the
+        CLI works identically, just with plain output. The standalone
+        `.dmg`/`.exe` installers bundle it already.
 
 === "pipx (isolated)"
 

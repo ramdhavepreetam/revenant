@@ -131,3 +131,24 @@ own PR; consider a 0.4.0 release.**
     persisting the choice. Verified end-to-end against real Ollama.
   - Tests: 507 (was 486) — `test_default_profiles.py`, `test_preflight.py`,
     doctor/models + `write_model_choice` cases. Next: Phase B (U3/U4 console).
+- 2026-08-01 — **Phase B (rich console) Implemented** — U3/U4.
+  - U3: `console.py` (`make_console`, `PlainConsole`, `unified_diff`) +
+    `_rich_console.py` (`RichConsole`: panel header, syntax-highlighted
+    observations, real unified diff for edits, `Status` spinner that pauses on
+    every print). `rich` is an **optional dep** (`revenant-cli[rich]`); guarded
+    import → `PlainConsole` fallback. `revenant.spec` + installer build bundle
+    `rich`. `test_console.py`: **byte-parity** of PlainConsole vs the legacy
+    renderer (18 event×color cases), backend selection, NO_COLOR, rich path.
+  - U4: `_build_agent` builds one `console` (via `_color_enabled` incl. NO_COLOR),
+    stashes it on the loop; `on_event=_on_event(console)` (actionable errors),
+    `approve=_make_approver(console)` (rich diff panel), `session_header` +
+    `status_spinner` in `cmd_run`/`cmd_chat`. Kept the 5-tuple (`color` slot) and
+    stashed the console — zero churn to callers/test-helpers.
+  - Verified end-to-end with rich (header + live spinner + event stream + diff
+    approval, all interleaving cleanly) AND without rich (byte-identical
+    fallback). Tests 507 → 532 (531 + 1 rich-skip when rich absent).
+  - Deviation from plan: kept `_build_agent`'s `color` tuple slot and stashed
+    `loop._console` instead of replacing the slot — same single-console outcome,
+    far lower risk (no changes to the 4 unpack sites, the many `color[...]`
+    prints, or the test helpers). Startup status lines (`graph:`/`mcp:`/…) left as
+    plain dim prints (not folded into the header) — low value, high churn.

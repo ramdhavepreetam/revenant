@@ -47,6 +47,7 @@ from revenant_cli.config import (
     context_config, write_model_choice,
 )
 from revenant_cli import session_store, preflight
+from revenant_cli.console import make_console
 from revenant_cli.git_checkpoint import GitCheckpointer, is_git_repo
 from revenant_cli.verify_hook import build_verifier, make_verify_hook
 from revenant_cli.context_hook import make_context_hook, compose_after_tool_hooks
@@ -79,61 +80,45 @@ def _color(enabled: bool):
     return _C if enabled else {k: "" for k in _C}
 
 
-def make_printer(color: dict):
-    def on_event(ev: AgentEvent) -> None:
-        c = color
-        if ev.kind == "assistant" and ev.text:
-            print(f"{c['dim']}{ev.text}{c['reset']}")
-        elif ev.kind == "action":
-            args = ", ".join(f"{k}={v!r}" for k, v in ev.args.items())
-            print(f"{c['cyan']}→ {ev.tool}({args}){c['reset']}")
-        elif ev.kind == "observation":
-            body = ev.text if len(ev.text) <= 800 else ev.text[:800] + " …"
-            indented = "\n".join("  " + line for line in body.splitlines())
-            print(f"{c['dim']}{indented}{c['reset']}")
-        elif ev.kind == "final":
-            print(f"\n{c['green']}{c['bold']}{ev.text}{c['reset']}")
-        elif ev.kind == "error":
-            print(f"{c['red']}error: {_actionable(ev.text)}{c['reset']}", file=sys.stderr)
-        elif ev.kind == "limit":
-            print(f"{c['yellow']}[{ev.text}]{c['reset']}", file=sys.stderr)
-        elif ev.kind == "compact":
-            print(f"{c['dim']}[context: {ev.text}]{c['reset']}", file=sys.stderr)
-        # "approval" events are handled by the approver prompt, not printed here.
-    return on_event
+def _color_enabled(args) -> bool:
+    """Colors on when stdout is a TTY, --no-color not set, and NO_COLOR unset
+    (the no-color.org convention: presence of NO_COLOR disables color)."""
+    return (sys.stdout.isatty()
+            and not getattr(args, "no_color", False)
+            and not os.environ.get("NO_COLOR"))
 
 
-def _preview_args(tool: str, args: dict) -> str:
-    """A readable, truncated preview of what a mutating call will do."""
-    if tool == "write_file":
-        content = str(args.get("content", ""))
-        head = content if len(content) <= 400 else content[:400] + " …"
-        return f"path={args.get('path')!r}\n--- content ---\n{head}"
-    if tool == "edit_file":
-        old = str(args.get("old", "")); new = str(args.get("new", ""))
-        clip = lambda s: s if len(s) <= 300 else s[:300] + " …"
-        return f"path={args.get('path')!r}\n--- old ---\n{clip(old)}\n--- new ---\n{clip(new)}"
-    if tool == "run_bash":
-        return f"$ {args.get('command')}"
-    return ", ".join(f"{k}={v!r}" for k, v in args.items())
-
-
-def make_approver(color: dict):
-    """Interactive y/N approval for mutating tools. Deny on anything but yes."""
-    c = color
-
+def _make_approver(console):
+    """A console-backed approval callback (U4). Renders via the console (rich shows
+    a real diff / panels; plain reproduces the legacy prompt), blocks on confirm.
+    The loop still calls this injected callback — the loop itself is unchanged."""
     def approve(tool: str, args: dict) -> bool:
-        print(f"\n{c['yellow']}{c['bold']}APPROVAL NEEDED: {tool}{c['reset']}")
-        print(f"{c['yellow']}{_preview_args(tool, args)}{c['reset']}")
-        try:
-            answer = input(f"{c['bold']}Run this? [y/N] {c['reset']}").strip().lower()
-        except EOFError:
-            answer = ""
-        ok = answer in ("y", "yes")
-        print(f"{c['dim']}{'approved' if ok else 'declined'}{c['reset']}")
-        return ok
-
+        console.approval(tool, args)
+        return console.confirm("Run this?")
     return approve
+
+
+def _loop_console(loop):
+    """The console stashed on the loop by _build_agent, or a plain fallback (so
+    tests with a fake loop, and any path that didn't set one, still work)."""
+    con = getattr(loop, "_console", None)
+    if con is not None:
+        return con
+    from revenant_cli.console import PlainConsole
+    return PlainConsole(color=False)
+
+
+def _on_event(console):
+    """Wrap the console's event renderer to make error text actionable (U1/U4).
+
+    The Console renders raw event text; here we append the `ollama serve` /
+    `ollama pull` hints to `error` events before they're shown, keeping that
+    CLI-specific phrasing out of the (engine-agnostic) console module."""
+    def sink(ev: AgentEvent) -> None:
+        if ev.kind == "error":
+            ev = AgentEvent("error", text=_actionable(ev.text), step=ev.step)
+        console.event(ev)
+    return sink
 
 
 def build_config(profiles: dict, base_url: str, model: str | None) -> ChatConfig:
@@ -508,14 +493,20 @@ def _build_agent(args: argparse.Namespace):
               f"{ccfg['max_callers']}){color['reset']}")
     after_tool = compose_after_tool_hooks(verify_hook, context_hook)
 
+    # U4 (ADR-0016): one Console — rich if installed + TTY + colors on, else the
+    # byte-for-byte plain-ANSI fallback. Drives the live event stream, the
+    # approval prompt (with a real diff), and the "thinking…" spinner.
+    console = make_console(color=_color_enabled(args),
+                           no_color_env=bool(os.environ.get("NO_COLOR")))
+
     loop = AgentLoop(
         config, registry,
         system_preamble=preamble,
         max_steps=max_steps,
         # None -> auto-detect native tool support per model; --no-native-tools forces off.
         use_native_tools=False if args.no_native_tools else None,
-        on_event=make_printer(color),
-        approve=make_approver(color),
+        on_event=_on_event(console),
+        approve=_make_approver(console),
         auto_approve=yolo,
         max_context_tokens=max_context,
         summarizer_config=summarizer,
@@ -529,6 +520,8 @@ def _build_agent(args: argparse.Namespace):
     loop._base_preamble = preamble
     # Stash the checkpointer so `loop` can take a per-iteration undo boundary (F13.2).
     loop._checkpointer = checkpointer
+    # Stash the console so command handlers can render the header + spinner (U4).
+    loop._console = console
     return workspace, config, rec, loop, color
 
 
@@ -677,8 +670,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         goal = args.goal or skill.body
         print(f"{color['dim']}skill: {skill.name}{color['reset']}")
 
-    print(f"{color['dim']}revenant · model={config.model} · workspace={workspace} · {_mode_label(args)}{color['reset']}")
-    print(f"{color['dim']}capacity: {rec.note}{color['reset']}")
+    console = _loop_console(loop)
+    console.session_header(model=config.model, workspace=workspace,
+                           mode=_mode_label(args), capacity=rec.note)
 
     # H3 (ADR-0014): --plan decomposes the goal into small, verified steps so the
     # model only reasons about one at a time. Without it, a normal single run.
@@ -689,7 +683,8 @@ def cmd_run(args: argparse.Namespace) -> int:
             _close_mcp(loop)
 
     try:
-        result = loop.run(goal)
+        with console.status_spinner("thinking…"):
+            result = loop.run(goal)
     finally:
         _close_mcp(loop)
     if result.stopped_reason == "final":
@@ -862,9 +857,10 @@ def cmd_chat(args: argparse.Namespace, input_fn=input,
         return 2
     workspace, config, rec, loop, color = built
     c = color
-    print(f"{c['dim']}revenant chat · model={config.model} · workspace={workspace} · {_mode_label(args)}{c['reset']}")
-    print(f"{c['dim']}capacity: {rec.note}{c['reset']}")
-    print(f"{c['dim']}Type your goal. Commands: /exit, /reset, /help.{c['reset']}")
+    console = _loop_console(loop)
+    console.session_header(model=config.model, workspace=workspace,
+                           mode=_mode_label(args), capacity=rec.note,
+                           extras=["Commands: /exit · /reset · /skills · /skill <name> · /help"])
 
     history: list[dict] = list(initial_history) if initial_history else []
     session_id: str | None = getattr(args, "session_id", None) or None
@@ -897,7 +893,8 @@ def cmd_chat(args: argparse.Namespace, input_fn=input,
                     continue  # unknown/misused: message already printed
                 line = goal  # fall through to run the skill body as this turn's goal
 
-            result = loop.run(line, history=history or None)
+            with console.status_spinner("thinking…"):
+                result = loop.run(line, history=history or None)
             # Thread the transcript forward so the next turn keeps context.
             history = result.messages
             # F3: persist the session after each turn so it can be resumed later.
