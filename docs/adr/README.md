@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-01 · **Tests:** 573 green · **Shipped: v0.3.0 on PyPI** · **U-series (0.4.0 — CLI UX) complete** 🎉 · **V-series (0.5.0 — interactive Textual TUI) COMPLETE + RELEASING** 🎉 — [ADR-0017](0017-interactive-tui.md); versions bumped to 0.5.0, changelog dated, tag/publish in flight
+**Last updated:** 2026-08-01 · **Tests:** 573 green · **Shipped: v0.3.0 on PyPI** · **U-series (0.4.0 — CLI UX) complete** 🎉 · **V-series (0.5.0 — interactive Textual TUI) COMPLETE + RELEASED** 🎉 — [ADR-0017](0017-interactive-tui.md); merged to master, tagged `v0.5.0`, [GitHub Release](https://github.com/ramdhavepreetam/revenant/releases/tag/v0.5.0) with installers published. **PyPI publish pending** (run `make publish` with a token)
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -40,11 +40,14 @@
     approval modal, worker-thread streaming, and cooperative `ctrl-c` interrupt
     (new `AgentLoop.run(should_stop=…)`). CLI `--tui`/`--no-tui`/`REVENANT_TUI`;
     `[tui]` packaging + installer/spec wired. Tests 532 → **573**.
-  - **✅ Release 0.5.0** — versions bumped 0.4.0 → 0.5.0 on all three packages
+  - **✅ Released 0.5.0** — versions bumped 0.4.0 → 0.5.0 on all three packages
     (inter-package deps pinned `>=0.5.0`), changelog `[Unreleased]` → `[0.5.0]`
     (2026-08-01), 573 tests + `mkdocs --strict` green, all 6 dists built and
-    `twine check` PASSED. **⏭ Merge to master, tag `v0.5.0`, `make publish` +
-    build installers** (same flow as the 0.4.0 release).
+    `twine check` PASSED. PR #32 merged to master; tag `v0.5.0` pushed → the
+    installer CI built the macOS `.dmg` + Windows `.exe` and cut the
+    [GitHub Release](https://github.com/ramdhavepreetam/revenant/releases/tag/v0.5.0).
+    **⏭ PyPI publish still pending** — run `make publish` with a PyPI token
+    (intentionally not automated; same as the 0.4.0 flow).
 - **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
   one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
   (P8); persisting the code graph (P7).
@@ -224,7 +227,11 @@ plugs into one — it is not greenfield:
   Released; README banner/index/roadmap flipped to "releasing".
 - **Verified:** 573 tests + `mkdocs build --strict` green; `make build` +
   `make check` (twine) PASSED for all 6 dists at 0.5.0.
-- **Next: merge to master, tag `v0.5.0`, `make publish` + build installers.**
+- **Released:** PR #32 merged to master (CI green 3.11/3.12); tag `v0.5.0` pushed
+  → installer CI built the macOS `.dmg` + Windows `.exe` and published the
+  [GitHub Release](https://github.com/ramdhavepreetam/revenant/releases/tag/v0.5.0);
+  docs-deploy redeployed the site with the 0.5.0 changelog.
+- **Still pending: PyPI publish** — `make publish` with a token (owner-run).
 
 ### 2026-08-01 (a) — U-series complete (Phase B: rich console)
 - Phase A (U0/U1/U2) merged (#29, CI green). Then **Phase B (U3/U4)**: a
