@@ -74,6 +74,55 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(g["function"]["parameters"]["required"], ["pattern"])
 
 
+class ArrayParamTests(unittest.TestCase):
+    """W4b (ADR-0020): one array-of-objects param shape, scalar tools unchanged."""
+
+    def _array_tool(self) -> Tool:
+        return Tool(
+            "apply_edits", "Apply edits atomically.",
+            [ToolParam("edits", "array", "The edits.", item_fields=[
+                ToolParam("path", "string", "File path"),
+                ToolParam("old", "string", "Old text"),
+                ToolParam("new", "string", "New text"),
+            ])],
+            run=lambda edits: "ok", mutating=True,
+        )
+
+    def test_array_param_native_schema(self):
+        sch = self._array_tool().native_schema()["function"]["parameters"]
+        edits = sch["properties"]["edits"]
+        self.assertEqual(edits["type"], "array")
+        self.assertEqual(edits["items"]["type"], "object")
+        self.assertEqual(set(edits["items"]["properties"]), {"path", "old", "new"})
+        self.assertEqual(edits["items"]["required"], ["path", "old", "new"])
+        self.assertEqual(sch["required"], ["edits"])
+
+    def test_array_param_doc_line_describes_shape(self):
+        doc = self._array_tool().doc_line()
+        self.assertIn("edits (array of {path: string, old: string, new: string})", doc)
+
+    def test_array_param_validate_passes_list_through(self):
+        t = self._array_tool()
+        val = [{"path": "a.py", "old": "x", "new": "y"}]
+        self.assertEqual(t.validate_args({"edits": val}), {"edits": val})
+
+    def test_array_param_dispatches(self):
+        reg = ToolRegistry([self._array_tool()])
+        out = reg.dispatch("apply_edits", {"edits": [{"path": "a", "old": "x", "new": "y"}]})
+        self.assertEqual(out, "ok")
+
+    def test_scalar_tools_schema_byte_identical(self):
+        # A scalar-only tool renders exactly as before the W4b relaxation.
+        s = Tool("edit_file", "Edit",
+                 [ToolParam("path", "string", "p"), ToolParam("old", "string", "o")],
+                 run=lambda **k: "", mutating=True)
+        props = s.native_schema()["function"]["parameters"]["properties"]
+        self.assertEqual(props, {
+            "path": {"type": "string", "description": "p"},
+            "old": {"type": "string", "description": "o"},
+        })
+
+
 class DispatchTests(unittest.TestCase):
     def test_dispatch_ok(self):
         self.assertEqual(_registry().dispatch("read_file", {"path": "a.py"}), "contents of a.py")

@@ -113,7 +113,9 @@ consumes it). Each mutating tool stays approval-gated + undo-covered + verify-ch
       graph-guided rename rewrites every in-file call site. **(W4a — `all` param;
       `edit_file(all=True)` renames def + all in-file call sites; default still
       errors on ambiguous match.)**
-- [ ] `ToolParam` can express one array-of-objects param; scalar tools unchanged.
+- [x] `ToolParam` can express one array-of-objects param; scalar tools unchanged.
+      **(W4b — `item_fields`; native schema renders `array`/`items`; doc_line
+      describes the shape; scalar tools byte-identical.)**
 - [ ] `apply_edits` performs an atomic multi-file rename (all-or-nothing revert),
       approval-gated + undo-covered + verify-checked; the W0 rename tasks pass.
 - [ ] Suite green (bare `pytest`); ADR-0020 + README updated per slice.
@@ -165,3 +167,17 @@ consumes it). Each mutating tool stays approval-gated + undo-covered + verify-ch
     occurrence; default/`all=False` still errors on ambiguous — byte-parity;
     0-match still errors; string-bool coercion; single-match unaffected). Suite
     **620 → 625**. **Next: W4b (relax `ToolParam` to one array-of-objects param).**
+- 2026-08-01 — **W4b Implemented** — the schema gate paid down.
+  - `ToolParam` gains an optional `item_fields: list[ToolParam]` (`agent_tools.py`):
+    when `type == "array"` + `item_fields`, the param is an array of flat objects.
+    New `_param_schema` helper renders it in `native_schema` as
+    `{"type":"array","items":{"type":"object","properties":…,"required":…}}`;
+    `doc_line` describes the element shape (`edits (array of {path: string, …})`)
+    for the prompt-based path. Exactly one new shape — item fields stay scalar, so
+    arbitrary nesting is still out of scope.
+  - Scalar params render **byte-identically** (the scalar branch of `_param_schema`
+    is the old expression). `validate_args` passes a list value through unchanged.
+  - **Tests.** `test_agent_tools.py` +5 (array native schema, doc_line shape,
+    validate passes list, dispatch, **scalar-tools-byte-identical**). Suite
+    **625 → 630**. Unblocks W4c's `apply_edits(edits=[{path,old,new}])`.
+    **Next: W4c (multi-file atomic apply_edits).**

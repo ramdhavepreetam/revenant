@@ -33,14 +33,38 @@ class ToolParam:
     """One parameter of a tool.
 
     `type` is a JSON-schema scalar type name ("string", "integer", "boolean",
-    "number"). Only a small set is needed for local tools; nested objects are
-    intentionally out of scope for v1.
+    "number") for a scalar param. W4b (ADR-0020) adds ONE structured shape: an
+    array of flat objects — set `type="array"` and `item_fields` to a list of
+    `ToolParam` describing each object's (scalar) fields. This is the single
+    relaxation needed for a multi-edit tool taking `[{path, old, new}, …]`;
+    arbitrary nesting stays out of scope (an item field is itself scalar).
     """
 
     name: str
     type: str = "string"
     description: str = ""
     required: bool = True
+    # W4b: for type == "array", the scalar fields of each object element.
+    item_fields: "list[ToolParam] | None" = None
+
+
+def _param_schema(p: "ToolParam") -> dict[str, Any]:
+    """JSON-schema fragment for one param. Scalar by default; W4b (ADR-0020)
+    renders an array-of-objects when `type == "array"` + `item_fields` are set."""
+    if p.type == "array" and p.item_fields:
+        item_props = {
+            f.name: {"type": f.type, **({"description": f.description} if f.description else {})}
+            for f in p.item_fields
+        }
+        item_required = [f.name for f in p.item_fields if f.required]
+        schema: dict[str, Any] = {
+            "type": "array",
+            "items": {"type": "object", "properties": item_props, "required": item_required},
+        }
+        if p.description:
+            schema["description"] = p.description
+        return schema
+    return {"type": p.type, **({"description": p.description} if p.description else {})}
 
 
 @dataclass
@@ -75,19 +99,25 @@ class Tool:
             flags.append("parallel-safe")
         flag_str = f"  [{'; '.join(flags)}]" if flags else ""
         line = f"- {self.signature()}: {self.description.strip()}{flag_str}"
-        arg_docs = [
-            f"    - {p.name} ({p.type}{'' if p.required else ', optional'}): {p.description}".rstrip()
-            for p in self.params
-            if p.description
-        ]
+        arg_docs = []
+        for p in self.params:
+            if p.type == "array" and p.item_fields:
+                # W4b: describe the array-of-objects element shape so the
+                # prompt-based path knows to emit a list of objects.
+                shape = ", ".join(f"{f.name}: {f.type}" for f in p.item_fields)
+                desc = f": {p.description}" if p.description else ""
+                arg_docs.append(
+                    f"    - {p.name} (array of {{{shape}}}{'' if p.required else ', optional'}){desc}".rstrip()
+                )
+            elif p.description:
+                arg_docs.append(
+                    f"    - {p.name} ({p.type}{'' if p.required else ', optional'}): {p.description}".rstrip()
+                )
         return "\n".join([line, *arg_docs])
 
     def native_schema(self) -> dict[str, Any]:
         """OpenAI/Ollama-style function-tool schema for tool-capable models."""
-        properties = {
-            p.name: {"type": p.type, **({"description": p.description} if p.description else {})}
-            for p in self.params
-        }
+        properties = {p.name: _param_schema(p) for p in self.params}
         required = [p.name for p in self.params if p.required]
         return {
             "type": "function",
