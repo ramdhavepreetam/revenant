@@ -353,6 +353,77 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(calls, ["deep.py"])
 
 
+class EventModelTests(unittest.TestCase):
+    """V0 (ADR-0017): additive AgentEvent fields, no breakage."""
+
+    def test_new_fields_default_empty(self):
+        ev = AgentEvent("action", tool="read_file")
+        self.assertEqual(ev.agent, "")
+        self.assertIsNone(ev.context)
+
+    def test_context_info_carried_on_event(self):
+        from nerva_agent.agent_loop import ContextInfo
+        ci = ContextInfo(used_tokens=120, max_tokens=6000, folded=True)
+        ev = AgentEvent("context", context=ci)
+        self.assertEqual(ev.context.used_tokens, 120)
+        self.assertTrue(ev.context.folded)
+
+    def test_replace_stamps_agent(self):
+        from dataclasses import replace
+        ev = AgentEvent("action", tool="grep")
+        self.assertEqual(replace(ev, agent="sub").agent, "sub")
+
+
+class ContextEventTests(unittest.TestCase):
+    """V1 (ADR-0017): the loop emits a context snapshot every step."""
+
+    def test_context_event_each_step(self):
+        reg = _registry([])
+        script = _scripted(
+            {"role": "assistant",
+             "content": '```action\n{"tool": "read_file", "args": {"path": "a"}}\n```'},
+            {"role": "assistant", "content": "done"},
+        )
+        seen = []
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=script):
+            AgentLoop(_config(), reg, max_steps=5, max_context_tokens=100_000,
+                      on_event=seen.append).run("go")
+        ctx = [e for e in seen if e.kind == "context"]
+        # one per model step (2 steps here); each carries a populated snapshot.
+        self.assertEqual(len(ctx), 2)
+        for e in ctx:
+            self.assertIsNotNone(e.context)
+            self.assertGreater(e.context.used_tokens, 0)
+            self.assertEqual(e.context.max_tokens, 100_000)
+            self.assertFalse(e.context.folded)  # never folded under a huge budget
+
+    def test_folded_flag_set_only_on_fold_step(self):
+        big = "x " * 400
+
+        def fake(config, msgs, tools=None):
+            step = getattr(fake, "n", 0) + 1
+            fake.n = step
+            if step < 6:
+                return {"role": "assistant",
+                        "content": '```action\n{"tool": "read_file", "args": {"path": "a"}}\n```'}
+            return {"role": "assistant", "content": "done"}
+
+        reg = ToolRegistry([
+            Tool("read_file", "Read.", [ToolParam("path")], run=lambda path: big,
+                 parallel_safe=True),
+        ])
+        seen = []
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=fake):
+            AgentLoop(_config(), reg, max_steps=8, max_context_tokens=500,
+                      keep_recent_steps=2, on_event=seen.append).run("go")
+        ctx = [e for e in seen if e.kind == "context"]
+        folded = [e for e in ctx if e.context.folded]
+        # At least one fold happened, and every fold event coincides with a compact.
+        self.assertTrue(folded)
+        compact_steps = {e.step for e in seen if e.kind == "compact"}
+        self.assertTrue({e.step for e in folded}.issubset(compact_steps))
+
+
 if __name__ == "__main__":
     unittest.main()
 

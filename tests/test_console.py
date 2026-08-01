@@ -117,6 +117,45 @@ def test_unified_diff():
     assert "f.py (before)" in d and "f.py (after)" in d
 
 
+# --- V2 (ADR-0017): sub-agent + new event kinds ------------------------------
+
+def test_root_events_unprefixed_byte_parity_preserved():
+    # An event with agent="" must still match the legacy renderer exactly.
+    ev = AgentEvent("action", tool="read_file", args={"path": "a.py"})
+    assert _plain(ev, color=True) == _legacy(ev, _C)
+
+
+def test_subagent_action_is_prefixed():
+    ev = AgentEvent("action", tool="grep", args={"q": "x"}, agent="fix-tests")
+    out, _err = _plain(ev, color=False)
+    assert out.startswith("[sub:fix-tests] ")
+    assert "→ grep" in out
+
+
+def test_subagent_final_carries_label():
+    ev = AgentEvent("final", text="done", agent="fix-tests")
+    out, _err = _plain(ev, color=False)
+    assert "[sub:fix-tests]" in out and "done" in out
+
+
+def test_agent_start_and_end_render():
+    con = PlainConsole(color=False)
+    out, err = io.StringIO(), io.StringIO()
+    with redirect_stdout(out), redirect_stderr(err):
+        con.event(AgentEvent("agent_start", text="refactor auth", agent="refactor-auth"))
+        con.event(AgentEvent("agent_end", text="Sub-agent completed", agent="refactor-auth"))
+    text = err.getvalue()
+    assert "sub-agent [refactor-auth]" in text
+    assert "refactor auth" in text and "done" in text
+
+
+def test_context_event_is_silent_in_plain():
+    from nerva_agent.agent_loop import ContextInfo
+    ev = AgentEvent("context", context=ContextInfo(100, 6000, folded=False))
+    out, err = _plain(ev, color=False)
+    assert out == "" and err == ""  # feeds the TUI gauge, not the scroll
+
+
 # --- approval confirm (plain) ------------------------------------------------
 
 def test_plain_confirm_yes(monkeypatch, capsys):

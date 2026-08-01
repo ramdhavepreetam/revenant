@@ -57,24 +57,34 @@ class PlainConsole:
     # --- agent activity (was make_printer) --------------------------------
     def event(self, ev: AgentEvent) -> None:
         c = self.c
+        # V2 (ADR-0017): a sub-agent's events carry a label; prefix them so the
+        # nesting is legible in plain output. Root events (agent == "") are
+        # unprefixed — byte-identical to the legacy renderer.
+        p = f"{c['dim']}[sub:{ev.agent}]{c['reset']} " if ev.agent else ""
         if ev.kind == "assistant" and ev.text:
-            print(f"{c['dim']}{ev.text}{c['reset']}")
+            print(f"{p}{c['dim']}{ev.text}{c['reset']}")
         elif ev.kind == "action":
             args = ", ".join(f"{k}={v!r}" for k, v in ev.args.items())
-            print(f"{c['cyan']}→ {ev.tool}({args}){c['reset']}")
+            print(f"{p}{c['cyan']}→ {ev.tool}({args}){c['reset']}")
         elif ev.kind == "observation":
             body = ev.text if len(ev.text) <= 800 else ev.text[:800] + " …"
             indented = "\n".join("  " + line for line in body.splitlines())
-            print(f"{c['dim']}{indented}{c['reset']}")
+            print(f"{p}{c['dim']}{indented}{c['reset']}")
         elif ev.kind == "final":
-            print(f"\n{c['green']}{c['bold']}{ev.text}{c['reset']}")
+            print(f"\n{p}{c['green']}{c['bold']}{ev.text}{c['reset']}")
         elif ev.kind == "error":
-            print(f"{c['red']}error: {ev.text}{c['reset']}", file=sys.stderr)
+            print(f"{p}{c['red']}error: {ev.text}{c['reset']}", file=sys.stderr)
         elif ev.kind == "limit":
-            print(f"{c['yellow']}[{ev.text}]{c['reset']}", file=sys.stderr)
+            print(f"{p}{c['yellow']}[{ev.text}]{c['reset']}", file=sys.stderr)
         elif ev.kind == "compact":
-            print(f"{c['dim']}[context: {ev.text}]{c['reset']}", file=sys.stderr)
-        # "approval" events are handled by the approver, not printed here.
+            print(f"{p}{c['dim']}[context: {ev.text}]{c['reset']}", file=sys.stderr)
+        elif ev.kind == "agent_start":
+            print(f"{c['cyan']}▸ sub-agent [{ev.agent}]: {ev.text}{c['reset']}", file=sys.stderr)
+        elif ev.kind == "agent_end":
+            print(f"{c['cyan']}▪ sub-agent [{ev.agent}] done{c['reset']}", file=sys.stderr)
+        # "context" events feed the UI's live gauge; PlainConsole stays quiet to
+        # keep byte-parity (a per-step token print would be noise). "approval"
+        # events are handled by the approver, not printed here.
 
     # --- chrome -----------------------------------------------------------
     def status(self, msg: str, *, kind: str = "info") -> None:

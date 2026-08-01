@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-01 · **Tests:** 532 green · **Shipped: v0.3.0 on PyPI** · **U-series (0.4.0 — CLI UX) complete** 🎉
+**Last updated:** 2026-08-01 · **Tests:** 547 green · **Shipped: v0.3.0 on PyPI** · **U-series (0.4.0 — CLI UX) complete** 🎉 · **V-series (0.5.0 — interactive Textual TUI) Phase A (V0–V2) implemented; Phase B (V3–V5) next** — [ADR-0017](0017-interactive-tui.md)
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -19,13 +19,29 @@
 - **🎉 H-series (0.3.0) COMPLETE + RELEASED.** H0/H1/H2/H3 all Implemented;
   **v0.3.0 on PyPI + GitHub Release** (installers attached). Docs live at
   https://ramdhavepreetam.github.io/revenant/ (auto-deploy, token-free).
-- **🎉 U-series (0.4.0) COMPLETE — U0–U4 all Implemented.** The CLI is now
+- **🎉 U-series (0.4.0) COMPLETE + RELEASED — U0–U4 all Implemented.** The CLI is
   usable: pre-flight checks with actionable messages + model picker (`doctor`/
   `models`), the default-model bug fixed, and a rich live console (`pip install
   revenant-cli[rich]`) with a "thinking…" spinner, real edit diffs, and a session
   header — with a byte-identical plain-ANSI fallback. Strategy
-  [ADR-0016](0016-cli-ux-console-and-setup.md). **⏭ NEXT: ship 0.4.0** (Phase A
-  merged as #29; Phase B in the next PR).
+  [ADR-0016](0016-cli-ux-console-and-setup.md). v0.4.0 merged (#31).
+- **🚧 V-series (0.5.0) — a Claude-Code-like interactive terminal. Phase A done.**
+  Full-screen **Textual TUI**: discoverable slash-command palette, live progress
+  view, persistent input + keybindings (`ctrl-c` interrupt without quit), a
+  status/mode bar, **multi-agent visibility** (show sub-agents working), and a
+  **live context-size gauge**. Optional dep (`revenant-cli[tui]`), offline, with a
+  byte-identical REPL fallback. Strategy [ADR-0017](0017-interactive-tui.md).
+  - **✅ Phase A (V0–V2) Implemented** (branch `v-series-phase-a`): the event-model
+    foundation. `AgentEvent` gains `agent` + `context` (additive); the loop emits a
+    per-step `context` snapshot (used/max tokens, `folded` flag); sub-agent events
+    are relayed up stamped with a goal label and bracketed by `agent_start`/
+    `agent_end`. Plain/Rich render the `[sub:…]` prefix + new kinds; root events
+    keep **byte-parity**. Tests 532 → 547. The two code-level gaps (sub-agent
+    events not relayed; context size never emitted) are now closed.
+  - **⏭ NEXT: Phase B (V3–V5)** — the Textual app itself: `revenant_cli/tui/`
+    (app shell, ActivityLog with nested sub-agent lanes, StatusBar + ContextGauge),
+    the slash-command palette, keybindings + cooperative `ctrl-c` interrupt. Then a
+    0.5.0 release. Mirrors the U-series A/B rhythm.
 - **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
   one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
   (P8); persisting the code graph (P7).
@@ -70,7 +86,8 @@
 | [0013](0013-proactive-context-injection.md) | Proactive context injection | H2 | Implemented |
 | [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Implemented (tighter-schemas deferred) |
 | [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Implemented |
-| [0016](0016-cli-ux-console-and-setup.md) | **Make the CLI usable** (U-series: setup UX + rich console) | 0.4.0 | Accepted |
+| [0016](0016-cli-ux-console-and-setup.md) | **Make the CLI usable** (U-series: setup UX + rich console) | 0.4.0 | Implemented |
+| [0017](0017-interactive-tui.md) | **Claude-Code-like interactive terminal** (V-series: Textual TUI, slash palette, multi-agent + context view) | 0.5.0 | In progress (Phase A done) |
 
 ---
 

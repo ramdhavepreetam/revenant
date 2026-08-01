@@ -17,6 +17,7 @@ import argparse
 import os
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from nerva_core.aibot_profiles import load_profiles
@@ -116,7 +117,8 @@ def _on_event(console):
     CLI-specific phrasing out of the (engine-agnostic) console module."""
     def sink(ev: AgentEvent) -> None:
         if ev.kind == "error":
-            ev = AgentEvent("error", text=_actionable(ev.text), step=ev.step)
+            # Preserve the other fields (agent/context) while rewriting the text.
+            ev = replace(ev, text=_actionable(ev.text))
         console.event(ev)
     return sink
 
@@ -415,8 +417,17 @@ def _build_agent(args: argparse.Namespace):
         else:
             checkpointer = Checkpointer(workspace, store_path=_checkpoint_store(workspace))
         # F15.1 (P8): let the agent delegate a scoped sub-goal to a nested loop.
+        # V2 (ADR-0017): pass a late-bound sink so the sub-agent's events surface in
+        # the parent's console. The loop (and its on_event) is built below, after
+        # `tools`, so we forward to `loop.on_event` at call time via `parent_hole`.
+        parent_hole: dict = {}
+        def _parent_sink(ev):
+            sink = parent_hole.get("on_event")
+            if sink is not None:
+                sink(ev)
         tools.append(build_spawn_tool(
-            _make_subagent_factory(args), depth=getattr(args, "_subagent_depth", 0)))
+            _make_subagent_factory(args), depth=getattr(args, "_subagent_depth", 0),
+            parent_sink=_parent_sink))
         # F11 (P3): connect configured MCP servers and add their tools. A server
         # that fails to connect is skipped with a warning (degrade, ADR-0001).
         specs = mcp_server_specs(cfg)
@@ -522,6 +533,10 @@ def _build_agent(args: argparse.Namespace):
     loop._checkpointer = checkpointer
     # Stash the console so command handlers can render the header + spinner (U4).
     loop._console = console
+    # V2 (ADR-0017): now that the loop's on_event exists, expose it to the
+    # spawn tool's late-bound parent sink so sub-agent events surface here.
+    if not read_only:
+        parent_hole["on_event"] = getattr(loop, "on_event", None)
     return workspace, config, rec, loop, color
 
 

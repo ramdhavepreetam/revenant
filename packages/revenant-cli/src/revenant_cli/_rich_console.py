@@ -49,22 +49,33 @@ class RichConsole:
 
     # --- agent activity ---------------------------------------------------
     def event(self, ev: AgentEvent) -> None:
+        # V2 (ADR-0017): sub-agent events carry a label; prefix them so nesting is
+        # legible. Root events (agent == "") render exactly as before.
+        pre = f"[sub:{ev.agent}] " if ev.agent else ""
         if ev.kind == "assistant" and ev.text:
-            self._emit(Text(ev.text, style="dim"))
+            self._emit(Text(f"{pre}{ev.text}", style="dim"))
         elif ev.kind == "action":
             args = ", ".join(f"{k}={v!r}" for k, v in ev.args.items())
-            self._emit(Text.assemble(("→ ", "cyan"), (f"{ev.tool}", "bold cyan"),
+            self._emit(Text.assemble((f"{pre}→ ", "cyan"), (f"{ev.tool}", "bold cyan"),
                                       (f"({args})", "cyan")))
         elif ev.kind == "observation":
-            self._emit(self._observation(ev.text))
+            self._emit(self._observation((f"{pre}{ev.text}") if pre else ev.text))
         elif ev.kind == "final":
-            self._emit(Panel(Text(ev.text), title="answer", border_style="green"))
+            self._emit(Panel(Text(ev.text), title=f"answer{(' · ' + ev.agent) if ev.agent else ''}",
+                             border_style="green"))
         elif ev.kind == "error":
-            self._emit(Text(f"error: {ev.text}", style="bold red"), err=True)
+            self._emit(Text(f"{pre}error: {ev.text}", style="bold red"), err=True)
         elif ev.kind == "limit":
-            self._emit(Text(f"[{ev.text}]", style="yellow"), err=True)
+            self._emit(Text(f"{pre}[{ev.text}]", style="yellow"), err=True)
         elif ev.kind == "compact":
-            self._emit(Text(f"[context: {ev.text}]", style="dim"), err=True)
+            self._emit(Text(f"{pre}[context: {ev.text}]", style="dim"), err=True)
+        elif ev.kind == "agent_start":
+            self._emit(Panel(Text(ev.text), title=f"▸ sub-agent · {ev.agent}",
+                             border_style="cyan", expand=False))
+        elif ev.kind == "agent_end":
+            self._emit(Text(f"▪ sub-agent [{ev.agent}] done", style="cyan"), err=True)
+        # "context" events feed the live gauge (V3 TUI); RichConsole is a scrolling
+        # view, so a per-step token line would be noise — stay quiet, like Plain.
         # "approval" handled by approval()/confirm().
 
     def _observation(self, text: str):
