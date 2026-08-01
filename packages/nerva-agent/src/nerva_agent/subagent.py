@@ -19,12 +19,15 @@ Guardrails (ADR-0009):
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Callable, Protocol
 
+from nerva_agent.agent_loop import AgentEvent, EventSink
 from nerva_agent.agent_tools import Tool, ToolParam
 
 
 class _LoopLike(Protocol):
+    on_event: "EventSink | None"
     def run(self, goal: str, history: "list[dict] | None" = None): ...
 
 
@@ -32,6 +35,33 @@ class _LoopLike(Protocol):
 LoopFactory = Callable[[str, "list[str] | None", int], _LoopLike]
 
 DEFAULT_MAX_DEPTH = 2
+
+
+def _label_for(goal: str, max_len: int = 32) -> str:
+    """A short, stable slug for a sub-agent, derived from its goal.
+
+    Used to tag every event the sub-agent emits so a UI can group them in a lane
+    and non-TUI consoles can prefix them (`[sub:<label>] …`).
+    """
+    words = (goal or "").strip().split()
+    slug = "-".join(words)[:max_len].strip("-").lower()
+    return slug or "subagent"
+
+
+def _relay_sink(parent_sink: "EventSink | None", label: str) -> "EventSink | None":
+    """Wrap the parent's sink so a child loop's events flow up, stamped with `label`.
+
+    Preserves an already-set `agent` (so a grandchild keeps its own label rather
+    than being re-tagged by its parent), giving correct nesting at any depth.
+    Returns None when there's no parent sink — the child then behaves as before.
+    """
+    if parent_sink is None:
+        return None
+
+    def sink(ev: AgentEvent) -> None:
+        parent_sink(replace(ev, agent=ev.agent or label))
+
+    return sink
 
 
 def summarize_result(result) -> str:
@@ -58,12 +88,18 @@ def build_spawn_tool(
     *,
     depth: int = 0,
     max_depth: int = DEFAULT_MAX_DEPTH,
+    parent_sink: "EventSink | None" = None,
 ) -> Tool:
     """A `spawn_subagent` Tool bound to `loop_factory` at the current `depth`.
 
     `tools` (optional, comma-separated) scopes the sub-agent's registry; the
     factory decides how to apply it (reusing the skill tool-filter). A run at or
     beyond `max_depth` is refused rather than recursing without bound.
+
+    `parent_sink` is the parent loop's `on_event`. When given (V2, ADR-0017), the
+    sub-agent's events are relayed up stamped with a goal-derived label, bracketed
+    by `agent_start`/`agent_end`, so a UI can show the sub-agent working live.
+    When None, sub-agents run silently exactly as before.
     """
     def run(goal: str, tools: str = "") -> str:
         if depth >= max_depth:
@@ -73,15 +109,26 @@ def build_spawn_tool(
         if not goal:
             return "Refused: spawn_subagent needs a non-empty goal."
         tool_list = [t.strip() for t in tools.split(",") if t.strip()] or None
+        label = _label_for(goal)
         try:
             loop = loop_factory(goal, tool_list, depth + 1)
         except Exception as exc:  # noqa: BLE001 - surface as an observation, not a crash
             return f"ERROR: could not build sub-agent: {exc}"
+        # Route the child's events up to the parent's UI, tagged with `label`.
+        relay = _relay_sink(parent_sink, label)
+        if relay is not None:
+            loop.on_event = relay
+            parent_sink(AgentEvent("agent_start", text=goal, agent=label))
         try:
             result = loop.run(goal)
         except Exception as exc:  # noqa: BLE001
+            if relay is not None:
+                parent_sink(AgentEvent("agent_end", text=f"errored: {exc}", agent=label))
             return f"ERROR: sub-agent run failed: {exc}"
-        return summarize_result(result)
+        summary = summarize_result(result)
+        if relay is not None:
+            parent_sink(AgentEvent("agent_end", text=summary, agent=label))
+        return summary
 
     return Tool(
         name="spawn_subagent",

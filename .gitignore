@@ -12,3 +12,7 @@ dist_pypi/
 dist_installers/
 *.egg-info/
 site_public/
+
+# nervapack code-graph data (local, machine-specific, regenerable via `nervapack ingest`)
+.nervapack/
+.nervapack_ingest.log

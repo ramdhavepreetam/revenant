@@ -27,18 +27,26 @@ Dependency graph (acyclic): `nerva-core ← nerva-agent ← revenant-cli`.
 ## Install
 
 ```bash
-pip install revenant-cli      # installs the `revenant` command
+pip install revenant-cli          # the `revenant` command
+pip install "revenant-cli[tui]"   # + the full-screen interactive terminal
 ```
 
 Or grab a standalone macOS `.dmg` / Windows `.exe` from
-[Releases](https://github.com/ramdhavepreetam/revenant/releases).
+[Releases](https://github.com/ramdhavepreetam/revenant/releases) (installers
+bundle the TUI).
 
 ## Use
 
 ```bash
 revenant --read-only "summarize what packages/nerva-agent does"
 revenant --workspace ~/proj "where is auth handled?"
+revenant chat                     # interactive TUI (type / for commands, ctrl-c to interrupt)
 ```
+
+With `[tui]` installed, `revenant chat` opens a full-screen terminal: a live
+activity view, a discoverable slash-command palette, a context-size gauge,
+sub-agents shown in nested lanes, and in-app diff approvals. Without it (or with
+`--no-tui`), it falls back to the plain REPL.
 
 Needs [Ollama](https://ollama.com) running with a model pulled
 (`ollama pull qwen2.5-coder:7b`). Full docs:

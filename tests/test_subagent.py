@@ -115,3 +115,79 @@ def test_run_error_becomes_observation():
     out = tool.invoke({"goal": "g"})
     assert out.startswith("ERROR:")
     assert "run failed" in out
+
+
+# --- V2 (ADR-0017): sub-agent visibility -------------------------------------
+
+def _emitting_loop_factory(child_events):
+    """A factory whose loop emits `child_events` through its own on_event."""
+    class _Emitter:
+        on_event = None  # the relay is assigned here by build_spawn_tool
+
+        def run(self, goal, history=None):
+            for ev in child_events:
+                if self.on_event is not None:
+                    self.on_event(ev)
+            return _FakeResult(answer="child done")
+
+    return lambda goal, tools, depth: _Emitter()
+
+
+def test_child_events_relayed_stamped_with_label():
+    from nerva_agent.agent_loop import AgentEvent
+
+    seen = []
+    child = [AgentEvent("action", tool="read_file", args={"path": "a.py"}, step=1)]
+    tool = build_spawn_tool(
+        _emitting_loop_factory(child), parent_sink=seen.append)
+    tool.invoke({"goal": "fix the failing test"})
+
+    kinds = [e.kind for e in seen]
+    # lifecycle brackets the child's own events.
+    assert kinds[0] == "agent_start" and kinds[-1] == "agent_end"
+    # every relayed event carries the goal-derived label.
+    label = seen[0].agent
+    assert label and all(e.agent == label for e in seen)
+    # the child's action was relayed through, stamped.
+    assert any(e.kind == "action" and e.tool == "read_file" for e in seen)
+
+
+def test_label_derived_from_goal():
+    seen = []
+    tool = build_spawn_tool(
+        _emitting_loop_factory([]), parent_sink=seen.append)
+    tool.invoke({"goal": "Refactor The Auth Module"})
+    assert seen[0].agent == "refactor-the-auth-module"
+
+
+def test_no_parent_sink_runs_silently():
+    # Without a parent_sink, behavior is exactly as before (no crash, summary out).
+    calls = []
+    tool = build_spawn_tool(_factory(calls))  # no parent_sink
+    out = tool.invoke({"goal": "g"})
+    assert "Sub-agent completed" in out
+
+
+def test_grandchild_keeps_own_label():
+    # A relayed event that already has an `agent` set is NOT re-tagged by a parent.
+    from nerva_agent.agent_loop import AgentEvent
+
+    seen = []
+    grandchild = [AgentEvent("action", tool="grep", agent="deep-task", step=1)]
+    tool = build_spawn_tool(
+        _emitting_loop_factory(grandchild), parent_sink=seen.append)
+    tool.invoke({"goal": "outer goal"})
+    relayed = [e for e in seen if e.kind == "action"][0]
+    assert relayed.agent == "deep-task"  # preserved, not overwritten by "outer-goal"
+
+
+def test_run_error_emits_agent_end():
+    class Boom:
+        on_event = None
+        def run(self, goal, history=None):
+            raise RuntimeError("kaboom")
+    seen = []
+    tool = build_spawn_tool(lambda g, t, d: Boom(), parent_sink=seen.append)
+    out = tool.invoke({"goal": "g"})
+    assert out.startswith("ERROR:")
+    assert seen[-1].kind == "agent_end" and "errored" in seen[-1].text

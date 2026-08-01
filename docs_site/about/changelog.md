@@ -5,6 +5,39 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [0.5.0] — 2026-08-01: the interactive terminal (V-series)
+
+A **Claude-Code-like full-screen terminal** for `revenant chat`. Backward
+compatible: the TUI is opt-in via an optional dependency, and everything falls
+back to the existing REPL when it's absent, piped, or disabled.
+
+### Added
+
+- **Interactive TUI** — `pip install "revenant-cli[tui]"` then `revenant chat`
+  (auto-on in a terminal; force with `--tui`, disable with `--no-tui` or
+  `NO_COLOR`). A persistent input box, a live streaming activity view, and a
+  status bar showing **model · workspace · mode · a live context-size gauge**.
+- **Discoverable slash commands** — type `/` to open a menu of every command
+  **and** skill with a one-line description: `/help /skills /skill <name> /model
+  /context /agents /reset /clear /exit`. No more memorizing.
+- **Multi-agent visibility** — when the agent spawns sub-agents, they appear in
+  **coloured, indented lanes** with a live sub-agent count, so you can watch the
+  delegation happen.
+- **Interrupt without quitting** — `ctrl-c` cancels the current goal cooperatively
+  (the loop stops cleanly between steps); `ctrl-d` quits, `ctrl-l` clears the log.
+- **In-app approvals** — mutating tools prompt in a modal with a **real edit
+  diff**; approve with `y`, deny with `n`/`esc`.
+
+### Changed
+
+- `AgentLoop.run` gained an optional `should_stop` predicate (powers the TUI's
+  interrupt); default behavior is unchanged. New event kinds (`context`,
+  `agent_start`, `agent_end`, `interrupted`) and optional `AgentEvent` fields
+  (`agent`, `context`) are additive — the plain and rich consoles are unaffected
+  (plain output stays byte-identical).
+
+---
+
 ## [0.4.0] — Usability release
 
 The **U-series**: making the CLI genuinely usable — a live console that shows

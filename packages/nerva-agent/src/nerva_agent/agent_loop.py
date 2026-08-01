@@ -38,14 +38,37 @@ from nerva_agent.agent_protocol import (
 
 
 @dataclass
+class ContextInfo:
+    """A snapshot of the running transcript's size vs. its budget (V1, ADR-0017).
+
+    Carried on `AgentEvent.context` for `kind == "context"` events so a UI can
+    show a live "how full is the window" gauge. `folded` is True only on the
+    event emitted right after a compaction fold happened this step.
+    """
+
+    used_tokens: int
+    max_tokens: int
+    folded: bool = False
+
+
+@dataclass
 class AgentEvent:
     """One thing that happened in the loop, for streaming/logging."""
 
-    kind: str  # "assistant" | "action" | "observation" | "final" | "error" | "limit"
+    # "assistant" | "action" | "observation" | "final" | "error" | "limit"
+    # | "approval" | "compact" | "context" | "agent_start" | "agent_end"
+    # | "interrupted"
+    kind: str
     text: str = ""
     tool: str = ""
     args: dict[str, Any] = field(default_factory=dict)
     step: int = 0
+    # V0 (ADR-0017): additive, optional fields. `agent` labels which agent an
+    # event came from ("" = the root loop; a slug = a sub-agent, so a UI can show
+    # multi-agent work in nested lanes). `context` is populated only on
+    # kind == "context". Both default empty so every existing consumer is unchanged.
+    agent: str = ""
+    context: "ContextInfo | None" = None
 
 
 @dataclass
@@ -232,7 +255,8 @@ class AgentLoop:
 
     # --- main loop ---------------------------------------------------------
     def run(
-        self, goal: str, history: list[dict[str, Any]] | None = None
+        self, goal: str, history: list[dict[str, Any]] | None = None,
+        *, should_stop: "Callable[[], bool] | None" = None,
     ) -> AgentResult:
         """Drive `goal` to a final answer or the step cap.
 
@@ -241,6 +265,11 @@ class AgentLoop:
         how the REPL is multi-turn. When it's None the run starts fresh with a
         system+goal transcript, preserving the original single-shot behavior. The
         returned AgentResult.messages is the transcript to thread into the next turn.
+
+        `should_stop` (V5, ADR-0017) is an optional predicate checked between steps;
+        when it returns True the loop stops cooperatively with stopped_reason
+        "interrupted" (used by the TUI's ctrl-c to cancel without killing the
+        thread). Default None = never interrupted — behavior is exactly as before.
         """
         events: list[AgentEvent] = []
         if history:
@@ -265,13 +294,33 @@ class AgentLoop:
         bad_parses = 0
 
         for step in range(1, self.max_steps + 1):
+            # V5 (ADR-0017): cooperative cancel — stop cleanly between steps rather
+            # than killing the worker thread, so the transcript stays consistent.
+            if should_stop is not None and should_stop():
+                self._emit(AgentEvent("interrupted", text="stopped by user", step=step - 1), events)
+                return AgentResult("", step - 1, "interrupted", events, messages)
             before = len(messages)
             messages = self._compact_messages(messages)
-            if len(messages) < before:
+            folded = len(messages) < before
+            if folded:
                 self._emit(
                     AgentEvent("compact", text=f"compacted {before - len(messages)} old turns", step=step),
                     events,
                 )
+            # V1 (ADR-0017): emit a context snapshot every step so a UI can show a
+            # live usage gauge. `folded` marks the step a compaction actually ran.
+            self._emit(
+                AgentEvent(
+                    "context",
+                    step=step,
+                    context=ContextInfo(
+                        used_tokens=self._total_tokens(messages),
+                        max_tokens=self.max_context_tokens,
+                        folded=folded,
+                    ),
+                ),
+                events,
+            )
             try:
                 message = call_model_message(self.config, messages, tools=native_tools)
             except LocalLLMError as exc:
