@@ -75,6 +75,29 @@ def post_json(url: str, payload: dict[str, Any], timeout: int) -> dict[str, Any]
         raise LocalLLMError(f"Invalid JSON response from {url}: {body[:500]}") from exc
 
 
+def list_local_models(base_url: str, timeout: int = 3) -> "list[str] | None":
+    """Return the model names the local server has pulled (Ollama `/api/tags`).
+
+    Distinguishes three states so callers can give an actionable message:
+      - None  -> the server is unreachable (Ollama not running / wrong host)
+      - []    -> reachable but no models pulled
+      - [...] -> the pulled model names, sorted
+
+    Never raises — a pre-flight/doctor check must degrade, not crash.
+    """
+    url = f"{base_url.rstrip('/')}/api/tags"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+    models = data.get("models") if isinstance(data, dict) else None
+    if not isinstance(models, list):
+        return []
+    names = [m.get("name") for m in models if isinstance(m, dict) and m.get("name")]
+    return sorted(n for n in names if isinstance(n, str))
+
+
 def trim_messages(messages: list[dict[str, str]], keep_last: int) -> list[dict[str, str]]:
     system = [message for message in messages if message["role"] == "system"][:1]
     rest = [message for message in messages if message["role"] != "system"]

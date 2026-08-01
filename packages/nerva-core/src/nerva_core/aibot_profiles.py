@@ -7,11 +7,18 @@ from typing import Any
 
 DEFAULT_PROFILES: dict[str, Any] = {
     "models": {
+        "qwen2.5-coder-7b": {
+            "backend": "ollama",
+            "base_url": "http://localhost:11434",
+            "model": "qwen2.5-coder:7b",
+            "notes": "Default. Code-specialized, native tool-calling, small enough "
+                     "for a first-run one-pull setup (matches the quickstart docs).",
+        },
         "qwen2.5-7b": {
             "backend": "ollama",
             "base_url": "http://localhost:11434",
             "model": "qwen2.5:7b",
-            "notes": "Native tool-calling; router role + fast/light coding.",
+            "notes": "General 7b; alternative router/summary model.",
         },
         "qwen2.5-coder-14b": {
             "backend": "ollama",
@@ -31,12 +38,13 @@ DEFAULT_PROFILES: dict[str, Any] = {
     # to a model via this map + the "models" section above, so endpoint data is
     # never duplicated. "fallback" names the role used when classification fails.
     "model_roles": {
-        "code": "qwen2.5-coder-14b",
+        # code/router/summary all default to the coder-7b so a first-run setup
+        # needs exactly ONE `ollama pull qwen2.5-coder:7b` (matches the docs).
+        # Power users can repoint these at qwen2.5-coder-14b / qwen2.5-14b.
+        "code": "qwen2.5-coder-7b",
         "language": "qwen2.5-14b",
-        "router": "qwen2.5-7b",
-        # Small/fast model for context compaction (F5); reuses the 7b already
-        # pulled for routing so no extra download is required.
-        "summary": "qwen2.5-7b",
+        "router": "qwen2.5-coder-7b",
+        "summary": "qwen2.5-coder-7b",
         "fallback": "language",
     },
     "generation_presets": {

@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-07-31 · **Tests:** 472 green · **Shipped: v0.2.0 on PyPI** · **H-series (0.3.0) complete** 🎉
+**Last updated:** 2026-07-31 · **Tests:** 482 green · **Shipped: v0.3.0 on PyPI** · **Building: U-series (0.4.0 — CLI UX)**
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -16,17 +16,19 @@
   git-native undo. All 14 PRs merged.
 - **📦 Shipped to PyPI: v0.2.0** (`pip install -U revenant-cli`) — tag `v0.2.0`.
 - **Suite:** 366 tests green (`python3 -m pytest tests/ -q`).
-- **🎉 H-series (0.3.0) COMPLETE — H0/H1/H2/H3 all Implemented.** The harness now
-  verifies+repairs edits (H1), pushes code context (H2), decomposes long goals
-  (H3), and measures its own lift (H0). Strategy
-  [ADR-0011](0011-harness-carries-the-model.md); the small local model punches
-  above its weight. **⏭ NEXT: run the H0 evals against a real 14B to quantify the
-  lift**, then tag/ship **0.3.0** to PyPI.
+- **🎉 H-series (0.3.0) COMPLETE + RELEASED.** H0/H1/H2/H3 all Implemented;
+  **v0.3.0 on PyPI + GitHub Release** (installers attached). Docs live at
+  https://ramdhavepreetam.github.io/revenant/ (auto-deploy, token-free).
+- **🔨 NOW: U-series (0.4.0) — make the CLI usable.** Strategy + phases in
+  [ADR-0016](0016-cli-ux-console-and-setup.md). Two problems: setup friction
+  (no preflight, no model picker, a default-model-vs-docs **bug**, unhelpful
+  errors) and no live "what's going on" console. Plan: **U0** default-model fix →
+  **U1** preflight+errors+OLLAMA_HOST → **U2** doctor/models/picker (ships Phase A)
+  → **U3** Console abstraction (rich optional + ANSI fallback) → **U4** reroute
+  event/approval/diff/spinner/chrome (ships Phase B). Order: U0 first.
 - **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
   one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
   (P8); persisting the code graph (P7).
-- **Done since the roadmap:** user docs refreshed (#11); `run --skill` + loop
-  `--watch` (#12); graph F14.3/F14.4 (#13); **0.2.0 released to PyPI** (#14).
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
@@ -68,6 +70,7 @@
 | [0013](0013-proactive-context-injection.md) | Proactive context injection | H2 | Implemented |
 | [0014](0014-decompose-and-per-step-verify.md) | Decompose + per-step verify | H3 | Implemented (tighter-schemas deferred) |
 | [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Implemented |
+| [0016](0016-cli-ux-console-and-setup.md) | **Make the CLI usable** (U-series: setup UX + rich console) | 0.4.0 | Accepted |
 
 ---
 
@@ -109,6 +112,23 @@ failure mode in ADR-0011 now has a shipped countermeasure.
 
 **Governing rule:** the model proposes; the harness verifies and repairs. A model
 mistake that reaches the user is a *harness* failure.
+
+### 0.4.0 — the U-series: make the CLI usable
+
+P0–P8 + the H-series made the agent *capable*; the **U-series** makes it
+*usable*. Two problems (found by reading the code): setup friction and no live
+console. Strategy + phases: [ADR-0016](0016-cli-ux-console-and-setup.md).
+
+| Phase | Pillar | Fixes | Status |
+|-------|--------|-------|--------|
+| **U0** | Default-model fix | first run fails ("model not found") — role ≠ docs | ✅ Shipped |
+| **U1** | Preflight + errors | Ollama down / model unpulled → cryptic failure; no `OLLAMA_HOST` | ✅ Shipped |
+| **U2** | `doctor`/`models`/picker | no diagnostics, no model discovery, `config` is a stub | ✅ Shipped |
+| **U3** | Console abstraction | `rich` optional + plain-ANSI fallback (byte-parity) | ⬜ **Next** |
+| **U4** | Reroute chrome | no live "thinking…", no real diffs, noisy startup | ⬜ |
+
+**Constraints:** `rich` is an *optional* dep (fallback = today's output, so zero
+required deps; ADR-0001/0002 hold); terminal UX lives in `revenant-cli` only.
 
 ---
 
@@ -174,6 +194,17 @@ plugs into one — it is not greenfield:
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-07-31 (e) — U-series (0.4.0) planned + started
+- 0.3.0 fully released since (d): PyPI + GitHub Release (installers), docs live
+  and auto-deploying, CI fixed (installer perms, Windows install gate, evals
+  import). Suite 482 green.
+- **Planned the U-series** (ADR-0016) — make the CLI usable: setup UX (U0 default-
+  model bug, U1 preflight/errors/OLLAMA_HOST, U2 doctor/models/picker) then a rich
+  live console (U3 abstraction, U4 reroute chrome). `rich` optional + ANSI
+  fallback. Research: 3 Explore agents mapped output/event system, Ollama/model
+  friction, and dep/packaging constraints; a Plan agent designed the Console
+  abstraction. Started with the durable record (this ADR + README) before code.
 
 ### 2026-07-31 (c) — H0/H2/H3 shipped → H-series complete
 - **H0 eval harness** (agent-built): `evals/` + 5 tasks + runner + `--compare`;

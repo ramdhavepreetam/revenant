@@ -30,6 +30,8 @@ dispatching read-only tools freely and mutating tools behind approval. A bare
 | [`undo`](#undo) | Revert changes the agent made. |
 | [`mcp`](#mcp) | Inspect configured MCP servers and their tools. |
 | [`skills`](#skills) | List and show reusable `SKILL.md` workflows. |
+| [`doctor`](#doctor) | Check Ollama + model setup; show resolved config. |
+| [`models`](#models) | List models pulled on the Ollama server. |
 | [`resume`](#resume) | Resume a saved session. |
 | `config` | Show/edit configuration *(coming soon)*. |
 
@@ -209,6 +211,33 @@ discovered from `.revenant/skills/` (project) and `~/.config/revenant/skills/`
 Invoke a skill inside `chat` with `/skill <name>`.
 
 ---
+
+## `doctor`
+
+```bash
+revenant doctor [--base-url URL] [--model NAME] [--workspace PATH]
+```
+
+Diagnoses your setup: whether Ollama is reachable, which models are pulled, the
+config that a run would resolve (model / base URL / workspace), and whether you're
+ready to run. Exit `0` if healthy, `1` otherwise (scriptable). Run this first if
+anything isn't working.
+
+## `models`
+
+```bash
+revenant models [--base-url URL]
+```
+
+Lists the models pulled on the Ollama server, marking the one your `code` role
+resolves to. If Ollama isn't reachable, it says so with the fix.
+
+!!! tip "First-run setup"
+    Every run does a **pre-flight** check first: if Ollama isn't running or the
+    model isn't pulled, it stops with the exact command to fix it (`ollama serve`
+    / `ollama pull …`) — and offers a picker of your pulled models. Bypass with
+    `--skip-preflight`. Point at a non-default server with `--base-url` or the
+    `OLLAMA_HOST` environment variable.
 
 ## `resume`
 
