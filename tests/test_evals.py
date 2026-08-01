@@ -314,3 +314,81 @@ def test_all_tasks_have_unique_names():
 def test_get_task_unknown_name_raises_with_known_list():
     with pytest.raises(KeyError, match="fix_failing_test"):
         get_task("does-not-exist")
+
+
+# --- --repeat aggregation (methodology fix for model non-determinism) --------
+
+from evals.run import run_task, TaskOutcome, Report
+
+
+class _FlakyRunner:
+    """An AgentRunner whose fixes succeed on a scripted subset of attempts.
+
+    `succeed_on` is a set of 0-based attempt indices where it 'fixes' the file so
+    the scorer passes; other attempts leave it broken.
+    """
+    def __init__(self, succeed_on):
+        self.succeed_on = set(succeed_on)
+        self.n = 0
+    def run(self, workspace, goal):
+        from pathlib import Path
+        idx = self.n; self.n += 1
+        # Each task's scorer runs pytest on a fixture; we just make a marker file
+        # the fake task below checks. (Real tasks are model-driven; unit tests use
+        # a synthetic task.)
+        (Path(workspace) / "result").write_text("pass" if idx in self.succeed_on else "fail")
+
+
+def _synthetic_task():
+    from evals.tasks.base import Task, ScoreResult
+    from pathlib import Path
+    return Task(
+        name="synthetic",
+        goal="make result say pass",
+        setup=lambda ws: (Path(ws) / "seed").write_text("x"),
+        score=lambda ws: (ScoreResult.ok("ok") if (Path(ws) / "result").exists()
+                          and (Path(ws) / "result").read_text() == "pass"
+                          else ScoreResult.fail("not passing")),
+        description="synthetic",
+    )
+
+
+def test_repeat_records_pass_tally():
+    task = _synthetic_task()
+    out = run_task(task, _FlakyRunner(succeed_on={0, 2, 3}), repeat=5)
+    assert out.runs == 5
+    assert out.passes == 3
+    assert out.task_pass_rate == 0.6
+
+
+def test_repeat_majority_verdict_pass():
+    out = run_task(_synthetic_task(), _FlakyRunner(succeed_on={0, 1, 2}), repeat=5)  # 3/5
+    assert out.passed is True   # majority (>50%)
+
+
+def test_repeat_majority_verdict_fail():
+    out = run_task(_synthetic_task(), _FlakyRunner(succeed_on={0, 1}), repeat=5)  # 2/5
+    assert out.passed is False  # not a majority
+
+
+def test_repeat_tie_is_not_majority():
+    out = run_task(_synthetic_task(), _FlakyRunner(succeed_on={0, 1}), repeat=4)  # 2/4 tie
+    assert out.passed is False  # strict majority required
+
+
+def test_repeat_one_matches_single_run():
+    out = run_task(_synthetic_task(), _FlakyRunner(succeed_on={0}), repeat=1)
+    assert out.runs == 1 and out.passes == 1 and out.passed is True
+
+
+def test_outcome_defaults_normalize_for_failed_single_run():
+    # A plain failed single-run outcome must show passes=0 (not the default).
+    o = TaskOutcome("t", False, "nope", 1.0)
+    assert o.runs == 1 and o.passes == 0
+
+
+def test_report_json_roundtrip_with_repeat_fields():
+    o = TaskOutcome("t", True, "3/5 passed", 2.0, runs=5, passes=3)
+    r = Report(model="m", outcomes=[o])
+    r2 = Report.from_dict(r.to_dict())
+    assert r2.outcomes[0].runs == 5 and r2.outcomes[0].passes == 3
