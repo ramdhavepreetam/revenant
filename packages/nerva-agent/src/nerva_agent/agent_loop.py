@@ -24,7 +24,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from nerva_core.local_llm_writer import (
-    ChatConfig, call_model, call_model_message, LocalLLMError, estimate_tokens,
+    ChatConfig, call_model, call_model_message, stream_model, LocalLLMError,
+    estimate_tokens,
 )
 from nerva_agent.agent_tools import ToolRegistry, ToolError
 from nerva_agent.agent_protocol import (
@@ -57,7 +58,11 @@ class AgentEvent:
 
     # "assistant" | "action" | "observation" | "final" | "error" | "limit"
     # | "approval" | "compact" | "context" | "agent_start" | "agent_end"
-    # | "interrupted"
+    # | "interrupted" | "token"
+    # W1 (ADR-0019): "token" events carry an incremental `text` delta as the model
+    # generates the assistant turn, so a UI can render the answer as it streams.
+    # They are purely additive — a consumer that ignores "token" still sees the
+    # whole text on the subsequent "assistant"/"final" event (byte-parity).
     kind: str
     text: str = ""
     tool: str = ""
@@ -120,6 +125,7 @@ class AgentLoop:
         summarizer_config: ChatConfig | None = None,
         before_tool: "BeforeToolHook | None" = None,
         after_tool: "AfterToolHook | None" = None,
+        stream: bool = False,
     ) -> None:
         self.config = config
         self.registry = registry
@@ -155,12 +161,55 @@ class AgentLoop:
         # and may APPEND to the observation (e.g. a verification failure to repair,
         # H1/ADR-0012). A hook error is swallowed so a verifier can't break a run.
         self.after_tool = after_tool
+        # stream (W1, ADR-0019): when True AND the prompt-based protocol is in use
+        # (no native tool schema), the assistant turn is streamed via stream_model
+        # and each delta is emitted as a "token" event. Native tool-calling turns
+        # (which need the whole message to read tool_calls) are handled in W2; any
+        # streaming error falls back to the non-streaming call for that turn. The
+        # buffered text is byte-identical to the non-streaming path.
+        self.stream = stream
 
     # --- helpers -----------------------------------------------------------
     def _emit(self, event: AgentEvent, sink_events: list[AgentEvent]) -> None:
         sink_events.append(event)
         if self.on_event is not None:
             self.on_event(event)
+
+    def _next_message(
+        self,
+        messages: list[dict[str, Any]],
+        native_tools: "list[dict] | None",
+        step: int,
+        events: list[AgentEvent],
+    ) -> dict[str, Any]:
+        """Get the next assistant message, streaming its content when possible (W1).
+
+        Streaming applies only when `self.stream` is on AND we're on the
+        prompt-based path (`native_tools is None`) — there the whole reply is
+        plain content parsed by `parse_action`, so streaming the deltas loses
+        nothing. Each delta is emitted as a "token" event; the buffered text is
+        returned as `{"role": "assistant", "content": <full text>}`, byte-identical
+        to what `call_model_message` would return for that turn.
+
+        Native tool-calling turns (which must read `message["tool_calls"]` from the
+        whole message) keep the non-streaming call — W2 handles them. Any streaming
+        error falls back to the non-streaming call for this turn, so a flaky stream
+        never fails a run.
+        """
+        if not self.stream or native_tools is not None:
+            return call_model_message(self.config, messages, tools=native_tools)
+        try:
+            buf: list[str] = []
+            for delta in stream_model(self.config, messages):
+                if not delta:
+                    continue
+                buf.append(delta)
+                self._emit(AgentEvent("token", text=delta, step=step), events)
+            return {"role": "assistant", "content": "".join(buf)}
+        except LocalLLMError:
+            # Streaming transport failed mid-turn: fall back to the plain call so
+            # the run continues (degrade gracefully, ADR-0001 invariant 4).
+            return call_model_message(self.config, messages, tools=native_tools)
 
     def _system_prompt(self) -> str:
         parts = []
@@ -322,7 +371,7 @@ class AgentLoop:
                 events,
             )
             try:
-                message = call_model_message(self.config, messages, tools=native_tools)
+                message = self._next_message(messages, native_tools, step, events)
             except LocalLLMError as exc:
                 self._emit(AgentEvent("error", text=str(exc), step=step), events)
                 return AgentResult("", step - 1, "error", events, messages)

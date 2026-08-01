@@ -79,7 +79,13 @@ class ActivityLog(RichLog):
             return [Text(f"▪ sub-agent [{ev.agent}] done",
                          style=_lane_color(ev.agent))]
         # "context" is consumed by the StatusBar gauge, not the log; "approval" is
-        # handled by the modal screen. Anything else: ignore silently.
+        # handled by the modal screen.
+        # "token" (W1, ADR-0019): the loop emits per-delta token events. RichLog is
+        # a line-append widget (no in-place line rewrite), so streaming a delta per
+        # write would spam one char per line. We coalesce instead: the full answer
+        # still lands via the "assistant"/"final" line. True in-place token
+        # rendering is a follow-on (would need a mutable "current line" widget).
+        # Anything else: ignore silently.
         return []
 
 

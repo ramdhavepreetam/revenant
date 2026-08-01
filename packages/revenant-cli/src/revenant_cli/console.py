@@ -53,6 +53,10 @@ class PlainConsole:
 
     def __init__(self, color: bool = True) -> None:
         self.c = _palette(color)
+        # W1 (ADR-0019): how much text we've already printed via live "token"
+        # deltas this turn, so the terminal "assistant"/"final" event doesn't
+        # reprint it (it just closes the line). "" = no streaming happened.
+        self._streamed = ""
 
     # --- agent activity (was make_printer) --------------------------------
     def event(self, ev: AgentEvent) -> None:
@@ -61,7 +65,19 @@ class PlainConsole:
         # nesting is legible in plain output. Root events (agent == "") are
         # unprefixed — byte-identical to the legacy renderer.
         p = f"{c['dim']}[sub:{ev.agent}]{c['reset']} " if ev.agent else ""
+        if ev.kind == "token":
+            # W1: live delta — print inline, no newline, dim like the assistant
+            # echo it will replace. Accumulate so the closing event knows to skip.
+            if ev.text:
+                if not self._streamed:
+                    sys.stdout.write(f"{p}{c['dim']}")
+                sys.stdout.write(ev.text)
+                sys.stdout.flush()
+                self._streamed += ev.text
+            return
         if ev.kind == "assistant" and ev.text:
+            if self._end_stream_if_active(ev.text):
+                return
             print(f"{p}{c['dim']}{ev.text}{c['reset']}")
         elif ev.kind == "action":
             args = ", ".join(f"{k}={v!r}" for k, v in ev.args.items())
@@ -71,7 +87,13 @@ class PlainConsole:
             indented = "\n".join("  " + line for line in body.splitlines())
             print(f"{p}{c['dim']}{indented}{c['reset']}")
         elif ev.kind == "final":
-            print(f"\n{p}{c['green']}{c['bold']}{ev.text}{c['reset']}")
+            # If we streamed this turn's content live, the answer is already on
+            # screen (as dim deltas): just close the line, don't reprint it.
+            if self._streamed:
+                self._streamed = ""
+                print(c['reset'])  # close the dim run + newline
+            else:
+                print(f"\n{p}{c['green']}{c['bold']}{ev.text}{c['reset']}")
         elif ev.kind == "error":
             print(f"{p}{c['red']}error: {ev.text}{c['reset']}", file=sys.stderr)
         elif ev.kind == "limit":
@@ -87,6 +109,15 @@ class PlainConsole:
         # "context" events feed the UI's live gauge; PlainConsole stays quiet to
         # keep byte-parity (a per-step token print would be noise). "approval"
         # events are handled by the approver, not printed here.
+
+    def _end_stream_if_active(self, text: str) -> bool:
+        """If a live stream produced `text` this turn, close its line and report
+        True (caller should NOT reprint). Else False (print normally). W1."""
+        if self._streamed:
+            self._streamed = ""
+            print(self.c['reset'])  # close the dim run started by the deltas
+            return True
+        return False
 
     # --- chrome -----------------------------------------------------------
     def status(self, msg: str, *, kind: str = "info") -> None:

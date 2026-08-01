@@ -200,6 +200,11 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
                    help="Compact once the transcript exceeds this budget (0 = auto from hardware).")
     p.add_argument("--no-native-tools", action="store_true",
                    help="Force the prompt-based protocol even on tool-capable models.")
+    p.add_argument("--stream", dest="stream", action="store_true", default=None,
+                   help="Stream the assistant's reply token-by-token (prompt-based "
+                        "protocol only). Default: on for interactive chat, off elsewhere.")
+    p.add_argument("--no-stream", dest="stream", action="store_false",
+                   help="Disable token streaming; wait for the whole reply.")
     p.add_argument("--read-only", action="store_true",
                    help="Disable mutating tools (write/edit/bash); investigate only.")
     p.add_argument("--yolo", action="store_true",
@@ -546,6 +551,10 @@ def _build_agent(args: argparse.Namespace):
         summarizer_config=summarizer,
         before_tool=(checkpointer.snapshot if checkpointer else None),
         after_tool=after_tool,
+        # W1 (ADR-0019): stream the assistant reply when explicitly asked. The
+        # `chat` command flips the default on for an interactive TTY (below);
+        # `run`/eval leave it off (None -> False) so batch output is unchanged.
+        stream=bool(getattr(args, "stream", None)),
     )
     # Stash MCP clients on the loop so the command handler can close them on exit.
     loop._mcp_clients = mcp_clients
@@ -926,6 +935,11 @@ def cmd_chat(args: argparse.Namespace, input_fn=input,
     session is auto-saved after every turn under `<ws>/.aibot/sessions/` so it can
     be resumed later; the id is stable for the REPL's lifetime.
     """
+    # W1 (ADR-0019): stream by default in an interactive terminal (the live reply
+    # is the point of chat); leave it as explicitly set otherwise. `run`/eval never
+    # reach here, so their default stays off.
+    if getattr(args, "stream", None) is None:
+        args.stream = sys.stdout.isatty() and not getattr(args, "no_color", False)
     built = _build_agent(args)
     if built is None:
         return 2

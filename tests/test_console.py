@@ -156,6 +156,53 @@ def test_context_event_is_silent_in_plain():
     assert out == "" and err == ""  # feeds the TUI gauge, not the scroll
 
 
+# --- W1 (ADR-0019): token streaming render -----------------------------------
+
+def _drive(events):
+    """Feed a sequence of events to one PlainConsole; return (stdout, stderr)."""
+    con = PlainConsole(color=False)
+    out, err = io.StringIO(), io.StringIO()
+    with redirect_stdout(out), redirect_stderr(err):
+        for ev in events:
+            con.event(ev)
+    return out.getvalue(), err.getvalue()
+
+
+def test_token_events_render_deltas_inline():
+    out, _err = _drive([
+        AgentEvent("token", text="Hello, "),
+        AgentEvent("token", text="world."),
+        AgentEvent("final", text="Hello, world."),
+    ])
+    # The streamed deltas appear inline...
+    assert "Hello, world." in out
+    # ...and the final answer is NOT printed twice (streamed once + final line).
+    assert out.count("Hello, world.") == 1
+
+
+def test_final_without_streaming_prints_the_answer():
+    # No token events -> the final event prints the whole answer (byte-parity).
+    out, _err = _drive([AgentEvent("final", text="Just the answer.")])
+    assert "Just the answer." in out
+
+
+def test_streamed_assistant_turn_not_duplicated():
+    # A tool turn: content streamed as tokens, then an "assistant" echo of the
+    # same text must NOT reprint it (the deltas already showed it).
+    out, _err = _drive([
+        AgentEvent("token", text="calling the tool"),
+        AgentEvent("assistant", text="calling the tool"),
+        AgentEvent("action", tool="read_file", args={"path": "a.py"}),
+    ])
+    assert out.count("calling the tool") == 1
+
+
+def test_token_event_is_silent_when_not_streaming_elsewhere():
+    # A lone token still writes its delta (no crash, no stderr noise).
+    out, err = _plain(AgentEvent("token", text="x"), color=False)
+    assert "x" in out and err == ""
+
+
 # --- approval confirm (plain) ------------------------------------------------
 
 def test_plain_confirm_yes(monkeypatch, capsys):

@@ -111,12 +111,15 @@ rich consoles keep byte-parity when they ignore the new `token` kind.
 - [x] 3–5 project-wide-rename tasks exist and fail against a no-op agent (ready to
       score W4). **(W0 — 3 added: rename_across_package, rename_class_across_modules,
       rename_with_shadow.)**
-- [ ] `revenant chat`/TUI streams the assistant's answer token-by-token; the final
-      answer is byte-identical to the non-streaming path.
-- [ ] A turn that ends in a tool call still dispatches, approves, and undoes exactly
-      as before — streaming changed only the content render.
-- [ ] Plain console (ignoring `token`) keeps byte-parity; suite green (bare
+- [x] `revenant chat` streams the assistant's answer token-by-token (PlainConsole
+      renders deltas inline); the final answer is byte-identical to the
+      non-streaming path. **(W1 — verified end-to-end.)**
+- [x] A turn that ends in a tool call still dispatches, approves, and undoes exactly
+      as before — streaming changed only the content render. **(W1 — prompt-based
+      path streams then parses the buffered action; native path unchanged.)**
+- [x] Plain console (ignoring `token`) keeps byte-parity; suite green (bare
       `pytest`), ADR-0019 + README updated. Streaming failure falls back cleanly.
+      **(W1.)** *(TUI in-place token render + native-tool-turn streaming = W2.)*
 
 ## Open questions
 - **Streaming scope for v1:** stream only the *final* content answer, or every
@@ -159,3 +162,28 @@ rich consoles keep byte-parity when they ignore the new `token` kind.
     parametrized per-task tests auto-cover the 3 new fixtures. Suite **573 → 591**.
     Verified end-to-end model-free: `--compare` shows the cost line, `--gate`
     exit-codes correctly, no-model run skips cleanly. **Next: W1 (content streaming).**
+- 2026-08-01 — **W1 Implemented** — stream plain-content assistant text.
+  - **Event.** `AgentEvent` gains a `"token"` kind (additive; documented at the
+    kind set). A `token` event carries an incremental `text` delta.
+  - **Loop.** `AgentLoop(stream=...)` toggle + a `_next_message` helper: on the
+    **prompt-based path** (`native_tools is None`) with `stream=True`, the turn is
+    read via `stream_model`, each delta emitted as a `token` event, and the full
+    text buffered into an identical `{"role":"assistant","content":…}` message so
+    `parse_action`/dispatch/transcript are byte-identical. Native tool-calling
+    turns keep `call_model_message` (must read `tool_calls` whole — that's W2). Any
+    `LocalLLMError` mid-stream falls back to the non-streaming call for that turn.
+  - **Render.** `PlainConsole` renders `token` deltas inline (dim), and the closing
+    `final`/`assistant` event does **not** reprint (no duplication); a non-streaming
+    turn is byte-identical to before. `RichConsole` stays quiet on `token` (per-call
+    spinner pause would jank) — the full answer still renders once. The TUI's
+    `ActivityLog` coalesces (line-append widget; true in-place token render is a
+    follow-on) — flagged for W2.
+  - **CLI.** `--stream`/`--no-stream` on `run`/`chat`; `chat` defaults streaming ON
+    for an interactive TTY, OFF elsewhere (so `run`/eval output is unchanged).
+  - **Tests.** `test_agent_loop.py` +6 (token concatenation == answer; byte-parity
+    vs non-streaming; token-ignoring consumer still sees `final`; streamed tool
+    action still dispatches; error→fallback; native turn never streams).
+    `test_console.py` +4 (inline deltas, no duplication, no-stream byte-parity).
+    Suite **591 → 601**. Verified end-to-end: 4 deltas render live through the real
+    PlainConsole, answer not duplicated. **Next: W2 (tool-call turns under
+    streaming + live TUI render).**
