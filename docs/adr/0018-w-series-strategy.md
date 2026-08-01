@@ -1,7 +1,7 @@
 # ADR-0018 — W-series: faster to watch, deeper, and measurably better (strategy)
 
-- **Status:** Accepted (strategy) · phase ADRs 0019 (A) / 0020 (B) / 0021 (C) track
-  the slices below
+- **Status:** Implemented (all phases) · released v0.6.0 · phase ADRs 0019 (A) /
+  0020 (B) / 0021 (C) track the slices below
 - **Phase:** W-series (0.6.0) · **W-slices:** W0 eval metrics+gate, W1 content
   streaming, W2 tool-turn streaming, W3 `--every`+graph cache, W4a `replace_all`+
   single-file rename, W4b `ToolParam` array type, W4c multi-file `apply_edits`,

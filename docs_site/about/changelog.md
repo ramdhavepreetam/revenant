@@ -5,6 +5,47 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [0.6.0] — 2026-08-01: faster, deeper, measurable (W-series)
+
+The **W-series**: the agent gets **faster to watch**, **deeper in what it can
+safely do**, and **measurably better**. Backward-compatible with 0.5.0 — streaming
+and the new tools degrade or default off where appropriate.
+
+### Added
+
+- **Token-by-token streaming** — the assistant's reply now streams live as it
+  generates, both in `revenant chat` (inline) and the TUI (a live in-place line).
+  On by default in an interactive terminal; `--stream`/`--no-stream` to control it.
+  Works on both the prompt-based and native tool-calling paths (the tool call
+  arrives whole; only the content prefix streams).
+- **Atomic project-wide edits** — a new `apply_edits` tool applies a set of edits
+  across many files **all-or-nothing**: if any edit fails, every change is rolled
+  back, so a rename is never left half-applied. `edit_file` gains `all=true` to
+  replace every occurrence in a file (default stays exactly-one).
+- **`revenant loop --every <seconds>`** — re-run a goal on a fixed interval (a
+  time-triggered companion to `--watch`), within the existing budget.
+- **Persisted, incremental code graph** — the code graph is cached under
+  `.aibot/code_graph.json` and only re-indexes files that changed since last run
+  (a corrupt cache falls back to a full rebuild). `--no-graph-cache` opts out.
+- **Role-routed sub-agents** — `spawn_subagent(role=…)` runs a sub-agent under a
+  different model (via the role router), e.g. a stronger planner delegating cheap
+  mechanical work. No role = the parent's model, as before.
+- **`revenant mcp add <name>`** — add an MCP server to your config from the CLI
+  (stdio or the new HTTP/SSE transport), instead of hand-editing `[[mcp.servers]]`.
+- **MCP over HTTP/SSE** — MCP servers can now be reached over HTTP/SSE (a local
+  URL), not just stdio subprocesses. Fully offline: the URL is a local server.
+
+### Changed
+
+- **Measurable harness** — the eval harness (`evals/run.py`) now records
+  step-count, token-cost, and edit-precision per task (not just pass/fail);
+  `--compare` diffs them, and `--gate baseline.json` fails CI on a regression.
+  Three project-wide-rename tasks were added. New `AgentEvent` kind (`token`) and
+  the `ToolParam` array-of-objects shape are additive — existing consumers and
+  scalar tools are byte-identical.
+
+---
+
 ## [0.5.0] — 2026-08-01: the interactive terminal (V-series)
 
 A **Claude-Code-like full-screen terminal** for `revenant chat`. Backward
