@@ -81,11 +81,24 @@ class RevenantAgentRunner:
         import argparse as _argparse
         from revenant_cli.cli import _build_agent
 
+        # When verify is on, enable the harness's correctness features for this
+        # task: write a [verify] config into the workspace and turn the code graph
+        # ON (so H2 context injection is active too). This is what makes the eval
+        # an honest "harness on vs. off" comparison (ADR-0015 --compare).
+        if self.verify:
+            # Rely on the built-in per-file pycompile (on by default) for syntax,
+            # and pytest for behavior. NO {paths}-scoped py_compile command — that
+            # runs with an empty arg after a run_bash step and would false-fail.
+            (workspace / ".revenant.toml").write_text(
+                "[verify]\nenabled = true\nmax_repair_attempts = 3\n"
+                "pycompile = true\ncommands = [\"pytest -q\"]\n"
+            )
+
         args = _argparse.Namespace(
             workspace=str(workspace), base_url=self.base_url, model=self.model,
             max_steps=self.max_steps, max_context_tokens=0,
             no_native_tools=False, read_only=False, yolo=True, no_color=True,
-            no_graph=True, skill=None,
+            no_graph=not self.verify, skill=None,   # graph (H2) on when verifying
         )
         built = _build_agent(args)
         if built is None:
@@ -119,6 +132,20 @@ class TaskOutcome:
     detail: str = ""
     seconds: float = 0.0
     skipped: bool = False
+    # With --repeat N, a task is run N times to average out model non-determinism.
+    # `runs`/`passes` record the tally; `passed` is the majority verdict. Default
+    # -1 means "not set" -> normalized in __post_init__ to a single run matching
+    # `passed`, so single-run code paths and older saved JSON stay valid.
+    runs: int = 1
+    passes: int = -1
+
+    def __post_init__(self) -> None:
+        if self.passes < 0:
+            self.passes = 1 if self.passed else 0
+
+    @property
+    def task_pass_rate(self) -> float:
+        return self.passes / self.runs if self.runs else 0.0
 
 
 @dataclass
@@ -168,12 +195,9 @@ class Report:
 
 # --- runner core ---------------------------------------------------------------
 
-def run_task(task: Task, agent_runner: AgentRunner, *, tmp_root: "Path | None" = None) -> TaskOutcome:
-    """Set up `task`'s fixture in a fresh temp dir, drive the agent, then score.
-
-    A scorer (or agent) exception never propagates -- it's captured as a failed
-    outcome so one broken task can't crash the whole run (ADR-0015).
-    """
+def _run_task_once(task: Task, agent_runner: AgentRunner,
+                   tmp_root: "Path | None") -> TaskOutcome:
+    """One attempt: set up a fresh fixture, drive the agent, score. Never raises."""
     started = time.monotonic()
     workspace = Path(tempfile.mkdtemp(prefix=f"revenant-eval-{task.name}-", dir=tmp_root))
     try:
@@ -181,20 +205,40 @@ def run_task(task: Task, agent_runner: AgentRunner, *, tmp_root: "Path | None" =
             task.setup(workspace)
         except Exception as exc:  # noqa: BLE001
             return TaskOutcome(task.name, False, f"setup error: {exc!r}", time.monotonic() - started)
-
         try:
             agent_runner.run(workspace, task.goal)
         except Exception as exc:  # noqa: BLE001
             return TaskOutcome(task.name, False, f"agent error: {exc!r}", time.monotonic() - started)
-
         try:
             result = task.score(workspace)
         except Exception as exc:  # noqa: BLE001
             return TaskOutcome(task.name, False, f"scorer error: {exc!r}", time.monotonic() - started)
-
         return TaskOutcome(task.name, result.passed, result.detail, time.monotonic() - started)
     finally:
         shutil.rmtree(workspace, ignore_errors=True)
+
+
+def run_task(task: Task, agent_runner: AgentRunner, *,
+             tmp_root: "Path | None" = None, repeat: int = 1) -> TaskOutcome:
+    """Run `task` `repeat` times and aggregate (ADR-0015 + --repeat).
+
+    With repeat>1, the task runs in `repeat` fresh fixtures; the returned outcome
+    records `passes`/`runs`, marks `passed` by majority (>50%), reports the MEDIAN
+    time, and keeps a failure detail from a failing run (the useful diagnostic).
+    A single run (repeat=1) behaves exactly as before.
+    """
+    repeat = max(1, repeat)
+    attempts = [_run_task_once(task, agent_runner, tmp_root) for _ in range(repeat)]
+    passes = sum(1 for a in attempts if a.passed)
+    times = sorted(a.seconds for a in attempts)
+    median = times[len(times) // 2]
+    majority = passes * 2 > repeat  # strictly more than half
+    # Prefer a failing detail (diagnostic) when not all passed, else the last one.
+    fail_detail = next((a.detail for a in attempts if not a.passed), "")
+    detail = (fail_detail if passes < repeat else attempts[-1].detail)
+    if repeat > 1:
+        detail = f"{passes}/{repeat} passed" + (f"; e.g. {detail}" if detail else "")
+    return TaskOutcome(task.name, majority, detail, median, runs=repeat, passes=passes)
 
 
 def run_suite(
@@ -205,11 +249,14 @@ def run_suite(
     base_url: str = "",
     harness_flags: "dict | None" = None,
     tmp_root: "Path | None" = None,
+    repeat: int = 1,
 ) -> Report:
     """Run every task in `tasks` and aggregate into a Report.
 
     `agent_runner=None` means "no model available": the run is skipped cleanly
-    (empty outcomes, `skipped=True`) rather than attempting a model call.
+    (empty outcomes, `skipped=True`) rather than attempting a model call. With
+    `repeat>1` each task is run that many times (see run_task) to average out
+    model non-determinism.
     """
     if agent_runner is None:
         return Report(
@@ -219,7 +266,7 @@ def run_suite(
         )
 
     started = time.monotonic()
-    outcomes = [run_task(t, agent_runner, tmp_root=tmp_root) for t in tasks]
+    outcomes = [run_task(t, agent_runner, tmp_root=tmp_root, repeat=repeat) for t in tasks]
     return Report(
         model=model, base_url=base_url, harness_flags=harness_flags or {},
         outcomes=outcomes, wall_seconds=time.monotonic() - started,
@@ -234,11 +281,21 @@ def format_report(report: Report) -> str:
     lines = [f"model={report.model!r} base_url={report.base_url!r} flags={report.harness_flags}"]
     for o in report.outcomes:
         mark = "PASS" if o.passed else "FAIL"
-        lines.append(f"  [{mark}] {o.name} ({o.seconds:.2f}s) {o.detail}".rstrip())
+        tally = f" [{o.passes}/{o.runs}]" if o.runs > 1 else ""
+        lines.append(f"  [{mark}]{tally} {o.name} (~{o.seconds:.1f}s) {o.detail}".rstrip())
+    # Two aggregate views: tasks passed (majority) and total attempts passed.
+    total_runs = sum(o.runs for o in report.outcomes)
+    total_passes = sum(o.passes for o in report.outcomes)
     lines.append(
-        f"pass-rate: {report.passed_count}/{report.total} "
-        f"({report.pass_rate * 100:.0f}%) in {report.wall_seconds:.2f}s"
+        f"tasks passed (majority): {report.passed_count}/{report.total} "
+        f"({report.pass_rate * 100:.0f}%)"
     )
+    if total_runs > report.total:  # repeats were used
+        lines.append(
+            f"attempts passed: {total_passes}/{total_runs} "
+            f"({total_passes / total_runs * 100:.0f}%)  <- the real signal"
+        )
+    lines.append(f"wall: {report.wall_seconds:.0f}s")
     return "\n".join(lines)
 
 
@@ -275,17 +332,32 @@ def compare_reports(baseline: Report, candidate: Report) -> CompareResult:
 
 
 def format_compare(cmp: CompareResult) -> str:
+    def _attempts(r):
+        tr = sum(o.runs for o in r.outcomes)
+        tp = sum(o.passes for o in r.outcomes)
+        return tp, tr
+
+    b_tp, b_tr = _attempts(cmp.baseline)
+    c_tp, c_tr = _attempts(cmp.candidate)
     lines = [
-        f"baseline pass-rate: {cmp.baseline.passed_count}/{cmp.baseline.total} "
+        f"baseline  tasks {cmp.baseline.passed_count}/{cmp.baseline.total} "
         f"({cmp.baseline.pass_rate * 100:.0f}%)",
-        f"candidate pass-rate: {cmp.candidate.passed_count}/{cmp.candidate.total} "
+        f"candidate tasks {cmp.candidate.passed_count}/{cmp.candidate.total} "
         f"({cmp.candidate.pass_rate * 100:.0f}%)",
-        f"delta: {cmp.delta_pass_rate * 100:+.0f} pts",
+        f"delta (tasks): {cmp.delta_pass_rate * 100:+.0f} pts",
     ]
+    if b_tr > cmp.baseline.total or c_tr > cmp.candidate.total:  # repeats used
+        b_rate = b_tp / b_tr * 100 if b_tr else 0
+        c_rate = c_tp / c_tr * 100 if c_tr else 0
+        lines.append(
+            f"attempts: baseline {b_tp}/{b_tr} ({b_rate:.0f}%) -> "
+            f"candidate {c_tp}/{c_tr} ({c_rate:.0f}%)  delta {c_rate - b_rate:+.0f} pts"
+            f"  <- the real signal"
+        )
     if cmp.improved:
-        lines.append(f"improved: {', '.join(cmp.improved)}")
+        lines.append(f"improved (task-level): {', '.join(cmp.improved)}")
     if cmp.regressed:
-        lines.append(f"regressed: {', '.join(cmp.regressed)}")
+        lines.append(f"regressed (task-level): {', '.join(cmp.regressed)}")
     return "\n".join(lines)
 
 
@@ -300,6 +372,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--compare", nargs=2, metavar=("BASELINE_JSON", "CANDIDATE_JSON"),
                     help="Diff two saved reports instead of running the suite")
     p.add_argument("--task", action="append", default=[], help="Run only this task (repeatable)")
+    p.add_argument("--verify", action="store_true",
+                   help="Enable the harness's verify→repair + code graph for the "
+                        "run (for an on-vs-off --compare against a plain baseline).")
+    p.add_argument("--repeat", type=int, default=1,
+                   help="Run each task N times and report pass-rate (averages out "
+                        "model non-determinism; default 1).")
     return p
 
 
@@ -321,12 +399,15 @@ def main(argv: "list[str] | None" = None) -> int:
     elif not model_server_reachable(args.base_url):
         print(f"no local model server reachable at {args.base_url} -- skipping.", file=sys.stderr)
     else:
-        agent_runner = RevenantAgentRunner(args.model, args.base_url, args.max_steps)
+        agent_runner = RevenantAgentRunner(args.model, args.base_url, args.max_steps,
+                                           verify=args.verify)
 
     report = run_suite(
         tasks, agent_runner,
         model=args.model, base_url=args.base_url,
-        harness_flags={"max_steps": args.max_steps},
+        harness_flags={"max_steps": args.max_steps, "verify": args.verify,
+                       "repeat": args.repeat},
+        repeat=args.repeat,
     )
     print(format_report(report))
 

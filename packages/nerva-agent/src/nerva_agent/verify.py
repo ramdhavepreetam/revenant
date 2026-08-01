@@ -90,6 +90,13 @@ class CommandVerifier:
     timeout: float = DEFAULT_TIMEOUT
 
     def check(self, changed_paths: list[str]) -> VerifyResult:
+        # A command scoped to the changed files (`{paths}`/`{tests}`) is meaningless
+        # when there are no changed paths — e.g. after a run_bash step, which names
+        # no file. Running it anyway would substitute an empty arg and report a
+        # bogus failure (a checker invoked wrong, not the code failing). Skip it.
+        needs_paths = "{paths}" in self.command or "{tests}" in self.command
+        if needs_paths and not changed_paths:
+            return VerifyResult.passed(f"skipped (no changed paths): {self.command}")
         paths = " ".join(shlex.quote(p) for p in changed_paths)
         cmd = self.command.replace("{paths}", paths).replace("{tests}", paths)
         try:
