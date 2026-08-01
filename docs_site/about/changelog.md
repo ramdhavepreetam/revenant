@@ -5,6 +5,31 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [Unreleased]
+
+Release-pipeline fixes only — no change to the installed `revenant` (the 0.3.0
+packages on PyPI and the CLI behavior are unaffected).
+
+### Fixed
+
+- **macOS / Windows installers now attach to the GitHub Release.** The
+  `build-installers` workflow built both binaries but its release step failed
+  with a 403 (`Resource not accessible by integration`) on 0.2.0 and 0.3.0 — the
+  job lacked `contents: write`. Granting it fixes the attach, so tagged releases
+  publish their `.dmg` / `.exe` automatically. (The 0.3.0 installers were
+  re-published to its Release with this fix.)
+
+### Changed
+
+- **Release CI now gates on the Windows installer working end-to-end.** The
+  smoke-test asserts on real output (a subcommand plus the current feature flag)
+  instead of only exit code, and a new step silently installs
+  `Revenant-windows-x64-setup.exe` and runs the *installed* `revenant.exe` —
+  failing the build if the installer doesn't install or the binary doesn't
+  launch. Every future release now proves the installers run before publishing.
+
+---
+
 ## [0.3.0] — Harness release
 
 The **H-series**: making a small local model (targeted at a 14B) perform above
