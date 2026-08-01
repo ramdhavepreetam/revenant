@@ -5,13 +5,13 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased]
+## [0.3.0] — Harness release
 
 The **H-series**: making a small local model (targeted at a 14B) perform above
 its weight by moving correctness out of the model and into deterministic
 machinery — "the model proposes; the harness verifies and repairs." Fully
-offline, no new runtime dependencies. Existing `run`/`chat` usage is unchanged;
-every new feature is opt-in.
+offline, no new runtime dependencies. Backward-compatible with 0.2.0: existing
+`run`/`chat` usage is unchanged; every new feature is opt-in.
 
 ### Added
 
@@ -106,5 +106,6 @@ The first public release of Revenant.
 
 ---
 
+[0.3.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ramdhavepreetam/revenant/releases/tag/v0.1.0
