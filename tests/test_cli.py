@@ -715,6 +715,55 @@ def test_spawn_subagent_absent_in_read_only(tmp_path, monkeypatch):
     assert "spawn_subagent" not in captured["names"]
 
 
+# --- W5 (ADR-0021): role-routed sub-agent factory ---------------------------
+
+class _FakeLoopWithConfig:
+    def __init__(self):
+        self.config = type("C", (), {"base_url": "http://x", "model": "parent-model"})()
+        self.registry = type("R", (), {})()
+
+
+def _patch_factory_build(monkeypatch, loop):
+    monkeypatch.setattr(cli, "_build_agent",
+                        lambda a: (None, None, None, loop, None))
+
+
+def test_subagent_factory_routes_role_via_config_for_role(tmp_path, monkeypatch):
+    loop = _FakeLoopWithConfig()
+    _patch_factory_build(monkeypatch, loop)
+    routed = type("C", (), {"base_url": "http://x", "model": "summary-model"})()
+    monkeypatch.setattr(cli, "config_for_role", lambda role, url, prof: routed)
+    monkeypatch.setattr(cli, "load_profiles", lambda: {})
+
+    factory = cli._make_subagent_factory(argparse.Namespace(workspace=str(tmp_path)))
+    built = factory("summarize this", None, 1, "summary")
+    assert built.config.model == "summary-model"   # routed to the role's model
+
+
+def test_subagent_factory_no_role_keeps_parent_config(tmp_path, monkeypatch):
+    loop = _FakeLoopWithConfig()
+    _patch_factory_build(monkeypatch, loop)
+    called = {"routed": False}
+    monkeypatch.setattr(cli, "config_for_role",
+                        lambda *a: called.__setitem__("routed", True) or None)
+
+    factory = cli._make_subagent_factory(argparse.Namespace(workspace=str(tmp_path)))
+    built = factory("do it", None, 1, "")            # no role
+    assert built.config.model == "parent-model"      # unchanged
+    assert called["routed"] is False                 # routing not even attempted
+
+
+def test_subagent_factory_unresolved_role_falls_back(tmp_path, monkeypatch):
+    loop = _FakeLoopWithConfig()
+    _patch_factory_build(monkeypatch, loop)
+    monkeypatch.setattr(cli, "config_for_role", lambda *a: None)  # unresolved
+    monkeypatch.setattr(cli, "load_profiles", lambda: {})
+
+    factory = cli._make_subagent_factory(argparse.Namespace(workspace=str(tmp_path)))
+    built = factory("g", None, 1, "bogus-role")
+    assert built.config.model == "parent-model"      # kept parent config, no crash
+
+
 def _make_git_repo(path):
     _sp.run(["git", "init", "-q"], cwd=path, check=True)
     _sp.run(["git", "config", "user.email", "t@e.com"], cwd=path, check=True)

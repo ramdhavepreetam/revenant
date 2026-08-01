@@ -624,14 +624,19 @@ def _load_skills(workspace: Path):
 def _make_subagent_factory(parent_args: argparse.Namespace):
     """A loop_factory for spawn_subagent: builds a nested agent (F15.1, P8).
 
-    Each sub-agent is a full `_build_agent` with the same config but a deeper
-    `_subagent_depth` (so its own spawn tool refuses past the cap) and, if the
-    parent named tools, a registry scoped to just those. Runs unattended, so it
-    inherits auto-approve within the parent's mode.
+    Each sub-agent is a full `_build_agent` with a deeper `_subagent_depth` (so its
+    own spawn tool refuses past the cap) and, if the parent named tools, a registry
+    scoped to just those. Runs unattended, so it inherits auto-approve within the
+    parent's mode.
+
+    W5 (ADR-0021): when a `role` is given, the child's model is routed via
+    `config_for_role` (a strong-planner / cheap-executor split within one run); an
+    empty or unresolved role keeps the parent's config verbatim (byte-identical to
+    before).
     """
     import copy
 
-    def factory(goal: str, tool_names, depth: int):
+    def factory(goal: str, tool_names, depth: int, role: str = ""):
         child = copy.copy(parent_args)
         child._subagent_depth = depth
         # A sub-agent runs unattended; auto-approve within the parent's budget.
@@ -640,6 +645,15 @@ def _make_subagent_factory(parent_args: argparse.Namespace):
         if built is None:
             raise RuntimeError("could not build sub-agent workspace")
         _ws, _cfg, _rec, loop, _color = built
+        # W5: route the child to a role-specific model when asked (and resolvable).
+        if role:
+            try:
+                profiles = load_profiles()
+                routed = config_for_role(role, loop.config.base_url, profiles)
+                if routed is not None:
+                    loop.config = routed
+            except Exception:  # noqa: BLE001 - unresolved role -> keep parent config
+                pass
         if tool_names:
             scoped = scope_registry(
                 loop.registry,

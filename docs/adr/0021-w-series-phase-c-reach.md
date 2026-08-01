@@ -84,8 +84,10 @@ and degrade gracefully; the offline and approval invariants hold.
   observation). stdio path unchanged.
 
 ## Acceptance criteria
-- [ ] `spawn_subagent(role=…)` runs the sub-agent under the role's model
+- [x] `spawn_subagent(role=…)` runs the sub-agent under the role's model
       (`config_for_role`); no/unknown role = today's behavior (byte-identical).
+      **(W5 — role threads through `LoopFactory`; factory routes on a resolvable
+      role, keeps the parent config otherwise.)**
 - [ ] `revenant mcp add <name> …` appends a valid `[[mcp.servers]]` entry the
       reader round-trips; duplicate names refused; supports stdio and http entries.
 - [ ] `McpClient` speaks HTTP/SSE when `transport` is http/sse (same JSON-RPC
@@ -106,3 +108,17 @@ and degrade gracefully; the offline and approval invariants hold.
   clone + `config_for_role` (None-on-miss), `McpClient` stdio-enforce +
   `_request`/`_write`/`_read` abstraction + config reader already carrying
   transport/url. Implementation begins with W5.
+- 2026-08-01 — **W5 Implemented** — role-routed sub-agents.
+  - `LoopFactory` gains a 4th arg `role` (`subagent.py`); `spawn_subagent` gains an
+    optional `role` param, trimmed and threaded through `run` → factory. Default
+    `""` = parent config (unchanged).
+  - `_make_subagent_factory` (`cli.py`): when a role is given, resolves
+    `config_for_role(role, base_url, profiles)` and swaps `loop.config`; an
+    unresolved role (`None`) or an exception keeps the parent config verbatim
+    (byte-identical fallback). Enables a strong-planner / cheap-executor split
+    within one run.
+  - **Tests.** `test_subagent.py` +4 (role threads to factory; default empty;
+    whitespace trimmed; param declared optional) — existing fakes updated to the
+    4-arg factory signature. `test_cli.py` +3 (factory routes via
+    `config_for_role`; no-role keeps parent + never calls the router; unresolved
+    role falls back, no crash). Suite **636 → 643**. **Next: W6.**
