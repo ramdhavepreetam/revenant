@@ -42,7 +42,7 @@ revenant --workspace ~/proj "where is auth handled?"
 
 Needs [Ollama](https://ollama.com) running with a model pulled
 (`ollama pull qwen2.5-coder:7b`). Full docs:
-<https://ramdhavepreetam.github.io/revenant-docs/>.
+<https://ramdhavepreetam.github.io/revenant/>.
 
 ## Develop
 
