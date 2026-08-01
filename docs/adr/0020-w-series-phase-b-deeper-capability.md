@@ -1,6 +1,6 @@
 # ADR-0020 — W-series Phase B: deeper capability, safe-first (W3/W4)
 
-- **Status:** Accepted — implementation starting with W3
+- **Status:** Implemented — W3/W4a/W4b/W4c all done (Phase B complete)
 - **Phase:** W-series (0.6.0) Phase B · **W-slices:** W3 `loop --every` + persisted/
   incremental code-graph cache · W4a `edit_file replace_all` + single-file
   graph-guided rename · W4b relax `ToolParam` to one array-of-objects param
@@ -116,9 +116,11 @@ consumes it). Each mutating tool stays approval-gated + undo-covered + verify-ch
 - [x] `ToolParam` can express one array-of-objects param; scalar tools unchanged.
       **(W4b — `item_fields`; native schema renders `array`/`items`; doc_line
       describes the shape; scalar tools byte-identical.)**
-- [ ] `apply_edits` performs an atomic multi-file rename (all-or-nothing revert),
+- [x] `apply_edits` performs an atomic multi-file rename (all-or-nothing revert),
       approval-gated + undo-covered + verify-checked; the W0 rename tasks pass.
-- [ ] Suite green (bare `pytest`); ADR-0020 + README updated per slice.
+      **(W4c — verified: the W0 `rename_across_package` task, failing against a
+      no-op, is solved by one `apply_edits` call across 4 files.)**
+- [x] Suite green (bare `pytest`, 636); ADR-0020 + README updated per slice.
 
 ## Open questions
 - **Rename tool shape:** expose W4a's single-file rename as a distinct
@@ -181,3 +183,24 @@ consumes it). Each mutating tool stays approval-gated + undo-covered + verify-ch
     validate passes list, dispatch, **scalar-tools-byte-identical**). Suite
     **625 → 630**. Unblocks W4c's `apply_edits(edits=[{path,old,new}])`.
     **Next: W4c (multi-file atomic apply_edits).**
+- 2026-08-01 — **W4c Implemented — Phase B COMPLETE.**
+  - **`apply_edits` tool** (`agent_edit_tools.py`): a mutating tool taking the W4b
+    array param `edits=[{path, old, new[, all]}]` and applying them **atomically**.
+    `_apply_edits` snapshots each touched file's original bytes before writing;
+    on **any** failure it restores every snapshot and raises, so a partial rename
+    can never leave the repo half-updated (old name in some files, new in others).
+    Validates the shape up front (non-empty list of well-formed objects) so it
+    never half-applies on malformed input. Reuses `_edit_file` per file (so
+    per-edit `all` works) + `_resolve_in_root` confinement.
+  - **Wiring.** `mutating=True` ⇒ auto approval-gated; added by `build_edit_tools`
+    which `_build_agent` already loads in write mode → rides the loop's
+    `before_tool` undo snapshot + `after_tool` verify. No new CLI wiring.
+  - **Tests.** `test_agent_mutating_tools.py` +6 (multi-file rename all-or-nothing;
+    rollback-all-on-any-failure; single-file multi-edit rollback; approval/mutating
+    flags; malformed-input rejected; workspace confinement). Suite **630 → 636**.
+  - **Eval-driven verification (the point of the W0→W4 sequencing):** the W0
+    `rename_across_package` task — a project-wide rename across 4 files that FAILS
+    against a no-op agent — is **solved by a single `apply_edits` call**, scored
+    PASS by the W0 harness. The graph-refactor ladder (W4a→b→c) is now measurable.
+  - **Phase B (W3/W4) is done. Next: Phase C (ADR-0021) — W5 role-routed
+    sub-agents, W6 `mcp add` + HTTP/SSE.**

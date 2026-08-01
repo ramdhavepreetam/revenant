@@ -101,6 +101,59 @@ class WriteEditTests(unittest.TestCase):
         self.assertEqual((self.root / "b.py").read_text(), "x = 1\ny = 3\n")
         self.assertIn("1 replacement", obs)
 
+    # --- W4c (ADR-0020): apply_edits (atomic multi-file) -------------------
+    def test_apply_edits_multi_file_rename_all_or_nothing(self):
+        (self.root / "a.py").write_text("def greet():\n    pass\ngreet()\n")
+        (self.root / "b.py").write_text("from a import greet\ngreet()\n")
+        obs = self.reg.dispatch("apply_edits", {"edits": [
+            {"path": "a.py", "old": "greet", "new": "hail", "all": True},
+            {"path": "b.py", "old": "greet", "new": "hail", "all": True},
+        ]})
+        self.assertNotIn("greet", (self.root / "a.py").read_text())
+        self.assertNotIn("greet", (self.root / "b.py").read_text())
+        self.assertIn("2 file(s)", obs)
+
+    def test_apply_edits_rolls_back_all_on_any_failure(self):
+        (self.root / "x.py").write_text("value = 1\n")
+        (self.root / "y.py").write_text("other = 2\n")
+        before_x = (self.root / "x.py").read_text()
+        with self.assertRaises(WorkspaceError):
+            self.reg.dispatch("apply_edits", {"edits": [
+                {"path": "x.py", "old": "value = 1", "new": "value = 99"},
+                {"path": "y.py", "old": "NOPE", "new": "z"},   # fails -> rollback
+            ]})
+        # The first (successful) edit was reverted: workspace is as it started.
+        self.assertEqual((self.root / "x.py").read_text(), before_x)
+        self.assertEqual((self.root / "y.py").read_text(), "other = 2\n")
+
+    def test_apply_edits_reverts_a_newly_created_file_on_rollback(self):
+        # If an edit set touches multiple spots in one file and a later edit fails,
+        # the file returns to its pre-set content (not a partial state).
+        (self.root / "f.py").write_text("a = 1\nb = 2\n")
+        with self.assertRaises(WorkspaceError):
+            self.reg.dispatch("apply_edits", {"edits": [
+                {"path": "f.py", "old": "a = 1", "new": "a = 10"},
+                {"path": "f.py", "old": "NOPE", "new": "z"},   # fails
+            ]})
+        self.assertEqual((self.root / "f.py").read_text(), "a = 1\nb = 2\n")
+
+    def test_apply_edits_requires_approval_and_mutating(self):
+        t = self.reg.get("apply_edits")
+        self.assertTrue(t.mutating)
+        self.assertTrue(t.requires_approval)
+
+    def test_apply_edits_rejects_malformed_input(self):
+        with self.assertRaises(WorkspaceError):
+            self.reg.dispatch("apply_edits", {"edits": []})              # empty
+        with self.assertRaises(WorkspaceError):
+            self.reg.dispatch("apply_edits", {"edits": [{"path": "a"}]})  # missing old/new
+
+    def test_apply_edits_confined_to_workspace(self):
+        with self.assertRaises(WorkspaceError):
+            self.reg.dispatch("apply_edits", {"edits": [
+                {"path": "../evil.py", "old": "x", "new": "y"},
+            ]})
+
     # --- confinement -------------------------------------------------------
     def test_write_escape_blocked(self):
         with self.assertRaises(WorkspaceError):

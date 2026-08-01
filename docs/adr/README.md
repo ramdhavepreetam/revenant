@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-01 · **Tests:** 610 green · **V-series (0.5.0) RELEASED to PyPI + GitHub** 🎉 — [ADR-0017](0017-interactive-tui.md) · **▶ NOW: W-series (0.6.0) — faster to watch, deeper, measurably better** — strategy [ADR-0018](0018-w-series-strategy.md) · **Phase A [ADR-0019](0019-w-series-phase-a-measure-and-stream.md) COMPLETE (W0 metrics/gate · W1 content streaming · W2 tool-turn streaming + live TUI)** · ⏭ Phase B next (ADR-0020: W3/W4)
+**Last updated:** 2026-08-01 · **Tests:** 636 green · **V-series (0.5.0) RELEASED to PyPI + GitHub** 🎉 · **▶ NOW: W-series (0.6.0)** — strategy [ADR-0018](0018-w-series-strategy.md) · **Phase A [ADR-0019](0019-w-series-phase-a-measure-and-stream.md) COMPLETE** (W0 metrics/gate · W1/W2 streaming + live TUI) · **Phase B [ADR-0020](0020-w-series-phase-b-deeper-capability.md) COMPLETE** (W3 --every+graph cache · W4a replace_all · W4b array-param · W4c atomic apply_edits) · ⏭ Phase C next (ADR-0021: W5/W6)
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -62,10 +62,14 @@
     (content prefix streams live; `tool_calls` arrive whole for byte-identical
     dispatch) + a live in-place `StreamLine` in the TUI. Tests 573 → **610**.
     Commits `614ef97` (W0), `a9e8c9e` (W1), `225fcd1` (W2) on `w-series-phase-a`.
-  - **Phase B — Deeper capability (W3/W4a/W4b/W4c)** · ADR-0020 (to write). `loop
-    --every` + persist/incremental code-graph cache; `edit_file replace_all` +
-    single-file graph rename; relax `ToolParam` to one array param; atomic
-    multi-file `apply_edits` (graph-driven project-wide rename).
+  - **✅ Phase B — Deeper capability (W3/W4a/W4b/W4c) COMPLETE** · [ADR-0020](0020-w-series-phase-b-deeper-capability.md).
+    **W3** ✅ `loop --every` + persisted/incremental code-graph cache (reindex only
+    changed files; corrupt→rebuild). **W4a** ✅ `edit_file replace_all` (scalar,
+    byte-parity default). **W4b** ✅ relaxed `ToolParam` to one array-of-objects
+    param (the schema gate; scalar tools byte-identical). **W4c** ✅ atomic
+    multi-file `apply_edits` (all-or-nothing rollback) — the W0 `rename_across_
+    package` task is solved by one call. Tests 610 → **636**. Commits `e8367ec`
+    (W3), `3ba66da` (W4a), `c45525b` (W4b) + W4c on `w-series-phase-a`.
   - **Phase C — Reach (W5/W6)** · ADR-0021 (to write). Role-routed sub-agents;
     `mcp add` writer + MCP HTTP/SSE transport.
   - **Excluded (already shipped):** `loop --watch`; code-graph `reindex_file`/
@@ -119,7 +123,7 @@
 | [0017](0017-interactive-tui.md) | **Claude-Code-like interactive terminal** (V-series: Textual TUI, slash palette, multi-agent + context view) | 0.5.0 | Implemented (released v0.5.0) |
 | [0018](0018-w-series-strategy.md) | **Faster, deeper, measurable** (W-series strategy: streaming + capability + quality) | 0.6.0 | Accepted |
 | [0019](0019-w-series-phase-a-measure-and-stream.md) | W-series Phase A — measure (eval metrics/gate) + stream (token events, live render) | W0/W1/W2 | Implemented |
-| [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Accepted (W3 in progress) |
+| [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Implemented |
 
 ---
 
