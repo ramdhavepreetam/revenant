@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-01 · **Tests:** 573 green · **Shipped: v0.3.0 on PyPI** · **U-series (0.4.0 — CLI UX) complete** 🎉 · **V-series (0.5.0 — interactive Textual TUI) COMPLETE + RELEASED** 🎉 — [ADR-0017](0017-interactive-tui.md); merged to master, tagged `v0.5.0`, [GitHub Release](https://github.com/ramdhavepreetam/revenant/releases/tag/v0.5.0) with installers published. **PyPI publish pending** (run `make publish` with a token)
+**Last updated:** 2026-08-01 · **Tests:** 657 green · **V-series (0.5.0) RELEASED** 🎉 · **▶ W-series (0.6.0) — ALL FEATURE WORK COMPLETE** ([0018](0018-w-series-strategy.md)): **Phase A** [0019](0019-w-series-phase-a-measure-and-stream.md) (W0 metrics/gate · W1/W2 streaming) · **Phase B** [0020](0020-w-series-phase-b-deeper-capability.md) (W3 --every+graph cache · W4 replace_all/array-param/atomic apply_edits) · **Phase C** [0021](0021-w-series-phase-c-reach.md) (W5 role-routed sub-agents · W6 mcp add + HTTP/SSE) · **▶ RELEASING 0.6.0** — versions bumped to 0.6.0, changelog dated, tag/publish in flight
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -46,10 +46,37 @@
     `twine check` PASSED. PR #32 merged to master; tag `v0.5.0` pushed → the
     installer CI built the macOS `.dmg` + Windows `.exe` and cut the
     [GitHub Release](https://github.com/ramdhavepreetam/revenant/releases/tag/v0.5.0).
-    **⏭ PyPI publish still pending** — run `make publish` with a PyPI token
-    (intentionally not automated; same as the 0.4.0 flow).
-- **Deferred backlog** (optional polish, nothing blocked): loop `--every` (P5);
-  one-shot `run` autosave (P6); `mcp add` + MCP HTTP (P3); role-routed sub-agents
+    **✅ Published to PyPI** (all three packages at 0.5.0) — `pip install -U
+    "revenant-cli[tui]"`. Docs redeployed with the 0.5.0 changelog.
+- **▶ W-series (0.6.0) — IN PROGRESS (Phase A, W0).** The next themed series:
+  *faster to watch, deeper in what it can safely do, and measurably better.* Three
+  themes — streaming responsiveness, deeper capability, quality/measurement —
+  shipped as **Phase A → B → C** (three PRs), then a 0.6.0 release. Strategy
+  [ADR-0018](0018-w-series-strategy.md). **Branch `w-series-phase-a`.**
+  - **✅ Phase A — Measure & Stream (W0/W1/W2) COMPLETE** · [ADR-0019](0019-w-series-phase-a-measure-and-stream.md).
+    **W0** ✅ eval harness gains step-count/token-cost/edit-precision metrics +
+    3 project-wide-rename tasks + a `--gate` regression gate (the backbone that
+    scores every later slice). **W1** ✅ streams plain-content assistant text via a
+    new additive `token` event (PlainConsole renders deltas inline, byte-parity
+    preserved). **W2** ✅ streams tool-call turns too via a new `stream_message`
+    (content prefix streams live; `tool_calls` arrive whole for byte-identical
+    dispatch) + a live in-place `StreamLine` in the TUI. Tests 573 → **610**.
+    Commits `614ef97` (W0), `a9e8c9e` (W1), `225fcd1` (W2) on `w-series-phase-a`.
+  - **✅ Phase B — Deeper capability (W3/W4a/W4b/W4c) COMPLETE** · [ADR-0020](0020-w-series-phase-b-deeper-capability.md).
+    **W3** ✅ `loop --every` + persisted/incremental code-graph cache (reindex only
+    changed files; corrupt→rebuild). **W4a** ✅ `edit_file replace_all` (scalar,
+    byte-parity default). **W4b** ✅ relaxed `ToolParam` to one array-of-objects
+    param (the schema gate; scalar tools byte-identical). **W4c** ✅ atomic
+    multi-file `apply_edits` (all-or-nothing rollback) — the W0 `rename_across_
+    package` task is solved by one call. Tests 610 → **636**. Commits `e8367ec`
+    (W3), `3ba66da` (W4a), `c45525b` (W4b) + W4c on `w-series-phase-a`.
+  - **Phase C — Reach (W5/W6)** · ADR-0021 (to write). Role-routed sub-agents;
+    `mcp add` writer + MCP HTTP/SSE transport.
+  - **Excluded (already shipped):** `loop --watch`; code-graph `reindex_file`/
+    `remove_file` primitives; `config_for_role` routing; the `stream_model`
+    transport — W-slices wire/persist/thread these, not rebuild them.
+- **Deferred backlog** (folded into the W-series where relevant): one-shot `run`
+  autosave (P6); persisting the code graph (P7 — now W3); the rest below.
   (P8); persisting the code graph (P7).
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
@@ -94,6 +121,10 @@
 | [0015](0015-eval-harness.md) | Eval harness (measure the lift) | H0 | Implemented |
 | [0016](0016-cli-ux-console-and-setup.md) | **Make the CLI usable** (U-series: setup UX + rich console) | 0.4.0 | Implemented |
 | [0017](0017-interactive-tui.md) | **Claude-Code-like interactive terminal** (V-series: Textual TUI, slash palette, multi-agent + context view) | 0.5.0 | Implemented (released v0.5.0) |
+| [0018](0018-w-series-strategy.md) | **Faster, deeper, measurable** (W-series strategy: streaming + capability + quality) | 0.6.0 | Accepted |
+| [0019](0019-w-series-phase-a-measure-and-stream.md) | W-series Phase A — measure (eval metrics/gate) + stream (token events, live render) | W0/W1/W2 | Implemented |
+| [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Implemented |
+| [0021](0021-w-series-phase-c-reach.md) | W-series Phase C — reach (role-routed sub-agents; mcp add + HTTP/SSE transport) | W5/W6 | Implemented |
 
 ---
 
@@ -217,6 +248,32 @@ plugs into one — it is not greenfield:
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-08-01 (c) — W-series (0.6.0) planned + Phase-A ADRs written
+- 0.5.0 fully released since (b): all three packages on PyPI, GitHub Release with
+  installers, docs redeployed.
+- **Planned the W-series** (the next themed series, 0.6.0): *faster to watch, deeper
+  in what it can safely do, and measurably better.* User chose all **three** themes
+  — streaming responsiveness, deeper capability, quality/measurement — shipped as
+  **Phase A → B → C** (three PRs), then a 0.6.0 release.
+- **Research before code:** two Explore agents mapped the deferred backlog + agent
+  capability gaps; a Plan agent designed the W0–W6 slice breakdown. Grounded facts:
+  `stream_model` (`local_llm_writer.py:214`) works but is orphaned (zero call
+  sites); `edit_file` replaces exactly one occurrence (`agent_edit_tools.py:33-54`);
+  the code graph is rebuilt in-memory each run though `reindex_file`/`remove_file`
+  primitives exist; `ToolParam` is scalar-only by design (`agent_tools.py:35-37`,
+  gates the multi-file edit tool); the eval harness records only pass/fail +
+  wall-time over 5 tasks.
+- **Durable record written first** (per the series workflow): strategy
+  [ADR-0018](0018-w-series-strategy.md) + Phase-A [ADR-0019](0019-w-series-phase-a-measure-and-stream.md)
+  (W0/W1/W2 detailed spec + test plan + acceptance criteria); this README banner /
+  index / roadmap / log. Branch `w-series-phase-a`. Decision + slice map also
+  persisted to NervaPack memory (session "W-series (0.6.0) planning").
+- **Excluded as already-shipped:** `loop --watch`; graph `reindex_file`/
+  `remove_file`; `config_for_role` routing; the `stream_model` transport.
+- **⏭ Next: implement W0** — the eval-harness measurement backbone (step-count/
+  token-cost/edit-precision metrics + project-wide-rename tasks + a regression
+  gate), because it scores every slice after it.
 
 ### 2026-08-01 (b) — Release 0.5.0 (V-series)
 - Bumped all three packages **0.4.0 → 0.5.0** (`nerva-core`/`nerva-agent`/

@@ -79,6 +79,11 @@ class RichConsole:
         # "context" events feed the live gauge (V3 TUI); RichConsole is a scrolling
         # view, so a per-step token line would be noise — stay quiet, like Plain.
         # "approval" handled by approval()/confirm().
+        # "token" (W1, ADR-0019): RichConsole stays quiet — streaming a delta per
+        # call would fight the spinner (each _emit pauses/resumes it) and produce
+        # jank. The full answer still renders once via the "assistant"/"final"
+        # event (byte-parity). The live token view lives in the TUI, which is
+        # built for it. PlainConsole DOES render deltas inline (no spinner there).
 
     def _observation(self, text: str):
         # Show a code-ish observation with syntax highlighting; otherwise dim text.

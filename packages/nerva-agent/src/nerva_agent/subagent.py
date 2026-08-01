@@ -31,8 +31,10 @@ class _LoopLike(Protocol):
     def run(self, goal: str, history: "list[dict] | None" = None): ...
 
 
-# loop_factory(goal, tools, depth) -> a loop ready to run `goal`.
-LoopFactory = Callable[[str, "list[str] | None", int], _LoopLike]
+# loop_factory(goal, tools, depth, role) -> a loop ready to run `goal`.
+# `role` (W5, ADR-0021) is an optional role name the factory maps to a model
+# config (config_for_role); "" = use the parent's config, as before.
+LoopFactory = Callable[[str, "list[str] | None", int, str], _LoopLike]
 
 DEFAULT_MAX_DEPTH = 2
 
@@ -101,7 +103,7 @@ def build_spawn_tool(
     by `agent_start`/`agent_end`, so a UI can show the sub-agent working live.
     When None, sub-agents run silently exactly as before.
     """
-    def run(goal: str, tools: str = "") -> str:
+    def run(goal: str, tools: str = "", role: str = "") -> str:
         if depth >= max_depth:
             return (f"Refused: sub-agent spawn depth limit ({max_depth}) reached. "
                     "Do this work directly instead of delegating further.")
@@ -111,7 +113,7 @@ def build_spawn_tool(
         tool_list = [t.strip() for t in tools.split(",") if t.strip()] or None
         label = _label_for(goal)
         try:
-            loop = loop_factory(goal, tool_list, depth + 1)
+            loop = loop_factory(goal, tool_list, depth + 1, (role or "").strip())
         except Exception as exc:  # noqa: BLE001 - surface as an observation, not a crash
             return f"ERROR: could not build sub-agent: {exc}"
         # Route the child's events up to the parent's UI, tagged with `label`.
@@ -143,6 +145,9 @@ def build_spawn_tool(
             ToolParam("tools", "string",
                       "Optional comma-separated tool names to restrict the "
                       "sub-agent to (e.g. 'read_file,run_bash').", required=False),
+            ToolParam("role", "string",
+                      "Optional role for the sub-agent's model (e.g. 'code', "
+                      "'summary'); default uses the parent's model.", required=False),
         ],
         run=run,
         mutating=True,   # a sub-agent may edit ⇒ approval-gated (ADR-0009)

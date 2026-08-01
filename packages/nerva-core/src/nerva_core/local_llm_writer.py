@@ -283,6 +283,115 @@ def stream_model(config: ChatConfig, messages: list[dict[str, str]]):
         raise LocalLLMError(f"Could not connect to {url}: {exc.reason}") from exc
 
 
+def stream_message(
+    config: ChatConfig,
+    messages: list[dict[str, Any]],
+    tools: list[dict] | None = None,
+    on_delta: "Any" = None,
+) -> dict[str, Any]:
+    """Stream the assistant turn and return the FULL message dict (W2, ADR-0019).
+
+    Like `call_model_message` (returns `{"content", optionally "tool_calls"}`) but
+    streams: each content delta is passed to `on_delta(text)` as it arrives, while
+    the whole message is accumulated and returned so the caller can read
+    `tool_calls` for native tool dispatch. This lets the agent loop stream the
+    content prefix even on a native tool-calling turn -- the tool call itself
+    arrives whole (in the final Ollama chunk / accumulated OpenAI deltas), never
+    parsed partially.
+
+    Offline, no new deps: raw urllib over the same /api/chat (Ollama) and
+    /v1/chat/completions (OpenAI-compat) streaming endpoints as `stream_model`.
+    Raises LocalLLMError on transport failure (the caller falls back).
+    """
+    if config.backend == "ollama":
+        url = f"{config.base_url.rstrip('/')}/api/chat"
+        payload: dict[str, Any] = {
+            "model": config.model,
+            "messages": messages,
+            "stream": True,
+            "options": {
+                "temperature": config.temperature,
+                "top_p": config.top_p,
+                "repeat_penalty": config.repeat_penalty,
+                "num_predict": config.max_tokens,
+            },
+        }
+        if tools:
+            payload["tools"] = tools
+    elif config.backend == "openai":
+        url = f"{config.base_url.rstrip('/')}/v1/chat/completions"
+        payload = {
+            "model": config.model,
+            "messages": messages,
+            "temperature": config.temperature,
+            "top_p": config.top_p,
+            "max_tokens": config.max_tokens,
+            "stream": True,
+        }
+        if tools:
+            payload["tools"] = tools
+    else:
+        raise LocalLLMError(f"Unknown backend: {config.backend}")
+
+    content_parts: list[str] = []
+    tool_calls: list[dict] = []
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            for raw in response:
+                line = raw.decode("utf-8").strip()
+                if not line:
+                    continue
+                if config.backend == "openai":
+                    if line.startswith("data:"):
+                        line = line[5:].strip()
+                    if line == "[DONE]":
+                        break
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if config.backend == "ollama":
+                    msg = obj.get("message") or {}
+                    delta = msg.get("content", "")
+                    if delta:
+                        content_parts.append(delta)
+                        if on_delta is not None:
+                            on_delta(delta)
+                    # Ollama delivers tool_calls whole (usually in the final chunk).
+                    if msg.get("tool_calls"):
+                        tool_calls = msg["tool_calls"]
+                    if obj.get("done"):
+                        break
+                else:  # openai
+                    choices = obj.get("choices") or []
+                    if not choices:
+                        continue
+                    delta_obj = choices[0].get("delta") or {}
+                    delta = delta_obj.get("content", "")
+                    if delta:
+                        content_parts.append(delta)
+                        if on_delta is not None:
+                            on_delta(delta)
+                    if delta_obj.get("tool_calls"):
+                        # OpenAI streams tool_calls in fragments; accept them as-is
+                        # (the loop only reads name+arguments of the first call).
+                        tool_calls = delta_obj["tool_calls"]
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise LocalLLMError(f"HTTP {exc.code} from {url}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise LocalLLMError(f"Could not connect to {url}: {exc.reason}") from exc
+
+    message: dict[str, Any] = {"role": "assistant", "content": "".join(content_parts)}
+    if tool_calls:
+        message["tool_calls"] = tool_calls
+    return message
+
+
 def _heuristic_tokens(text: str) -> int:
     # Cheap word-count approximation; the offline fallback when tiktoken is absent.
     return max(1, round(len(text.split()) * 1.33))

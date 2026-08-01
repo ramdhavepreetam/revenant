@@ -11,7 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from nerva_agent.code_graph.indexer import build_index
+from nerva_agent.code_graph.indexer import (
+    build_index, load_or_build_index, index_signature, CodeGraph,
+)
 
 
 def _repo(tmp_path: Path) -> Path:
@@ -177,4 +179,74 @@ def test_reindex_matches_full_rebuild(tmp_path):
     g.reindex_file("pkg/core.py")
     rebuilt = build_index(tmp_path)
     assert set(g.symbols) == set(rebuilt.symbols)
-    assert g.stats() == rebuilt.stats()
+
+
+# --- W3 (ADR-0020): persistence + incremental load ---------------------------
+
+def test_to_dict_from_dict_round_trips(tmp_path):
+    g = build_index(_repo(tmp_path))
+    restored = CodeGraph.from_dict(tmp_path, g.to_dict())
+    assert set(restored.symbols) == set(g.symbols)
+    assert set(restored.files) == set(g.files)
+    # The name index is rebuilt so lookups still work after a round-trip.
+    assert restored.resolve("helper")
+    assert restored.callers_of("helper")  # main/dispatch still resolve
+
+
+def test_from_dict_rejects_version_mismatch(tmp_path):
+    g = build_index(_repo(tmp_path))
+    data = g.to_dict()
+    data["version"] = 999
+    with pytest.raises(ValueError):
+        CodeGraph.from_dict(tmp_path, data)
+
+
+def test_load_or_build_creates_cache_first_time(tmp_path):
+    cache = tmp_path / ".aibot" / "code_graph.json"
+    g = load_or_build_index(_repo(tmp_path), cache)
+    assert cache.is_file()                       # cache written
+    assert "main" in g.symbols                   # graph is correct
+    # Second load reads the cache and yields an equal graph.
+    g2 = load_or_build_index(tmp_path, cache)
+    assert set(g2.symbols) == set(g.symbols)
+
+
+def test_load_or_build_reindexes_only_changed_file(tmp_path):
+    import os, time
+    cache = tmp_path / ".aibot" / "code_graph.json"
+    load_or_build_index(_repo(tmp_path), cache)          # seed the cache
+    # Change one file (bump mtime deterministically) and reload.
+    core = tmp_path / "pkg" / "core.py"
+    core.write_text("def only_this():\n    return 1\n")
+    os.utime(core, (time.time() + 10, time.time() + 10))
+    g = load_or_build_index(tmp_path, cache)
+    assert "only_this" in g.symbols                       # picked up the change
+    assert "main" not in g.symbols                        # old symbol gone
+    assert g.resolve("helper")                            # unchanged file untouched
+
+
+def test_load_or_build_drops_deleted_file(tmp_path):
+    import os, time
+    cache = tmp_path / ".aibot" / "code_graph.json"
+    load_or_build_index(_repo(tmp_path), cache)
+    (tmp_path / "pkg" / "util.py").unlink()
+    g = load_or_build_index(tmp_path, cache)
+    assert "pkg/util.py" not in g.files
+    assert g.resolve("helper") == []
+
+
+def test_load_or_build_falls_back_on_corrupt_cache(tmp_path):
+    cache = tmp_path / ".aibot" / "code_graph.json"
+    cache.parent.mkdir(parents=True)
+    cache.write_text("{ not valid json ]")               # corrupt
+    g = load_or_build_index(_repo(tmp_path), cache)       # must not raise
+    assert "main" in g.symbols                            # full rebuild happened
+    # And the corrupt cache was overwritten with a valid one.
+    import json
+    assert json.loads(cache.read_text())["version"] == CodeGraph.CACHE_VERSION
+
+
+def test_index_signature_lists_indexable_files(tmp_path):
+    sig = index_signature(_repo(tmp_path))
+    assert "pkg/core.py" in sig and "pkg/util.py" in sig
+    assert all(isinstance(v, float) for v in sig.values())

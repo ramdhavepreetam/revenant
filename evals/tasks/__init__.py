@@ -1,9 +1,12 @@
-"""The eval task suite (H0.1, ADR-0015).
+"""The eval task suite (H0.1, ADR-0015; extended W0, ADR-0019).
 
-5 self-contained tasks targeting the ADR-0011 failure profile: fix a failing
-test, add a function used by an existing caller, make a file exist with
-required content, rename a symbol across all call sites, and handle an edge
-case without regressing the normal path. Each module exports a single `TASK`;
+The original 5 tasks target the ADR-0011 failure profile: fix a failing test,
+add a function used by an existing caller, make a file exist with required
+content, rename a symbol across all call sites, and handle an edge case without
+regressing the normal path. W0 adds 3 harder *project-wide rename* tasks
+(rename across a package, a class rename across modules, and a precision rename
+that must leave a same-named decoy alone) -- the profile the graph-driven
+refactor slices (W4) are scored on. Each module exports a single `TASK`;
 `ALL_TASKS` collects them in a stable order for the runner and the tests.
 """
 from __future__ import annotations
@@ -15,6 +18,9 @@ from evals.tasks import (
     make_file_exist,
     rename_across_callers,
     handle_edge_case,
+    rename_across_package,
+    rename_class_across_modules,
+    rename_with_shadow,
 )
 
 ALL_TASKS: list[Task] = [
@@ -23,6 +29,10 @@ ALL_TASKS: list[Task] = [
     make_file_exist.TASK,
     rename_across_callers.TASK,
     handle_edge_case.TASK,
+    # W0 (ADR-0019): project-wide rename tasks -- the W4 scoring profile.
+    rename_across_package.TASK,
+    rename_class_across_modules.TASK,
+    rename_with_shadow.TASK,
 ]
 
 _BY_NAME = {t.name: t for t in ALL_TASKS}

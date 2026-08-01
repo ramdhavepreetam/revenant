@@ -79,8 +79,39 @@ class ActivityLog(RichLog):
             return [Text(f"▪ sub-agent [{ev.agent}] done",
                          style=_lane_color(ev.agent))]
         # "context" is consumed by the StatusBar gauge, not the log; "approval" is
-        # handled by the modal screen. Anything else: ignore silently.
+        # handled by the modal screen.
+        # "token" (W1/W2, ADR-0019): rendered LIVE by the StreamLine widget (a
+        # mutable current-line), not appended here — RichLog is line-append only.
+        # The completed turn's full text still lands as an "assistant"/"final" line.
+        # Anything else: ignore silently.
         return []
+
+
+class StreamLine(Static):
+    """The live, in-place current line for streaming token deltas (W2, ADR-0019).
+
+    RichLog can only append whole lines, so token-by-token rendering lives here: a
+    single Static below the log whose text grows as `token` events arrive and is
+    cleared when the turn completes (the finished text then lands in the log as a
+    normal line). `feed`/`clear_line` are the whole API.
+    """
+
+    def __init__(self, **kw) -> None:
+        super().__init__("", **kw)
+        self._buf = ""
+
+    def feed(self, delta: str) -> None:
+        self._buf += delta
+        self.update(Text(self._buf, style="dim"))
+
+    def clear_line(self) -> None:
+        if self._buf:
+            self._buf = ""
+            self.update("")
+
+    @property
+    def streaming(self) -> bool:
+        return bool(self._buf)
 
 
 class ContextGauge(Static):

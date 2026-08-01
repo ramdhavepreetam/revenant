@@ -353,6 +353,136 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(calls, ["deep.py"])
 
 
+def _stream_msg(*turns):
+    """A fake stream_message. Each turn is (content_chunks, message_dict): the
+    chunks are pushed to on_delta in order, then the message_dict is returned.
+    A single turn may be given without wrapping in a tuple-of-turns."""
+    it = iter(turns)
+
+    def fake(config, msgs, tools=None, on_delta=None):
+        chunks, message = next(it)
+        if on_delta is not None:
+            for c in chunks:
+                on_delta(c)
+        return message
+    return fake
+
+
+def _content_turn(*chunks):
+    """Helper: a content-only turn whose message is the concatenated chunks."""
+    return (list(chunks), {"role": "assistant", "content": "".join(chunks)})
+
+
+class StreamingTests(unittest.TestCase):
+    """W1/W2 (ADR-0019): stream assistant content (both paths) via `token` events;
+    native tool_calls arrive whole and dispatch identically."""
+
+    def test_content_turn_emits_token_events_that_concatenate(self):
+        reg = _registry([])
+        events: list[AgentEvent] = []
+        with mock.patch.object(agent_loop, "stream_message",
+                               side_effect=_stream_msg(_content_turn("The file ", "defines ", "alpha()."))):
+            result = AgentLoop(_config(), reg, max_steps=5, stream=True,
+                               use_native_tools=False,
+                               on_event=events.append).run("what is a.py")
+        tokens = [e.text for e in events if e.kind == "token"]
+        self.assertEqual(tokens, ["The file ", "defines ", "alpha()."])
+        self.assertEqual("".join(tokens), "The file defines alpha().")
+        self.assertEqual(result.answer, "The file defines alpha().")
+        self.assertEqual(result.stopped_reason, "final")
+
+    def test_streamed_answer_is_byte_identical_to_non_streaming(self):
+        reg = _registry([])
+        content = "Here is the summary of the module."
+        with mock.patch.object(agent_loop, "call_model_message",
+                               side_effect=_scripted({"role": "assistant", "content": content})):
+            plain = AgentLoop(_config(), reg, max_steps=5,
+                              use_native_tools=False).run("go")
+        with mock.patch.object(agent_loop, "stream_message",
+                               side_effect=_stream_msg(_content_turn("Here is ", "the summary ", "of the module."))):
+            streamed = AgentLoop(_config(), reg, max_steps=5, stream=True,
+                                 use_native_tools=False).run("go")
+        self.assertEqual(streamed.answer, plain.answer)
+
+    def test_token_ignoring_consumer_still_sees_final(self):
+        reg = _registry([])
+        events: list[AgentEvent] = []
+        with mock.patch.object(agent_loop, "stream_message",
+                               side_effect=_stream_msg(_content_turn("all ", "done"))):
+            AgentLoop(_config(), reg, max_steps=5, stream=True,
+                      use_native_tools=False, on_event=events.append).run("q")
+        finals = [e.text for e in events if e.kind == "final"]
+        self.assertEqual(finals, ["all done"])
+
+    def test_prompt_based_streamed_tool_call_then_final(self):
+        # Prompt path: a streamed turn whose buffered text is a fenced action still
+        # parses + dispatches exactly like the non-streaming path.
+        calls: list[str] = []
+        reg = _registry(calls)
+        action = '```action\n{"tool": "read_file", "args": {"path": "a.py"}}\n```'
+        with mock.patch.object(agent_loop, "stream_message",
+                               side_effect=_stream_msg(_content_turn(action),
+                                                       _content_turn("It defines alpha()."))):
+            result = AgentLoop(_config(), reg, max_steps=5, stream=True,
+                               use_native_tools=False).run("what is a.py")
+        self.assertEqual(calls, ["a.py"])
+        self.assertEqual(result.answer, "It defines alpha().")
+
+    def test_native_tool_turn_streams_content_then_dispatches_whole_tool_call(self):
+        # W2: even with native tools, streaming is used. The content prefix streams
+        # as token events; the tool_calls arrive WHOLE on the returned message and
+        # dispatch exactly as the non-streaming native path does.
+        calls: list[str] = []
+        reg = _registry(calls)
+        events: list[AgentEvent] = []
+        native_msg = {
+            "role": "assistant", "content": "Let me read it.",
+            "tool_calls": [{"function": {"name": "read_file", "arguments": {"path": "b.py"}}}],
+        }
+        turns = _stream_msg(
+            (["Let me ", "read it."], native_msg),   # streamed content + whole tool_call
+            _content_turn("Done."),
+        )
+        with mock.patch.object(agent_loop, "stream_message", side_effect=turns):
+            result = AgentLoop(_config(), reg, max_steps=5, stream=True,
+                               use_native_tools=True, on_event=events.append).run("read b")
+        self.assertEqual(calls, ["b.py"])              # tool ran from the whole message
+        self.assertEqual(result.answer, "Done.")
+        tokens = [e.text for e in events if e.kind == "token"]
+        self.assertEqual("".join(tokens), "Let me read it.Done.")  # content streamed on both turns
+
+    def test_streaming_error_falls_back_to_non_streaming(self):
+        reg = _registry([])
+
+        def boom(config, msgs, tools=None, on_delta=None):
+            raise LocalLLMError("stream broke")
+
+        with mock.patch.object(agent_loop, "stream_message", side_effect=boom), \
+             mock.patch.object(agent_loop, "call_model_message",
+                               side_effect=_scripted({"role": "assistant", "content": "recovered"})):
+            result = AgentLoop(_config(), reg, max_steps=5, stream=True,
+                               use_native_tools=False).run("go")
+        self.assertEqual(result.answer, "recovered")
+        self.assertEqual(result.stopped_reason, "final")
+
+    def test_stream_off_uses_non_streaming_call(self):
+        # stream=False must never touch stream_message.
+        reg = _registry([])
+        used = {"stream": False}
+
+        def should_not(config, msgs, tools=None, on_delta=None):
+            used["stream"] = True
+            return {"role": "assistant", "content": "x"}
+
+        with mock.patch.object(agent_loop, "stream_message", side_effect=should_not), \
+             mock.patch.object(agent_loop, "call_model_message",
+                               side_effect=_scripted({"role": "assistant", "content": "plain"})):
+            result = AgentLoop(_config(), reg, max_steps=5, stream=False,
+                               use_native_tools=False).run("go")
+        self.assertEqual(result.answer, "plain")
+        self.assertFalse(used["stream"])
+
+
 class EventModelTests(unittest.TestCase):
     """V0 (ADR-0017): additive AgentEvent fields, no breakage."""
 

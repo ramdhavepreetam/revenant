@@ -16,7 +16,9 @@ pytest.importorskip("textual")
 from nerva_agent.agent_loop import AgentEvent, ContextInfo  # noqa: E402
 from revenant_cli.tui.app import RevenantApp  # noqa: E402
 from revenant_cli.tui.screens import ApprovalScreen  # noqa: E402
-from revenant_cli.tui.widgets import ActivityLog, ContextGauge, StatusBar  # noqa: E402
+from revenant_cli.tui.widgets import (  # noqa: E402
+    ActivityLog, ContextGauge, StatusBar, StreamLine,
+)
 
 
 class _FakeLoop:
@@ -101,6 +103,57 @@ def test_context_event_updates_the_gauge():
             await pilot.pause()
             g = app.query_one(ContextGauge)
             assert g.used == 1500 and g.budget == 6000
+    _run(go())
+
+
+def test_token_events_feed_the_live_stream_line_then_clear():
+    # W2 (ADR-0019): token deltas render on the StreamLine live; the completing
+    # "final" event clears it (its text lands in the log instead).
+    events = [
+        AgentEvent("token", text="Analy", step=1),
+        AgentEvent("token", text="zing…", step=1),
+        AgentEvent("final", text="Analyzing…", step=2),
+    ]
+
+    async def go():
+        app = _app(_FakeLoop(events))
+        async with app.run_test() as pilot:
+            app.query_one("#prompt").value = "go"
+            await pilot.press("enter")
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            # After the turn completes, the live line is cleared.
+            assert app.query_one(StreamLine).streaming is False
+    _run(go())
+
+
+def test_stream_line_holds_partial_text_mid_turn():
+    # Feeding tokens without a closing event leaves the partial text on the line.
+    async def go():
+        app = _app(_FakeLoop([]))
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._apply_event(AgentEvent("token", text="hello "))
+            app._apply_event(AgentEvent("token", text="world"))
+            await pilot.pause()
+            sl = app.query_one(StreamLine)
+            assert sl.streaming is True
+            # A non-token event closes the line.
+            app._apply_event(AgentEvent("assistant", text="hello world"))
+            await pilot.pause()
+            assert sl.streaming is False
+    _run(go())
+
+
+def test_subagent_token_does_not_feed_root_stream_line():
+    # A sub-agent's token (agent != "") must NOT hijack the root live line.
+    async def go():
+        app = _app(_FakeLoop([]))
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._apply_event(AgentEvent("token", text="child text", agent="sub"))
+            await pilot.pause()
+            assert app.query_one(StreamLine).streaming is False
     _run(go())
 
 

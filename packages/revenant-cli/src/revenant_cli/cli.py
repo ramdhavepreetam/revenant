@@ -39,13 +39,13 @@ from nerva_agent.loop_driver import (
     loop_until, Budget, model_final_predicate, command_predicate,
     file_exists_predicate,
 )
-from nerva_agent.code_graph.indexer import build_index
+from nerva_agent.code_graph.indexer import build_index, load_or_build_index
 from nerva_agent.code_graph.tools import build_code_graph_tools
 from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
-    context_config, write_model_choice,
+    context_config, write_model_choice, write_mcp_server,
 )
 from revenant_cli import session_store, preflight
 from revenant_cli.console import make_console
@@ -200,12 +200,20 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
                    help="Compact once the transcript exceeds this budget (0 = auto from hardware).")
     p.add_argument("--no-native-tools", action="store_true",
                    help="Force the prompt-based protocol even on tool-capable models.")
+    p.add_argument("--stream", dest="stream", action="store_true", default=None,
+                   help="Stream the assistant's reply token-by-token (prompt-based "
+                        "protocol only). Default: on for interactive chat, off elsewhere.")
+    p.add_argument("--no-stream", dest="stream", action="store_false",
+                   help="Disable token streaming; wait for the whole reply.")
     p.add_argument("--read-only", action="store_true",
                    help="Disable mutating tools (write/edit/bash); investigate only.")
     p.add_argument("--yolo", action="store_true",
                    help="Auto-approve mutating tools (skips the y/N prompt; footgun guards still apply).")
     p.add_argument("--no-graph", action="store_true",
                    help="Skip building the code graph (defn_of/who_calls/… tools).")
+    p.add_argument("--no-graph-cache", action="store_true",
+                   help="Rebuild the code graph from scratch (ignore the cached "
+                        ".aibot/code_graph.json; no persistence this run).")
     p.add_argument("--skip-preflight", action="store_true",
                    help="Skip the Ollama reachability / model-pulled check.")
     p.add_argument("--no-color", action="store_true")
@@ -262,6 +270,9 @@ def build_parser() -> argparse.ArgumentParser:
                              "changes (mtime poll; respects ignore globs). Ctrl-C to stop.")
     p_loop.add_argument("--watch-interval", type=float, default=1.0,
                         help="Seconds between --watch polls (default: 1.0).")
+    p_loop.add_argument("--every", type=float, metavar="SECONDS",
+                        help="Re-run the loop every SECONDS on a fixed interval "
+                             "(within the budget). Ctrl-C to stop.")
 
     p_undo = sub.add_parser("undo", help="Revert file changes the agent made.")
     p_undo.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
@@ -291,6 +302,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_mcp_test = mcp_sub.add_parser("test", help="Connect to a server and report health.")
     _add_mcp_flags(p_mcp_test, suppress=True)
     p_mcp_test.add_argument("name", help="Server name to test (from [[mcp.servers]]).")
+    p_mcp_add = mcp_sub.add_parser("add", help="Add an MCP server to your config.")
+    _add_mcp_flags(p_mcp_add, suppress=True)
+    p_mcp_add.add_argument("name", help="A unique name for the server.")
+    p_mcp_add.add_argument("--transport", default="stdio", choices=["stdio", "http", "sse"],
+                           help="How to reach the server (default: stdio).")
+    p_mcp_add.add_argument("--command", help="stdio: the server executable.")
+    p_mcp_add.add_argument("--arg", action="append", default=[], dest="args",
+                           help="stdio: an argument to the command (repeatable).")
+    p_mcp_add.add_argument("--url", help="http/sse: the server URL (local).")
+    p_mcp_add.add_argument("--project", action="store_true",
+                           help="Write to the project .revenant.toml instead of user config.")
 
     # F12 (P4): inspect skills (reusable SKILL.md workflows).
     def _add_skills_flags(p: argparse.ArgumentParser, *, suppress: bool) -> None:
@@ -469,7 +491,14 @@ def _build_agent(args: argparse.Namespace):
     graph = None
     if not getattr(args, "no_graph", False):
         try:
-            graph = build_index(workspace)
+            # W3 (ADR-0020): load a persisted graph and refresh only changed files
+            # (falls back to a full build on a missing/corrupt cache). --no-graph-
+            # cache forces a from-scratch build (no persistence).
+            if getattr(args, "no_graph_cache", False):
+                graph = build_index(workspace)
+            else:
+                cache_path = workspace / ".aibot" / "code_graph.json"
+                graph = load_or_build_index(workspace, cache_path)
             tools += build_code_graph_tools(graph)
             st = graph.stats()
             print(f"{color['dim']}graph: {st['symbols']} symbols across "
@@ -546,6 +575,10 @@ def _build_agent(args: argparse.Namespace):
         summarizer_config=summarizer,
         before_tool=(checkpointer.snapshot if checkpointer else None),
         after_tool=after_tool,
+        # W1 (ADR-0019): stream the assistant reply when explicitly asked. The
+        # `chat` command flips the default on for an interactive TTY (below);
+        # `run`/eval leave it off (None -> False) so batch output is unchanged.
+        stream=bool(getattr(args, "stream", None)),
     )
     # Stash MCP clients on the loop so the command handler can close them on exit.
     loop._mcp_clients = mcp_clients
@@ -602,14 +635,19 @@ def _load_skills(workspace: Path):
 def _make_subagent_factory(parent_args: argparse.Namespace):
     """A loop_factory for spawn_subagent: builds a nested agent (F15.1, P8).
 
-    Each sub-agent is a full `_build_agent` with the same config but a deeper
-    `_subagent_depth` (so its own spawn tool refuses past the cap) and, if the
-    parent named tools, a registry scoped to just those. Runs unattended, so it
-    inherits auto-approve within the parent's mode.
+    Each sub-agent is a full `_build_agent` with a deeper `_subagent_depth` (so its
+    own spawn tool refuses past the cap) and, if the parent named tools, a registry
+    scoped to just those. Runs unattended, so it inherits auto-approve within the
+    parent's mode.
+
+    W5 (ADR-0021): when a `role` is given, the child's model is routed via
+    `config_for_role` (a strong-planner / cheap-executor split within one run); an
+    empty or unresolved role keeps the parent's config verbatim (byte-identical to
+    before).
     """
     import copy
 
-    def factory(goal: str, tool_names, depth: int):
+    def factory(goal: str, tool_names, depth: int, role: str = ""):
         child = copy.copy(parent_args)
         child._subagent_depth = depth
         # A sub-agent runs unattended; auto-approve within the parent's budget.
@@ -618,6 +656,15 @@ def _make_subagent_factory(parent_args: argparse.Namespace):
         if built is None:
             raise RuntimeError("could not build sub-agent workspace")
         _ws, _cfg, _rec, loop, _color = built
+        # W5: route the child to a role-specific model when asked (and resolvable).
+        if role:
+            try:
+                profiles = load_profiles()
+                routed = config_for_role(role, loop.config.base_url, profiles)
+                if routed is not None:
+                    loop.config = routed
+            except Exception:  # noqa: BLE001 - unresolved role -> keep parent config
+                pass
         if tool_names:
             scoped = scope_registry(
                 loop.registry,
@@ -779,6 +826,8 @@ def cmd_loop(args: argparse.Namespace, _watch_ticks=None) -> int:
     """
     if getattr(args, "watch", None):
         return _cmd_loop_watch(args, _watch_ticks)
+    if getattr(args, "every", None):
+        return _cmd_loop_every(args, _watch_ticks)
     return _cmd_loop_once(args)
 
 
@@ -806,6 +855,36 @@ def _cmd_loop_watch(args: argparse.Namespace, watch_ticks=None) -> int:
                 last = current
                 print(f"{color['dim']}watch: change detected — re-running{color['reset']}")
                 rc = _cmd_loop_once(args)
+    except KeyboardInterrupt:
+        print()
+    return rc
+
+
+def _cmd_loop_every(args: argparse.Namespace, ticks=None) -> int:
+    """Re-run the loop on a fixed time interval (W3, ADR-0020).
+
+    Parallel to `--watch` but time-triggered rather than change-triggered: sleep
+    `--every` seconds, re-run, repeat until Ctrl-C. `ticks` is an injectable
+    iterable of sleep callables for testing (each `next()` is one interval); in
+    normal use it sleeps on a timer. Each iteration is a full `_cmd_loop_once`,
+    so per-iteration budgets/journaling/undo boundaries still apply (ADR-0006).
+    """
+    import time as _time
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    interval = args.every
+    print(f"{color['dim']}every: re-runs every {interval}s · Ctrl-C to stop{color['reset']}")
+
+    def real_ticks():
+        while True:
+            yield lambda: _time.sleep(interval)
+    tick_source = ticks if ticks is not None else real_ticks()
+
+    rc = _cmd_loop_once(args)  # initial run
+    try:
+        for sleep in tick_source:
+            sleep()
+            print(f"{color['dim']}every: interval elapsed — re-running{color['reset']}")
+            rc = _cmd_loop_once(args)
     except KeyboardInterrupt:
         print()
     return rc
@@ -926,6 +1005,11 @@ def cmd_chat(args: argparse.Namespace, input_fn=input,
     session is auto-saved after every turn under `<ws>/.aibot/sessions/` so it can
     be resumed later; the id is stable for the REPL's lifetime.
     """
+    # W1 (ADR-0019): stream by default in an interactive terminal (the live reply
+    # is the point of chat); leave it as explicitly set otherwise. `run`/eval never
+    # reach here, so their default stays off.
+    if getattr(args, "stream", None) is None:
+        args.stream = sys.stdout.isatty() and not getattr(args, "no_color", False)
     built = _build_agent(args)
     if built is None:
         return 2
@@ -1216,9 +1300,29 @@ def cmd_mcp(args: argparse.Namespace) -> int:
 
     action = getattr(args, "mcp_action", None) or "list"
 
+    # W6 (ADR-0021): `mcp add` writes a new [[mcp.servers]] entry (works even with
+    # zero servers configured, so it must run before the "none configured" guard).
+    if action == "add":
+        try:
+            path = write_mcp_server(
+                args.name,
+                command=getattr(args, "command", None),
+                args=getattr(args, "args", None),
+                transport=getattr(args, "transport", "stdio"),
+                url=getattr(args, "url", None),
+                scope="project" if getattr(args, "project", False) else "user",
+                workspace=workspace,
+            )
+        except ValueError as exc:
+            print(f"{color['red']}{exc}{color['reset']}", file=sys.stderr)
+            return 2
+        print(f"{color['bold']}✓{color['reset']} added MCP server "
+              f"{args.name!r} to {path}")
+        return 0
+
     if not specs:
-        print(f"{color['dim']}no MCP servers configured. Add [[mcp.servers]] to "
-              f".revenant.toml.{color['reset']}")
+        print(f"{color['dim']}no MCP servers configured. Add one with "
+              f"`revenant mcp add <name> …` or edit .revenant.toml.{color['reset']}")
         return 0
 
     if action == "test":

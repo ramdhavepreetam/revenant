@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from revenant_cli import config
 from revenant_cli.config import (
     resolve, find_project_config, load_config, mcp_server_specs,
@@ -223,3 +225,58 @@ def test_write_model_choice_appends_when_absent(tmp_path):
     write_model_choice("m", scope="project", workspace=tmp_path)
     text = (tmp_path / PROJECT_FILENAME).read_text()
     assert "max_steps = 5" in text and 'model = "m"' in text
+
+
+# --- write_mcp_server (W6, ADR-0021) ----------------------------------------
+
+from revenant_cli.config import write_mcp_server
+
+
+def test_write_mcp_server_stdio_roundtrips(tmp_path):
+    write_mcp_server("fs", command="mcp-fs", args=["--root", "."],
+                     scope="project", workspace=tmp_path)
+    # The reader parses back exactly what we wrote.
+    specs = mcp_server_specs(load_config(tmp_path))
+    fs = next(s for s in specs if s.name == "fs")
+    assert fs.transport == "stdio"
+    assert fs.command == "mcp-fs"
+    assert fs.args == ["--root", "."]
+
+
+def test_write_mcp_server_http_roundtrips(tmp_path):
+    write_mcp_server("remote", transport="http", url="http://localhost:8808/mcp",
+                     scope="project", workspace=tmp_path)
+    specs = mcp_server_specs(load_config(tmp_path))
+    r = next(s for s in specs if s.name == "remote")
+    assert r.transport == "http"
+    assert r.url == "http://localhost:8808/mcp"
+
+
+def test_write_mcp_server_preserves_existing_content(tmp_path):
+    (tmp_path / PROJECT_FILENAME).write_text('model = "m"\n')
+    write_mcp_server("fs", command="mcp-fs", scope="project", workspace=tmp_path)
+    text = (tmp_path / PROJECT_FILENAME).read_text()
+    assert 'model = "m"' in text and "[[mcp.servers]]" in text
+
+
+def test_write_mcp_server_refuses_duplicate_name(tmp_path):
+    write_mcp_server("fs", command="a", scope="project", workspace=tmp_path)
+    with pytest.raises(ValueError):
+        write_mcp_server("fs", command="b", scope="project", workspace=tmp_path)
+
+
+def test_write_mcp_server_validates_required_fields(tmp_path):
+    with pytest.raises(ValueError):   # stdio needs a command
+        write_mcp_server("x", scope="project", workspace=tmp_path)
+    with pytest.raises(ValueError):   # http needs a url
+        write_mcp_server("y", transport="http", scope="project", workspace=tmp_path)
+    with pytest.raises(ValueError):   # unknown transport
+        write_mcp_server("z", transport="pigeon", url="x", scope="project", workspace=tmp_path)
+
+
+def test_write_two_servers_both_readable(tmp_path):
+    write_mcp_server("a", command="cmd-a", scope="project", workspace=tmp_path)
+    write_mcp_server("b", transport="sse", url="http://localhost:1/mcp",
+                     scope="project", workspace=tmp_path)
+    names = {s.name for s in mcp_server_specs(load_config(tmp_path))}
+    assert {"a", "b"} <= names

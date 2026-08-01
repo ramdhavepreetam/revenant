@@ -50,14 +50,20 @@ for _pkg_src in sorted((_REPO_ROOT / "packages").glob("*/src")):
 sys.path.insert(0, str(_REPO_ROOT))
 
 from evals.tasks import ALL_TASKS, Task  # noqa: E402
+from evals.tasks.base import RunMetrics  # noqa: E402
 
 
 # --- pluggable agent runner ---------------------------------------------------
 
 class AgentRunner(Protocol):
-    """Drives an agent over a goal inside a workspace. Mutates files in place."""
+    """Drives an agent over a goal inside a workspace. Mutates files in place.
 
-    def run(self, workspace: Path, goal: str) -> None:
+    `run` may optionally return a `RunMetrics` (W0, ADR-0019) describing the
+    cost/quality of the run (steps/tokens/edit-precision). Returning `None`
+    (the historical contract) is still valid -- the task then carries no metrics.
+    """
+
+    def run(self, workspace: Path, goal: str) -> "RunMetrics | None":
         ...
 
 
@@ -77,7 +83,7 @@ class RevenantAgentRunner:
         self.max_steps = max_steps
         self.verify = verify
 
-    def run(self, workspace: Path, goal: str) -> None:
+    def run(self, workspace: Path, goal: str) -> "RunMetrics | None":
         import argparse as _argparse
         from revenant_cli.cli import _build_agent
 
@@ -105,13 +111,62 @@ class RevenantAgentRunner:
             raise RuntimeError(f"could not build agent for workspace {workspace}")
         _ws, _config, _rec, loop, _color = built
         try:
-            loop.run(goal)
+            result = loop.run(goal)
         finally:
             for client in getattr(loop, "_mcp_clients", ()) or ():
                 try:
                     client.close()
                 except Exception:  # noqa: BLE001 - cleanup is best-effort
                     pass
+        return _metrics_from_result(result)
+
+
+# Tool names that mutate files -- used to count "edits" from the event stream.
+_EDIT_TOOLS = frozenset({"write_file", "edit_file", "apply_edits"})
+
+
+def _metrics_from_result(result) -> "RunMetrics | None":
+    """Derive RunMetrics from a finished AgentResult. Never raises.
+
+    steps/tokens come straight off the result + transcript; `edits` counts the
+    mutating tool calls in the event stream, and `edits_kept` counts those whose
+    target file still exists at the end (a coarse but honest "did the edit
+    survive" proxy -- the graph-refactor slices refine it). Best-effort: any
+    attribute the loop doesn't expose degrades to 0 rather than crashing a run.
+    """
+    try:
+        steps = int(getattr(result, "steps", 0) or 0)
+        events = list(getattr(result, "events", ()) or ())
+        edits = sum(1 for e in events
+                    if getattr(e, "kind", "") == "action"
+                    and getattr(e, "tool", "") in _EDIT_TOOLS)
+        # edits_kept: an edit "survived" if its target path still exists at the
+        # end. Missing path arg -> treat as kept so we never under-report.
+        kept = 0
+        for e in events:
+            if getattr(e, "kind", "") != "action" or getattr(e, "tool", "") not in _EDIT_TOOLS:
+                continue
+            args = getattr(e, "args", {}) or {}
+            path = args.get("path") or args.get("file")
+            kept += 1 if path is None else (1 if Path(path).exists() else 0)
+        tokens = _estimate_tokens(getattr(result, "messages", ()) or ())
+        return RunMetrics(steps=steps, tokens=tokens, edits=edits, edits_kept=kept)
+    except Exception:  # noqa: BLE001 - metrics are best-effort, never fail a run
+        return None
+
+
+def _estimate_tokens(messages) -> int:
+    """Best-effort token count of the final transcript. Reuses the model layer's
+    counter if importable; else a cheap ~4-chars/token estimate; else 0."""
+    try:
+        text = "".join(str(m.get("content", "")) for m in messages if isinstance(m, dict))
+    except Exception:  # noqa: BLE001
+        return 0
+    try:
+        from nerva_core.local_llm_writer import estimate_tokens
+        return int(estimate_tokens(text))
+    except Exception:  # noqa: BLE001
+        return len(text) // 4
 
 
 def model_server_reachable(base_url: str, timeout: float = 2.0) -> bool:
@@ -138,10 +193,16 @@ class TaskOutcome:
     # `passed`, so single-run code paths and older saved JSON stay valid.
     runs: int = 1
     passes: int = -1
+    # W0 (ADR-0019): optional cost/quality metrics for this task's run(s).
+    # None when the runner reported nothing (older reports / metric-free fakes).
+    metrics: "RunMetrics | None" = None
 
     def __post_init__(self) -> None:
         if self.passes < 0:
             self.passes = 1 if self.passed else 0
+        # Accept a plain dict for `metrics` (from JSON round-trips) transparently.
+        if isinstance(self.metrics, dict):
+            self.metrics = RunMetrics.from_dict(self.metrics)
 
     @property
     def task_pass_rate(self) -> float:
@@ -172,11 +233,39 @@ class Report:
             return 0.0
         return self.passed_count / self.total
 
+    # --- W0 (ADR-0019) metric aggregates over the tasks that reported metrics ---
+    @property
+    def _metric_outcomes(self) -> "list[TaskOutcome]":
+        return [o for o in self.outcomes if isinstance(o.metrics, RunMetrics)]
+
+    @property
+    def total_steps(self) -> int:
+        return sum(o.metrics.steps for o in self._metric_outcomes)
+
+    @property
+    def total_tokens(self) -> int:
+        return sum(o.metrics.tokens for o in self._metric_outcomes)
+
+    @property
+    def mean_edit_precision(self) -> "float | None":
+        ms = self._metric_outcomes
+        if not ms:
+            return None
+        return sum(o.metrics.edit_precision for o in ms) / len(ms)
+
     def to_dict(self) -> dict:
         d = asdict(self)
+        # asdict() drops @property-only fields; re-attach the metric properties
+        # onto each serialized outcome so a saved report carries edit_precision.
+        for od, o in zip(d.get("outcomes", []), self.outcomes):
+            if isinstance(o.metrics, RunMetrics):
+                od["metrics"] = o.metrics.to_dict()
         d["pass_rate"] = self.pass_rate
         d["passed_count"] = self.passed_count
         d["total"] = self.total
+        d["total_steps"] = self.total_steps
+        d["total_tokens"] = self.total_tokens
+        d["mean_edit_precision"] = self.mean_edit_precision
         return d
 
     @staticmethod
@@ -206,14 +295,16 @@ def _run_task_once(task: Task, agent_runner: AgentRunner,
         except Exception as exc:  # noqa: BLE001
             return TaskOutcome(task.name, False, f"setup error: {exc!r}", time.monotonic() - started)
         try:
-            agent_runner.run(workspace, task.goal)
+            metrics = agent_runner.run(workspace, task.goal)
         except Exception as exc:  # noqa: BLE001
             return TaskOutcome(task.name, False, f"agent error: {exc!r}", time.monotonic() - started)
         try:
             result = task.score(workspace)
         except Exception as exc:  # noqa: BLE001
             return TaskOutcome(task.name, False, f"scorer error: {exc!r}", time.monotonic() - started)
-        return TaskOutcome(task.name, result.passed, result.detail, time.monotonic() - started)
+        return TaskOutcome(task.name, result.passed, result.detail,
+                           time.monotonic() - started,
+                           metrics=metrics if isinstance(metrics, RunMetrics) else None)
     finally:
         shutil.rmtree(workspace, ignore_errors=True)
 
@@ -238,7 +329,22 @@ def run_task(task: Task, agent_runner: AgentRunner, *,
     detail = (fail_detail if passes < repeat else attempts[-1].detail)
     if repeat > 1:
         detail = f"{passes}/{repeat} passed" + (f"; e.g. {detail}" if detail else "")
-    return TaskOutcome(task.name, majority, detail, median, runs=repeat, passes=passes)
+    return TaskOutcome(task.name, majority, detail, median, runs=repeat, passes=passes,
+                       metrics=_mean_metrics([a.metrics for a in attempts]))
+
+
+def _mean_metrics(items: "list[RunMetrics | None]") -> "RunMetrics | None":
+    """Average the metrics across a task's attempts (None if none reported)."""
+    present = [m for m in items if isinstance(m, RunMetrics)]
+    if not present:
+        return None
+    n = len(present)
+    return RunMetrics(
+        steps=round(sum(m.steps for m in present) / n),
+        tokens=round(sum(m.tokens for m in present) / n),
+        edits=round(sum(m.edits for m in present) / n),
+        edits_kept=round(sum(m.edits_kept for m in present) / n),
+    )
 
 
 def run_suite(
@@ -282,7 +388,11 @@ def format_report(report: Report) -> str:
     for o in report.outcomes:
         mark = "PASS" if o.passed else "FAIL"
         tally = f" [{o.passes}/{o.runs}]" if o.runs > 1 else ""
-        lines.append(f"  [{mark}]{tally} {o.name} (~{o.seconds:.1f}s) {o.detail}".rstrip())
+        met = ""
+        if isinstance(o.metrics, RunMetrics):
+            m = o.metrics
+            met = f" · {m.steps} steps, {m.tokens} tok, prec {m.edit_precision:.0%}"
+        lines.append(f"  [{mark}]{tally} {o.name} (~{o.seconds:.1f}s){met} {o.detail}".rstrip())
     # Two aggregate views: tasks passed (majority) and total attempts passed.
     total_runs = sum(o.runs for o in report.outcomes)
     total_passes = sum(o.passes for o in report.outcomes)
@@ -294,6 +404,11 @@ def format_report(report: Report) -> str:
         lines.append(
             f"attempts passed: {total_passes}/{total_runs} "
             f"({total_passes / total_runs * 100:.0f}%)  <- the real signal"
+        )
+    if report.mean_edit_precision is not None:  # metrics were reported
+        lines.append(
+            f"cost: {report.total_steps} steps, {report.total_tokens} tokens · "
+            f"edit-precision {report.mean_edit_precision:.0%}"
         )
     lines.append(f"wall: {report.wall_seconds:.0f}s")
     return "\n".join(lines)
@@ -315,6 +430,23 @@ class CompareResult:
     @property
     def regressed(self) -> "list[str]":
         return [n for n, (b, c) in self.per_task.items() if b and not c]
+
+    # W0 (ADR-0019): metric deltas (candidate - baseline). Fewer steps/tokens and
+    # higher edit-precision are improvements. None when a side lacks metrics.
+    @property
+    def delta_steps(self) -> int:
+        return self.candidate.total_steps - self.baseline.total_steps
+
+    @property
+    def delta_tokens(self) -> int:
+        return self.candidate.total_tokens - self.baseline.total_tokens
+
+    @property
+    def delta_edit_precision(self) -> "float | None":
+        b, c = self.baseline.mean_edit_precision, self.candidate.mean_edit_precision
+        if b is None or c is None:
+            return None
+        return c - b
 
 
 def compare_reports(baseline: Report, candidate: Report) -> CompareResult:
@@ -354,11 +486,38 @@ def format_compare(cmp: CompareResult) -> str:
             f"candidate {c_tp}/{c_tr} ({c_rate:.0f}%)  delta {c_rate - b_rate:+.0f} pts"
             f"  <- the real signal"
         )
+    if cmp.delta_edit_precision is not None:  # both sides carry metrics
+        lines.append(
+            f"cost: steps {cmp.delta_steps:+d}, tokens {cmp.delta_tokens:+d}, "
+            f"edit-precision {cmp.delta_edit_precision * 100:+.0f} pts"
+        )
     if cmp.improved:
         lines.append(f"improved (task-level): {', '.join(cmp.improved)}")
     if cmp.regressed:
         lines.append(f"regressed (task-level): {', '.join(cmp.regressed)}")
     return "\n".join(lines)
+
+
+# --- regression gate (W0, ADR-0019) ------------------------------------------
+
+def gate_regressions(baseline: Report, candidate: Report) -> "list[str]":
+    """Return human-readable reasons the candidate regressed vs. the baseline.
+
+    A regression is: the overall task pass-rate dropped, OR any task that passed
+    in the baseline now fails. Cost metrics (steps/tokens) are reported by
+    --compare but do NOT gate CI -- they're informational, not pass/fail. An
+    empty list means "no regression": the gate passes.
+    """
+    reasons: list[str] = []
+    cmp = compare_reports(baseline, candidate)
+    if candidate.pass_rate < baseline.pass_rate:
+        reasons.append(
+            f"pass-rate dropped {baseline.pass_rate * 100:.0f}% -> "
+            f"{candidate.pass_rate * 100:.0f}%"
+        )
+    if cmp.regressed:
+        reasons.append(f"tasks now failing: {', '.join(cmp.regressed)}")
+    return reasons
 
 
 # --- CLI ---------------------------------------------------------------------
@@ -371,6 +530,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--save", default="", help="Write the report as JSON to this path")
     p.add_argument("--compare", nargs=2, metavar=("BASELINE_JSON", "CANDIDATE_JSON"),
                     help="Diff two saved reports instead of running the suite")
+    p.add_argument("--gate", metavar="BASELINE_JSON", default="",
+                    help="Fail (exit 1) if this run regresses below the saved "
+                         "baseline report (pass-rate drop or a task that passed "
+                         "before now failing). For CI.")
     p.add_argument("--task", action="append", default=[], help="Run only this task (repeatable)")
     p.add_argument("--verify", action="store_true",
                    help="Enable the harness's verify→repair + code graph for the "
@@ -417,6 +580,19 @@ def main(argv: "list[str] | None" = None) -> int:
 
     if report.skipped:
         return 0
+
+    # --gate: fail the run if it regressed below a saved baseline (CI use).
+    if args.gate:
+        baseline = Report.from_dict(json.loads(Path(args.gate).read_text()))
+        reasons = gate_regressions(baseline, report)
+        if reasons:
+            print("REGRESSION GATE FAILED vs " + args.gate + ":", file=sys.stderr)
+            for r in reasons:
+                print(f"  - {r}", file=sys.stderr)
+            return 1
+        print(f"regression gate passed vs {args.gate}")
+        return 0
+
     return 0 if report.pass_rate == 1.0 else 1
 
 

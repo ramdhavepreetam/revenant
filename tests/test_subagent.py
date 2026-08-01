@@ -33,9 +33,9 @@ class _FakeLoop:
 
 
 def _factory(record, result=None):
-    """A loop_factory that records (goal, tools, depth) and returns a fake loop."""
-    def make(goal, tools, depth):
-        record.append((goal, tools, depth))
+    """A loop_factory that records (goal, tools, depth[, role]) and returns a loop."""
+    def make(goal, tools, depth, role=""):
+        record.append((goal, tools, depth, role))
         return _FakeLoop(result or _FakeResult())
     return make
 
@@ -48,8 +48,8 @@ def test_spawn_runs_nested_loop_and_summarizes():
     out = tool.invoke({"goal": "refactor module X"})
     assert "Sub-agent completed" in out
     assert "done" in out
-    # factory was called with the goal, no tool scope, and depth+1.
-    assert calls == [("refactor module X", None, 1)]
+    # factory was called with the goal, no tool scope, depth+1, and no role.
+    assert calls == [("refactor module X", None, 1, "")]
 
 
 def test_spawn_passes_scoped_tools():
@@ -57,6 +57,36 @@ def test_spawn_passes_scoped_tools():
     tool = build_spawn_tool(_factory(calls))
     tool.invoke({"goal": "g", "tools": "read_file, run_bash"})
     assert calls[0][1] == ["read_file", "run_bash"]
+
+
+# --- W5 (ADR-0021): role-routed sub-agents -----------------------------------
+
+def test_spawn_threads_role_to_factory():
+    calls = []
+    tool = build_spawn_tool(_factory(calls))
+    tool.invoke({"goal": "plan the work", "role": "summary"})
+    assert calls[0][3] == "summary"   # role reached the factory
+
+
+def test_spawn_default_role_is_empty():
+    calls = []
+    tool = build_spawn_tool(_factory(calls))
+    tool.invoke({"goal": "g"})
+    assert calls[0][3] == ""          # no role -> parent config (unchanged)
+
+
+def test_spawn_role_whitespace_trimmed():
+    calls = []
+    tool = build_spawn_tool(_factory(calls))
+    tool.invoke({"goal": "g", "role": "  code  "})
+    assert calls[0][3] == "code"
+
+
+def test_spawn_tool_declares_role_param():
+    tool = build_spawn_tool(_factory([]))
+    params = {p.name for p in tool.params}
+    assert "role" in params
+    assert not next(p for p in tool.params if p.name == "role").required
 
 
 def test_summary_is_bounded():
@@ -99,7 +129,7 @@ def test_tool_is_mutating_and_approval_gated():
 # --- failure degradation -----------------------------------------------------
 
 def test_factory_error_becomes_observation():
-    def bad_factory(goal, tools, depth):
+    def bad_factory(goal, tools, depth, role=""):
         raise RuntimeError("boom")
     tool = build_spawn_tool(bad_factory)
     out = tool.invoke({"goal": "g"})
@@ -111,7 +141,7 @@ def test_run_error_becomes_observation():
     class Boom:
         def run(self, goal, history=None):
             raise RuntimeError("kaboom")
-    tool = build_spawn_tool(lambda g, t, d: Boom())
+    tool = build_spawn_tool(lambda g, t, d, r="": Boom())
     out = tool.invoke({"goal": "g"})
     assert out.startswith("ERROR:")
     assert "run failed" in out
@@ -130,7 +160,7 @@ def _emitting_loop_factory(child_events):
                     self.on_event(ev)
             return _FakeResult(answer="child done")
 
-    return lambda goal, tools, depth: _Emitter()
+    return lambda goal, tools, depth, role="": _Emitter()
 
 
 def test_child_events_relayed_stamped_with_label():
@@ -187,7 +217,7 @@ def test_run_error_emits_agent_end():
         def run(self, goal, history=None):
             raise RuntimeError("kaboom")
     seen = []
-    tool = build_spawn_tool(lambda g, t, d: Boom(), parent_sink=seen.append)
+    tool = build_spawn_tool(lambda g, t, d, r="": Boom(), parent_sink=seen.append)
     out = tool.invoke({"goal": "g"})
     assert out.startswith("ERROR:")
     assert seen[-1].kind == "agent_end" and "errored" in seen[-1].text

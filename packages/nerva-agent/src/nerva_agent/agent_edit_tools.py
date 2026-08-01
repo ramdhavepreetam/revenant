@@ -30,7 +30,17 @@ def _write_file(root: Path, path: str, content: str) -> str:
     return f"{verb} {_rel(root, target)} ({lines} lines, {len(content)} bytes)"
 
 
-def _edit_file(root: Path, path: str, old: str, new: str) -> str:
+def _coerce_bool(value: object) -> bool:
+    """Weak models pass booleans as strings ('true'/'1'); coerce leniently."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes", "y", "all")
+    return bool(value)
+
+
+def _edit_file(root: Path, path: str, old: str, new: str,
+               replace_all: object = False) -> str:
     target = _resolve_in_root(root, path)
     if not target.exists():
         raise WorkspaceError(f"no such file: {path}")
@@ -45,13 +55,69 @@ def _edit_file(root: Path, path: str, old: str, new: str) -> str:
             "old string not found. Provide the exact text to replace, including "
             "whitespace and surrounding context."
         )
-    if count > 1:
+    all_ = _coerce_bool(replace_all)
+    # W4a (ADR-0020): replace_all replaces every occurrence; the default (False)
+    # keeps the exactly-one contract — a non-unique match without the flag errors,
+    # so a careless edit can't silently touch multiple spots.
+    if count > 1 and not all_:
         raise WorkspaceError(
             f"old string is not unique ({count} matches). Add surrounding context "
-            "so it matches exactly one location."
+            "so it matches exactly one location, or pass all=true to replace every "
+            "occurrence."
         )
-    target.write_text(text.replace(old, new, 1), encoding="utf-8")
-    return f"edited {_rel(root, target)} (1 replacement)"
+    n = count if all_ else 1
+    target.write_text(text.replace(old, new, n), encoding="utf-8")
+    return f"edited {_rel(root, target)} ({n} replacement{'s' if n != 1 else ''})"
+
+
+def _apply_edits(root: Path, edits: object) -> str:
+    """Apply a list of {path, old, new[, all]} edits ATOMICALLY (W4c, ADR-0020).
+
+    Every edit must succeed or the whole set is rolled back — the payoff for a
+    graph-driven project-wide rename, where a partial application leaves the repo
+    broken (old name in some files, new in others). We snapshot each touched
+    file's original bytes before writing anything; on the first failure we restore
+    every snapshot and raise, so the workspace is exactly as it started. (This
+    in-tool atomicity composes with the loop's before_tool undo snapshot and
+    after_tool verify — belt and suspenders.)
+    """
+    if not isinstance(edits, list) or not edits:
+        raise WorkspaceError("apply_edits: `edits` must be a non-empty list of "
+                             "{path, old, new} objects.")
+    # Validate shape up front so we never half-apply on a malformed item.
+    for i, e in enumerate(edits):
+        if not isinstance(e, dict) or not {"path", "old", "new"} <= set(e):
+            raise WorkspaceError(f"apply_edits: edit #{i} must have path, old, new.")
+
+    snapshots: dict[Path, "str | None"] = {}   # target -> original text (None = absent)
+    applied = 0
+    try:
+        for e in edits:
+            target = _resolve_in_root(root, str(e["path"]))
+            if target not in snapshots:
+                snapshots[target] = (
+                    target.read_text(encoding="utf-8", errors="replace")
+                    if target.exists() and not target.is_dir() else None
+                )
+            _edit_file(root, str(e["path"]), str(e["old"]), str(e["new"]),
+                       replace_all=e.get("all", False))
+            applied += 1
+    except Exception as exc:  # noqa: BLE001 - roll back the whole set on any failure
+        for target, original in snapshots.items():
+            try:
+                if original is None:
+                    if target.exists():
+                        target.unlink()
+                else:
+                    target.write_text(original, encoding="utf-8")
+            except OSError:
+                pass
+        raise WorkspaceError(
+            f"apply_edits: edit #{applied} failed ({exc}); rolled back all "
+            f"{len(snapshots)} file(s). No changes were made."
+        ) from exc
+    files = len(snapshots)
+    return f"applied {applied} edit(s) across {files} file(s) atomically"
 
 
 def build_edit_tools(root: str | Path) -> list[Tool]:
@@ -73,14 +139,37 @@ def build_edit_tools(root: str | Path) -> list[Tool]:
         ),
         Tool(
             "edit_file",
-            "Replace exactly one occurrence of `old` with `new` in a file. `old` "
-            "must match a unique span (include surrounding context if needed).",
+            "Replace occurrences of `old` with `new` in a file. By default `old` "
+            "must match exactly one span (include surrounding context if needed); "
+            "pass all=true to replace every occurrence in the file.",
             [
                 ToolParam("path", "string", "File path relative to the workspace root."),
-                ToolParam("old", "string", "Exact text to replace (must occur exactly once)."),
+                ToolParam("old", "string", "Exact text to replace."),
                 ToolParam("new", "string", "Replacement text."),
+                ToolParam("all", "boolean",
+                          "Replace every occurrence (default: false = exactly one).",
+                          required=False),
             ],
-            run=lambda path, old, new: _edit_file(root_path, path, old, new),
+            run=lambda path, old, new, all=False: _edit_file(root_path, path, old, new, all),
+            mutating=True,
+        ),
+        Tool(
+            "apply_edits",
+            "Apply several edits across one or more files ATOMICALLY (all-or-"
+            "nothing): if any edit fails, every change is rolled back. Use for a "
+            "project-wide rename so the repo is never left half-updated.",
+            [
+                ToolParam("edits", "array",
+                          "The edits to apply, in order.", item_fields=[
+                              ToolParam("path", "string", "File path relative to the workspace root."),
+                              ToolParam("old", "string", "Exact text to replace in that file."),
+                              ToolParam("new", "string", "Replacement text."),
+                              ToolParam("all", "boolean",
+                                        "Replace every occurrence in the file (default: false).",
+                                        required=False),
+                          ]),
+            ],
+            run=lambda edits: _apply_edits(root_path, edits),
             mutating=True,
         ),
     ]

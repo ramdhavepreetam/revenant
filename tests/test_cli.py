@@ -359,6 +359,41 @@ def test_mcp_parser_accepts_flags_before_and_after_action():
     assert c.mcp_action == "test" and c.name == "git" and c.workspace == "/w"
 
 
+# --- W6 (ADR-0021): mcp add -------------------------------------------------
+
+def test_mcp_add_parser():
+    p = cli.build_parser()
+    a = p.parse_args(["mcp", "add", "fs", "--command", "mcp-fs",
+                      "--arg", "serve", "--arg", "/data", "--project"])
+    assert a.mcp_action == "add" and a.name == "fs"
+    assert a.command == "mcp-fs" and a.args == ["serve", "/data"] and a.project is True
+
+
+def test_cmd_mcp_add_writes_entry(tmp_path, capsys):
+    args = argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, mcp_action="add", name="fs",
+        transport="stdio", command="mcp-fs", args=["--root", "."], url=None, project=True,
+    )
+    rc = cli.cmd_mcp(args)
+    assert rc == 0
+    assert "added MCP server" in capsys.readouterr().out
+    # The written entry is readable by the config loader.
+    from revenant_cli.config import mcp_server_specs, load_config
+    names = {s.name for s in mcp_server_specs(load_config(tmp_path))}
+    assert "fs" in names
+
+
+def test_cmd_mcp_add_duplicate_errors(tmp_path, capsys):
+    args = argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, mcp_action="add", name="fs",
+        transport="stdio", command="mcp-fs", args=[], url=None, project=True,
+    )
+    assert cli.cmd_mcp(args) == 0
+    capsys.readouterr()
+    assert cli.cmd_mcp(args) == 2                      # second add = duplicate
+    assert "already exists" in capsys.readouterr().err
+
+
 # --- skills subcommand + /skill REPL (F12.4, ADR-0005) ----------------------
 
 def _skill_workspace(tmp_path, tools=None):
@@ -715,6 +750,55 @@ def test_spawn_subagent_absent_in_read_only(tmp_path, monkeypatch):
     assert "spawn_subagent" not in captured["names"]
 
 
+# --- W5 (ADR-0021): role-routed sub-agent factory ---------------------------
+
+class _FakeLoopWithConfig:
+    def __init__(self):
+        self.config = type("C", (), {"base_url": "http://x", "model": "parent-model"})()
+        self.registry = type("R", (), {})()
+
+
+def _patch_factory_build(monkeypatch, loop):
+    monkeypatch.setattr(cli, "_build_agent",
+                        lambda a: (None, None, None, loop, None))
+
+
+def test_subagent_factory_routes_role_via_config_for_role(tmp_path, monkeypatch):
+    loop = _FakeLoopWithConfig()
+    _patch_factory_build(monkeypatch, loop)
+    routed = type("C", (), {"base_url": "http://x", "model": "summary-model"})()
+    monkeypatch.setattr(cli, "config_for_role", lambda role, url, prof: routed)
+    monkeypatch.setattr(cli, "load_profiles", lambda: {})
+
+    factory = cli._make_subagent_factory(argparse.Namespace(workspace=str(tmp_path)))
+    built = factory("summarize this", None, 1, "summary")
+    assert built.config.model == "summary-model"   # routed to the role's model
+
+
+def test_subagent_factory_no_role_keeps_parent_config(tmp_path, monkeypatch):
+    loop = _FakeLoopWithConfig()
+    _patch_factory_build(monkeypatch, loop)
+    called = {"routed": False}
+    monkeypatch.setattr(cli, "config_for_role",
+                        lambda *a: called.__setitem__("routed", True) or None)
+
+    factory = cli._make_subagent_factory(argparse.Namespace(workspace=str(tmp_path)))
+    built = factory("do it", None, 1, "")            # no role
+    assert built.config.model == "parent-model"      # unchanged
+    assert called["routed"] is False                 # routing not even attempted
+
+
+def test_subagent_factory_unresolved_role_falls_back(tmp_path, monkeypatch):
+    loop = _FakeLoopWithConfig()
+    _patch_factory_build(monkeypatch, loop)
+    monkeypatch.setattr(cli, "config_for_role", lambda *a: None)  # unresolved
+    monkeypatch.setattr(cli, "load_profiles", lambda: {})
+
+    factory = cli._make_subagent_factory(argparse.Namespace(workspace=str(tmp_path)))
+    built = factory("g", None, 1, "bogus-role")
+    assert built.config.model == "parent-model"      # kept parent config, no crash
+
+
 def _make_git_repo(path):
     _sp.run(["git", "init", "-q"], cwd=path, check=True)
     _sp.run(["git", "config", "user.email", "t@e.com"], cwd=path, check=True)
@@ -853,6 +937,34 @@ def test_loop_watch_reruns_on_change(tmp_path, monkeypatch):
     cli._cmd_loop_watch(args, watch_ticks=iter(ticks))
     # initial run + one rerun after the change = 2
     assert runs["n"] == 2
+
+
+# --- loop --every trigger (W3, ADR-0020) ------------------------------------
+
+def test_loop_every_parser():
+    p = cli.build_parser()
+    ns = p.parse_args(cli._normalize_argv(["loop", "g", "--every", "5"]))
+    assert ns.every == 5.0
+
+
+def test_loop_every_reruns_each_interval(tmp_path, monkeypatch):
+    runs = {"n": 0}
+    monkeypatch.setattr(cli, "_cmd_loop_once", lambda a: runs.__setitem__("n", runs["n"] + 1) or 0)
+    # Three interval ticks -> initial run + 3 reruns = 4 (no change detection;
+    # time-triggered fires every interval unconditionally).
+    ticks = [lambda: None, lambda: None, lambda: None]
+    args = argparse.Namespace(workspace=str(tmp_path), every=0.0, no_color=True)
+    cli._cmd_loop_every(args, ticks=iter(ticks))
+    assert runs["n"] == 4
+
+
+def test_loop_dispatch_routes_every(tmp_path, monkeypatch):
+    # cmd_loop must dispatch to the --every branch when --every is set.
+    called = {"every": False}
+    monkeypatch.setattr(cli, "_cmd_loop_every", lambda a, t=None: called.__setitem__("every", True) or 0)
+    args = argparse.Namespace(workspace=str(tmp_path), every=5.0, watch=None, no_color=True)
+    cli.cmd_loop(args)
+    assert called["every"] is True
 
 
 # --- H3: --plan decompose + per-step driver (ADR-0014) ----------------------
