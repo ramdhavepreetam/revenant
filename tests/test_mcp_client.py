@@ -105,14 +105,83 @@ def test_close_is_idempotent(good_client):
     good_client.close()  # second call must not raise
 
 
-def test_non_stdio_transport_rejected():
+def test_unknown_transport_rejected():
     with pytest.raises(McpError):
-        McpClient(McpServerSpec(name="x", transport="http", url="http://y"))
+        McpClient(McpServerSpec(name="x", transport="carrier-pigeon"))
 
 
 def test_stdio_without_command_rejected():
     with pytest.raises(McpError):
         McpClient(McpServerSpec(name="x", transport="stdio"))
+
+
+# --- W6 (ADR-0021): HTTP/SSE transport --------------------------------------
+
+def test_http_transport_accepted_with_url():
+    # http is now a valid transport (was rejected before W6).
+    c = McpClient(McpServerSpec(name="x", transport="http", url="http://localhost:9"))
+    assert c._is_http is True
+
+
+def test_http_without_url_rejected():
+    with pytest.raises(McpError):
+        McpClient(McpServerSpec(name="x", transport="http"))
+
+
+def test_http_client_lists_and_calls_tools(monkeypatch):
+    # Drive the HTTP JSON-RPC path with a fake urlopen: initialize -> tools/list
+    # -> tools/call, each returning a canned JSON-RPC response.
+    import json as _json
+    responses = {
+        "initialize": {"protocolVersion": "1.0"},
+        "tools/list": {"tools": [{"name": "echo", "description": "d", "inputSchema": {}}]},
+        "tools/call": {"content": [{"type": "text", "text": "hello"}]},
+    }
+
+    class _Resp:
+        def __init__(self, body): self._b = body.encode()
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return self._b
+
+    def fake_urlopen(req, timeout=None):
+        payload = _json.loads(req.data.decode())
+        result = responses.get(payload.get("method"), {})
+        return _Resp(_json.dumps({"jsonrpc": "2.0", "id": payload.get("id"),
+                                  "result": result}))
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    c = McpClient(McpServerSpec(name="x", transport="http", url="http://localhost:9"))
+    c.connect()
+    tools = c.list_tools()
+    assert [t.name for t in tools] == ["echo"]
+    assert c.call_tool("echo", {"msg": "hi"}) == "hello"
+
+
+def test_http_parses_sse_data_frame(monkeypatch):
+    import json as _json
+
+    class _Resp:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self):
+            return (b"data: " + _json.dumps(
+                {"jsonrpc": "2.0", "id": 1, "result": {"tools": []}}).encode())
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: _Resp())
+    c = McpClient(McpServerSpec(name="x", transport="sse", url="http://localhost:9"))
+    # A single request should parse the SSE data: frame into the JSON-RPC result.
+    assert c.list_tools() == []
+
+
+def test_http_transport_error_raises_mcp_error(monkeypatch):
+    import urllib.error
+    monkeypatch.setattr("urllib.request.urlopen",
+                        lambda req, timeout=None: (_ for _ in ()).throw(
+                            urllib.error.URLError("refused")))
+    c = McpClient(McpServerSpec(name="x", transport="http", url="http://localhost:9"))
+    with pytest.raises(McpError):
+        c.list_tools()
 
 
 # --- content flattening (pure) ----------------------------------------------

@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-01 · **Tests:** 636 green · **V-series (0.5.0) RELEASED to PyPI + GitHub** 🎉 · **▶ NOW: W-series (0.6.0)** — strategy [ADR-0018](0018-w-series-strategy.md) · **Phase A [ADR-0019](0019-w-series-phase-a-measure-and-stream.md) COMPLETE** (W0 metrics/gate · W1/W2 streaming + live TUI) · **Phase B [ADR-0020](0020-w-series-phase-b-deeper-capability.md) COMPLETE** (W3 --every+graph cache · W4a replace_all · W4b array-param · W4c atomic apply_edits) · ⏭ Phase C next (ADR-0021: W5/W6)
+**Last updated:** 2026-08-01 · **Tests:** 657 green · **V-series (0.5.0) RELEASED** 🎉 · **▶ W-series (0.6.0) — ALL FEATURE WORK COMPLETE** ([0018](0018-w-series-strategy.md)): **Phase A** [0019](0019-w-series-phase-a-measure-and-stream.md) (W0 metrics/gate · W1/W2 streaming) · **Phase B** [0020](0020-w-series-phase-b-deeper-capability.md) (W3 --every+graph cache · W4 replace_all/array-param/atomic apply_edits) · **Phase C** [0021](0021-w-series-phase-c-reach.md) (W5 role-routed sub-agents · W6 mcp add + HTTP/SSE) · ⏭ **ship 0.6.0 next** (bump/changelog/tag/PyPI, same flow as 0.5.0)
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -124,7 +124,7 @@
 | [0018](0018-w-series-strategy.md) | **Faster, deeper, measurable** (W-series strategy: streaming + capability + quality) | 0.6.0 | Accepted |
 | [0019](0019-w-series-phase-a-measure-and-stream.md) | W-series Phase A — measure (eval metrics/gate) + stream (token events, live render) | W0/W1/W2 | Implemented |
 | [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Implemented |
-| [0021](0021-w-series-phase-c-reach.md) | W-series Phase C — reach (role-routed sub-agents; mcp add + HTTP/SSE transport) | W5/W6 | Accepted (W5 in progress) |
+| [0021](0021-w-series-phase-c-reach.md) | W-series Phase C — reach (role-routed sub-agents; mcp add + HTTP/SSE transport) | W5/W6 | Implemented |
 
 ---
 

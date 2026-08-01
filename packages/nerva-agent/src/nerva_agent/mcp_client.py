@@ -45,11 +45,11 @@ class McpServerSpec:
     """How to reach one MCP server. `transport="stdio"` spawns `command args`."""
 
     name: str
-    transport: str = "stdio"          # "stdio" (implemented) | "http" (future)
+    transport: str = "stdio"          # "stdio" | "http" | "sse" (W6, ADR-0021)
     command: str | None = None        # stdio: the server executable
     args: list[str] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
-    url: str | None = None            # http: reserved for the future transport
+    url: str | None = None            # http/sse: the local server URL
     # Optional policy carried from config (consumed by the adapter, not here):
     read_only: list[str] = field(default_factory=list)   # tool names that skip approval
     alias: str | None = None                             # name-prefix override
@@ -73,10 +73,14 @@ class McpClient:
     """
 
     def __init__(self, spec: McpServerSpec, *, timeout: float = DEFAULT_TIMEOUT) -> None:
-        if spec.transport != "stdio":
-            raise McpError(f"{spec.name}: only the stdio transport is implemented")
-        if not spec.command:
+        # W6 (ADR-0021): stdio (subprocess) or http/sse (POST to a local URL).
+        if spec.transport not in ("stdio", "http", "sse"):
+            raise McpError(f"{spec.name}: unknown transport {spec.transport!r} "
+                           "(stdio, http, or sse)")
+        if spec.transport == "stdio" and not spec.command:
             raise McpError(f"{spec.name}: stdio server needs a 'command'")
+        if spec.transport in ("http", "sse") and not spec.url:
+            raise McpError(f"{spec.name}: {spec.transport} server needs a 'url'")
         self.spec = spec
         self.timeout = timeout
         self._proc: subprocess.Popen | None = None
@@ -84,9 +88,23 @@ class McpClient:
         self._lock = threading.Lock()
         self._initialized = False
 
+    @property
+    def _is_http(self) -> bool:
+        return self.spec.transport in ("http", "sse")
+
     # --- lifecycle ---------------------------------------------------------
     def connect(self) -> None:
-        """Spawn the server and perform the MCP `initialize` handshake."""
+        """Spawn/reach the server and perform the MCP `initialize` handshake."""
+        if self._is_http:
+            # No subprocess: the HTTP endpoint is already "up". Just handshake.
+            self._request("initialize", {
+                "protocolVersion": PROTOCOL_VERSION,
+                "capabilities": {},
+                "clientInfo": _CLIENT_INFO,
+            })
+            self._notify("notifications/initialized", {})
+            self._initialized = True
+            return
         env = {**os.environ, **self.spec.env}
         try:
             self._proc = subprocess.Popen(
@@ -154,10 +172,18 @@ class McpClient:
 
     def _request(self, method: str, params: dict) -> Any:
         """Send a request and block for its response. Raises McpError on failure."""
+        rid = self._next_id()
+        payload = {"jsonrpc": "2.0", "id": rid, "method": method, "params": params}
+        if self._is_http:
+            msg = self._http_post(payload)
+            if "error" in msg:
+                err = msg["error"]
+                raise McpError(f"{self.spec.name}: {method} failed: "
+                               f"{err.get('message', err)}")
+            return msg.get("result")
         if self._proc is None or self._proc.stdin is None or self._proc.stdout is None:
             raise McpError(f"{self.spec.name}: server not connected")
-        rid = self._next_id()
-        self._write({"jsonrpc": "2.0", "id": rid, "method": method, "params": params})
+        self._write(payload)
         # Read lines until we get the response with our id (skip notifications
         # and unrelated messages a server may interleave).
         while True:
@@ -172,7 +198,49 @@ class McpClient:
 
     def _notify(self, method: str, params: dict) -> None:
         """Fire-and-forget JSON-RPC notification (no id, no response)."""
-        self._write({"jsonrpc": "2.0", "method": method, "params": params})
+        payload = {"jsonrpc": "2.0", "method": method, "params": params}
+        if self._is_http:
+            try:
+                self._http_post(payload)   # server may 200 with an empty body
+            except McpError:
+                pass                       # notifications are best-effort
+            return
+        self._write(payload)
+
+    def _http_post(self, payload: dict) -> dict:
+        """POST a JSON-RPC message to the server URL, parse the JSON (or SSE) reply.
+
+        Handles a plain JSON body and an SSE `data: {…}` frame (the two shapes an
+        MCP-over-HTTP server returns). Offline invariant: `spec.url` is a
+        user-configured LOCAL server, same class as Ollama (ADR-0001).
+        """
+        import urllib.error
+        import urllib.request
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            self.spec.url, data=data, method="POST",
+            headers={"Content-Type": "application/json",
+                     "Accept": "application/json, text/event-stream"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                body = resp.read().decode("utf-8", errors="replace").strip()
+        except urllib.error.HTTPError as exc:
+            raise McpError(f"{self.spec.name}: HTTP {exc.code} from {self.spec.url}") from exc
+        except (urllib.error.URLError, OSError) as exc:
+            raise McpError(f"{self.spec.name}: could not reach {self.spec.url}: {exc}") from exc
+        if not body:
+            return {}
+        # SSE: take the last `data:` frame's JSON payload.
+        if body.startswith("data:") or "\ndata:" in body:
+            frames = [ln[5:].strip() for ln in body.splitlines() if ln.startswith("data:")]
+            body = frames[-1] if frames else "{}"
+        try:
+            msg = json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise McpError(f"{self.spec.name}: invalid JSON from {self.spec.url}: {exc}") from exc
+        return msg if isinstance(msg, dict) else {}
 
     def _write(self, obj: dict) -> None:
         assert self._proc is not None and self._proc.stdin is not None

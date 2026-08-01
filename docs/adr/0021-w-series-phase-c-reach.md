@@ -1,6 +1,6 @@
 # ADR-0021 — W-series Phase C: reach — routing & transport (W5/W6)
 
-- **Status:** Accepted — implementation starting with W5
+- **Status:** Implemented — W5/W6 both done (Phase C complete)
 - **Phase:** W-series (0.6.0) Phase C · **W-slices:** W5 role-routed sub-agents ·
   W6 `mcp add` config writer + MCP HTTP/SSE transport
 - **Date proposed:** 2026-08-01 · **Date implemented:** —
@@ -88,11 +88,13 @@ and degrade gracefully; the offline and approval invariants hold.
       (`config_for_role`); no/unknown role = today's behavior (byte-identical).
       **(W5 — role threads through `LoopFactory`; factory routes on a resolvable
       role, keeps the parent config otherwise.)**
-- [ ] `revenant mcp add <name> …` appends a valid `[[mcp.servers]]` entry the
+- [x] `revenant mcp add <name> …` appends a valid `[[mcp.servers]]` entry the
       reader round-trips; duplicate names refused; supports stdio and http entries.
-- [ ] `McpClient` speaks HTTP/SSE when `transport` is http/sse (same JSON-RPC
+      **(W6 — `write_mcp_server`; verified round-trip.)**
+- [x] `McpClient` speaks HTTP/SSE when `transport` is http/sse (same JSON-RPC
       methods); the adapter + stdio path are unchanged; a bad server degrades.
-- [ ] Suite green (bare `pytest`); ADR-0021 + README updated per slice.
+      **(W6 — verified against a real local `http.server`: initialize/list/call.)**
+- [x] Suite green (bare `pytest`, 657); ADR-0021 + README updated per slice.
 
 ## Open questions
 - **Sub-agent role default:** leave default = parent config (explicit opt-in), or
@@ -122,3 +124,24 @@ and degrade gracefully; the offline and approval invariants hold.
     4-arg factory signature. `test_cli.py` +3 (factory routes via
     `config_for_role`; no-role keeps parent + never calls the router; unresolved
     role falls back, no crash). Suite **636 → 643**. **Next: W6.**
+- 2026-08-01 — **W6 Implemented — Phase C COMPLETE.**
+  - **`mcp add`.** New `write_mcp_server` in `config.py` (mirrors
+    `write_model_choice`'s dependency-free text-append): appends a well-formed
+    `[[mcp.servers]]` block (stdio: command/args; http/sse: url), refusing a
+    duplicate name; the existing `mcp_server_specs` reader round-trips it. New
+    `mcp add` subparser + `cmd_mcp` handler (runs before the "none configured"
+    guard). `--project` writes the project `.revenant.toml`, else user config.
+  - **HTTP/SSE transport.** `McpClient` now accepts `transport in (stdio, http,
+    sse)`: `connect` skips the subprocess and just handshakes; `_request`/`_notify`
+    route through a new `_http_post` (urllib POST of the JSON-RPC body to
+    `spec.url`, parsing a plain-JSON body or an SSE `data:` frame). `list_tools`/
+    `call_tool`/the adapter are unchanged (they only call `_request`). Offline
+    invariant holds — `spec.url` is a user-configured local server.
+  - **Tests.** `test_config.py` +6 (stdio/http round-trip, preserves existing,
+    duplicate refused, required-field validation, two-servers). `test_mcp_client.py`
+    +6 (http accepted with url, without-url rejected, lists+calls via fake urlopen,
+    SSE frame parsed, transport-error→McpError, unknown-transport rejected — the
+    old "non-stdio rejected" test updated). `test_cli.py` +3 (`mcp add` parse,
+    writes entry, duplicate errors). Suite **643 → 657**. Verified end-to-end
+    against a real local `http.server`: add→read round-trip + initialize/list/call
+    over HTTP. **Phase C done — the W-series feature work is complete.**

@@ -102,6 +102,78 @@ def write_model_choice(model: str, scope: str = "user",
     return target
 
 
+def _toml_str(value: str) -> str:
+    """Minimal TOML string escaping (double-quote, backslash)."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def write_mcp_server(
+    name: str,
+    *,
+    command: "str | None" = None,
+    args: "list[str] | None" = None,
+    transport: str = "stdio",
+    url: "str | None" = None,
+    scope: str = "user",
+    workspace: "Path | None" = None,
+) -> Path:
+    """Append an `[[mcp.servers]]` entry to a config file (W6, ADR-0021).
+
+    Mirrors `write_model_choice`'s dependency-free text approach: read the file,
+    refuse if a server of the same `name` is already present, else append a
+    well-formed `[[mcp.servers]]` block and write it back. The existing
+    `mcp_server_specs` reader round-trips what this writes. Returns the path.
+    Raises ValueError on a duplicate name or a malformed spec.
+    """
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("mcp add: a server name is required")
+    transport = (transport or "stdio").strip()
+    if transport == "stdio":
+        if not command:
+            raise ValueError("mcp add: a stdio server needs --command")
+    elif transport in ("http", "sse"):
+        if not url:
+            raise ValueError(f"mcp add: a {transport} server needs --url")
+    else:
+        raise ValueError(f"mcp add: unknown transport {transport!r} "
+                         "(use stdio, http, or sse)")
+
+    if scope == "project":
+        target = (workspace or Path.cwd()) / PROJECT_FILENAME
+    else:
+        target = user_config_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+
+    # Refuse to clobber an existing server of the same name.
+    existing = _load_toml(target) if target.exists() else {}
+    for entry in (((existing.get("mcp") or {}).get("servers")) or []):
+        if isinstance(entry, dict) and entry.get("name") == name:
+            raise ValueError(f"mcp add: a server named {name!r} already exists in "
+                             f"{target}")
+
+    lines = ["", "[[mcp.servers]]", f"name = {_toml_str(name)}",
+             f"transport = {_toml_str(transport)}"]
+    if transport == "stdio":
+        lines.append(f"command = {_toml_str(command)}")
+        if args:
+            rendered = ", ".join(_toml_str(a) for a in args)
+            lines.append(f"args = [{rendered}]")
+    else:
+        lines.append(f"url = {_toml_str(url)}")
+
+    if text and not text.endswith("\n"):
+        text += "\n"
+    text += "\n".join(lines) + "\n"
+    target.write_text(text, encoding="utf-8")
+    return target
+
+
 def load_config(workspace: Path) -> dict[str, Any]:
     """Merge user then project config (project wins). Returns recognized keys only.
 

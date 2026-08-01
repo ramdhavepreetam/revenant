@@ -359,6 +359,41 @@ def test_mcp_parser_accepts_flags_before_and_after_action():
     assert c.mcp_action == "test" and c.name == "git" and c.workspace == "/w"
 
 
+# --- W6 (ADR-0021): mcp add -------------------------------------------------
+
+def test_mcp_add_parser():
+    p = cli.build_parser()
+    a = p.parse_args(["mcp", "add", "fs", "--command", "mcp-fs",
+                      "--arg", "serve", "--arg", "/data", "--project"])
+    assert a.mcp_action == "add" and a.name == "fs"
+    assert a.command == "mcp-fs" and a.args == ["serve", "/data"] and a.project is True
+
+
+def test_cmd_mcp_add_writes_entry(tmp_path, capsys):
+    args = argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, mcp_action="add", name="fs",
+        transport="stdio", command="mcp-fs", args=["--root", "."], url=None, project=True,
+    )
+    rc = cli.cmd_mcp(args)
+    assert rc == 0
+    assert "added MCP server" in capsys.readouterr().out
+    # The written entry is readable by the config loader.
+    from revenant_cli.config import mcp_server_specs, load_config
+    names = {s.name for s in mcp_server_specs(load_config(tmp_path))}
+    assert "fs" in names
+
+
+def test_cmd_mcp_add_duplicate_errors(tmp_path, capsys):
+    args = argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, mcp_action="add", name="fs",
+        transport="stdio", command="mcp-fs", args=[], url=None, project=True,
+    )
+    assert cli.cmd_mcp(args) == 0
+    capsys.readouterr()
+    assert cli.cmd_mcp(args) == 2                      # second add = duplicate
+    assert "already exists" in capsys.readouterr().err
+
+
 # --- skills subcommand + /skill REPL (F12.4, ADR-0005) ----------------------
 
 def _skill_workspace(tmp_path, tools=None):

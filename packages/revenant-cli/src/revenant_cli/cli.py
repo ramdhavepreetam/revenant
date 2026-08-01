@@ -45,7 +45,7 @@ from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
-    context_config, write_model_choice,
+    context_config, write_model_choice, write_mcp_server,
 )
 from revenant_cli import session_store, preflight
 from revenant_cli.console import make_console
@@ -302,6 +302,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_mcp_test = mcp_sub.add_parser("test", help="Connect to a server and report health.")
     _add_mcp_flags(p_mcp_test, suppress=True)
     p_mcp_test.add_argument("name", help="Server name to test (from [[mcp.servers]]).")
+    p_mcp_add = mcp_sub.add_parser("add", help="Add an MCP server to your config.")
+    _add_mcp_flags(p_mcp_add, suppress=True)
+    p_mcp_add.add_argument("name", help="A unique name for the server.")
+    p_mcp_add.add_argument("--transport", default="stdio", choices=["stdio", "http", "sse"],
+                           help="How to reach the server (default: stdio).")
+    p_mcp_add.add_argument("--command", help="stdio: the server executable.")
+    p_mcp_add.add_argument("--arg", action="append", default=[], dest="args",
+                           help="stdio: an argument to the command (repeatable).")
+    p_mcp_add.add_argument("--url", help="http/sse: the server URL (local).")
+    p_mcp_add.add_argument("--project", action="store_true",
+                           help="Write to the project .revenant.toml instead of user config.")
 
     # F12 (P4): inspect skills (reusable SKILL.md workflows).
     def _add_skills_flags(p: argparse.ArgumentParser, *, suppress: bool) -> None:
@@ -1289,9 +1300,29 @@ def cmd_mcp(args: argparse.Namespace) -> int:
 
     action = getattr(args, "mcp_action", None) or "list"
 
+    # W6 (ADR-0021): `mcp add` writes a new [[mcp.servers]] entry (works even with
+    # zero servers configured, so it must run before the "none configured" guard).
+    if action == "add":
+        try:
+            path = write_mcp_server(
+                args.name,
+                command=getattr(args, "command", None),
+                args=getattr(args, "args", None),
+                transport=getattr(args, "transport", "stdio"),
+                url=getattr(args, "url", None),
+                scope="project" if getattr(args, "project", False) else "user",
+                workspace=workspace,
+            )
+        except ValueError as exc:
+            print(f"{color['red']}{exc}{color['reset']}", file=sys.stderr)
+            return 2
+        print(f"{color['bold']}✓{color['reset']} added MCP server "
+              f"{args.name!r} to {path}")
+        return 0
+
     if not specs:
-        print(f"{color['dim']}no MCP servers configured. Add [[mcp.servers]] to "
-              f".revenant.toml.{color['reset']}")
+        print(f"{color['dim']}no MCP servers configured. Add one with "
+              f"`revenant mcp add <name> …` or edit .revenant.toml.{color['reset']}")
         return 0
 
     if action == "test":
