@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-01 · **Tests:** 657 green · **V-series (0.5.0) RELEASED** 🎉 · **▶ W-series (0.6.0) — ALL FEATURE WORK COMPLETE** ([0018](0018-w-series-strategy.md)): **Phase A** [0019](0019-w-series-phase-a-measure-and-stream.md) (W0 metrics/gate · W1/W2 streaming) · **Phase B** [0020](0020-w-series-phase-b-deeper-capability.md) (W3 --every+graph cache · W4 replace_all/array-param/atomic apply_edits) · **Phase C** [0021](0021-w-series-phase-c-reach.md) (W5 role-routed sub-agents · W6 mcp add + HTTP/SSE) · **▶ RELEASING 0.6.0** — versions bumped to 0.6.0, changelog dated, tag/publish in flight
+**Last updated:** 2026-08-01 · **Tests:** 657 green · **V-series (0.5.0) RELEASED** 🎉 · **▶ W-series (0.6.0) — ALL FEATURE WORK COMPLETE** ([0018](0018-w-series-strategy.md)): **Phase A** [0019](0019-w-series-phase-a-measure-and-stream.md) (W0 metrics/gate · W1/W2 streaming) · **Phase B** [0020](0020-w-series-phase-b-deeper-capability.md) (W3 --every+graph cache · W4 replace_all/array-param/atomic apply_edits) · **Phase C** [0021](0021-w-series-phase-c-reach.md) (W5 role-routed sub-agents · W6 mcp add + HTTP/SSE) · **🎉 RELEASED v0.6.0** — merged to master, tagged, [GitHub Release](https://github.com/ramdhavepreetam/revenant/releases/tag/v0.6.0) + installers, and **all three packages published to PyPI** (`pip install -U "revenant-cli[tui]"`)
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -248,6 +248,27 @@ plugs into one — it is not greenfield:
 ## Progress log
 
 > One entry per working session touching the roadmap. Newest first.
+
+### 2026-08-01 (d) — W-series (0.6.0) COMPLETE + RELEASED 🎉
+- **All three phases shipped** on `w-series-phase-a` (PR #34), then released.
+  - **Phase A** (W0/W1/W2): eval metrics + `--gate`; token streaming (chat inline
+    + TUI `StreamLine`) on both prompt and native tool paths. Commits `614ef97`/
+    `a9e8c9e`/`225fcd1`.
+  - **Phase B** (W3/W4): `loop --every` + incremental graph cache; `edit_file
+    replace_all`; `ToolParam` array param; atomic multi-file `apply_edits`. Commits
+    `e8367ec`/`3ba66da`/`c45525b`/`2aec49e`.
+  - **Phase C** (W5/W6): role-routed sub-agents; `mcp add` + MCP HTTP/SSE. Commits
+    `f3b4216`/`8b6af3e`.
+- **Every slice**: durable ADR first (0018 strategy + 0019/0020/0021 phases),
+  model-free tests, end-to-end verification, NervaPack-synced. Suite **573 → 657**.
+  The sequencing thesis held: W0 scored the rest; the schema gate (W4b) cleared
+  before W4c; the W0 `rename_across_package` task is solved by one `apply_edits`.
+- **Released v0.6.0**: bumped `0.5.0 → 0.6.0` (deps `>=0.6.0`), changelog `[0.6.0]`,
+  657 tests + `mkdocs --strict` + `twine check` green; PR #34 merged to master
+  (CI green 3.11/3.12) → `7a08dc5`; tag `v0.6.0` → installer CI built the macOS
+  `.dmg` + Windows `.exe` and cut the [GitHub Release](https://github.com/ramdhavepreetam/revenant/releases/tag/v0.6.0);
+  **published all three packages to PyPI** (0.6.0 confirmed live).
+- **No phase remains.** The next themed series (X?) is undefined — open runway.
 
 ### 2026-08-01 (c) — W-series (0.6.0) planned + Phase-A ADRs written
 - 0.5.0 fully released since (b): all three packages on PyPI, GitHub Release with
