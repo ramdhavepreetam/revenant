@@ -25,8 +25,13 @@ classifiers = [
 # `rich` is OPTIONAL: `pip install revenant-cli[rich]` gets the polished live
 # console (panels, spinner, real diffs). Without it, the CLI falls back to
 # plain-ANSI output — so the base install stays zero required third-party deps.
+#
+# `tui` is OPTIONAL: `pip install revenant-cli[tui]` adds the full-screen
+# interactive terminal (`revenant chat --tui`; ADR-0017). textual is built on
+# rich, so [tui] implies [rich]. Without it, chat falls back to the REPL.
 [project.optional-dependencies]
 rich = ["rich>=13"]
+tui = ["textual>=0.60", "rich>=13"]
 
 [project.urls]
 Homepage = "https://github.com/ramdhavepreetam/revenant"

@@ -972,3 +972,53 @@ def test_doctor_models_in_parser():
     p = cli.build_parser()
     assert p.parse_args(["doctor", "--no-color"]).command == "doctor"
     assert p.parse_args(["models"]).command == "models"
+
+
+# --- V3 (ADR-0017): TUI enablement + REPL fallback ---------------------------
+
+def _tui_args(**kw):
+    ns = argparse.Namespace(tui=False, no_tui=False)
+    for k, v in kw.items():
+        setattr(ns, k, v)
+    return ns
+
+
+def test_tui_disabled_by_no_tui(monkeypatch):
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True, raising=False)
+    monkeypatch.setattr(cli, "_tui_enabled", cli._tui_enabled)  # use real impl
+    assert cli._tui_enabled(_tui_args(no_tui=True)) is False
+
+
+def test_tui_disabled_when_not_a_tty(monkeypatch):
+    monkeypatch.setattr("sys.stdout.isatty", lambda: False, raising=False)
+    # Even with --tui forced, a non-TTY can't host the app.
+    assert cli._tui_enabled(_tui_args(tui=True)) is False
+
+
+def test_tui_disabled_when_textual_absent(monkeypatch):
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True, raising=False)
+    monkeypatch.setattr("revenant_cli.tui.tui_available", lambda: False)
+    assert cli._tui_enabled(_tui_args(tui=True)) is False
+
+
+def test_tui_enabled_when_available_and_tty(monkeypatch):
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True, raising=False)
+    monkeypatch.setattr("revenant_cli.tui.tui_available", lambda: True)
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    assert cli._tui_enabled(_tui_args()) is True
+
+
+def test_no_color_env_disables_tui(monkeypatch):
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True, raising=False)
+    monkeypatch.setattr("revenant_cli.tui.tui_available", lambda: True)
+    monkeypatch.setenv("NO_COLOR", "1")
+    # NO_COLOR turns off the auto path; without an explicit --tui it stays off.
+    assert cli._tui_enabled(_tui_args()) is False
+
+
+def test_tui_flags_in_parser():
+    p = cli.build_parser()
+    a = p.parse_args(["chat", "--tui"])
+    assert a.tui is True and a.no_tui is False
+    b = p.parse_args(["chat", "--no-tui"])
+    assert b.no_tui is True

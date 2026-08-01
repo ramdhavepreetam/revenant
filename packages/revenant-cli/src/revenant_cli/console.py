@@ -76,6 +76,8 @@ class PlainConsole:
             print(f"{p}{c['red']}error: {ev.text}{c['reset']}", file=sys.stderr)
         elif ev.kind == "limit":
             print(f"{p}{c['yellow']}[{ev.text}]{c['reset']}", file=sys.stderr)
+        elif ev.kind == "interrupted":
+            print(f"{p}{c['yellow']}[interrupted: {ev.text}]{c['reset']}", file=sys.stderr)
         elif ev.kind == "compact":
             print(f"{p}{c['dim']}[context: {ev.text}]{c['reset']}", file=sys.stderr)
         elif ev.kind == "agent_start":

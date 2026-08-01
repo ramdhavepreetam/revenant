@@ -24,6 +24,13 @@ try:
 except Exception:
     pass
 
+# Bundle `textual` too (installer build uses `[tui]`), so the frozen binary can
+# launch the interactive TUI (ADR-0017). Guarded: absent textual → REPL fallback.
+try:
+    hidden += collect_submodules("textual")
+except Exception:
+    pass
+
 import os
 _HERE = os.path.dirname(os.path.abspath(SPEC))
 

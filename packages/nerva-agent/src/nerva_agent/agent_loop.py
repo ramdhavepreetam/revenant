@@ -57,6 +57,7 @@ class AgentEvent:
 
     # "assistant" | "action" | "observation" | "final" | "error" | "limit"
     # | "approval" | "compact" | "context" | "agent_start" | "agent_end"
+    # | "interrupted"
     kind: str
     text: str = ""
     tool: str = ""
@@ -254,7 +255,8 @@ class AgentLoop:
 
     # --- main loop ---------------------------------------------------------
     def run(
-        self, goal: str, history: list[dict[str, Any]] | None = None
+        self, goal: str, history: list[dict[str, Any]] | None = None,
+        *, should_stop: "Callable[[], bool] | None" = None,
     ) -> AgentResult:
         """Drive `goal` to a final answer or the step cap.
 
@@ -263,6 +265,11 @@ class AgentLoop:
         how the REPL is multi-turn. When it's None the run starts fresh with a
         system+goal transcript, preserving the original single-shot behavior. The
         returned AgentResult.messages is the transcript to thread into the next turn.
+
+        `should_stop` (V5, ADR-0017) is an optional predicate checked between steps;
+        when it returns True the loop stops cooperatively with stopped_reason
+        "interrupted" (used by the TUI's ctrl-c to cancel without killing the
+        thread). Default None = never interrupted — behavior is exactly as before.
         """
         events: list[AgentEvent] = []
         if history:
@@ -287,6 +294,11 @@ class AgentLoop:
         bad_parses = 0
 
         for step in range(1, self.max_steps + 1):
+            # V5 (ADR-0017): cooperative cancel — stop cleanly between steps rather
+            # than killing the worker thread, so the transcript stays consistent.
+            if should_stop is not None and should_stop():
+                self._emit(AgentEvent("interrupted", text="stopped by user", step=step - 1), events)
+                return AgentResult("", step - 1, "interrupted", events, messages)
             before = len(messages)
             messages = self._compact_messages(messages)
             folded = len(messages) < before

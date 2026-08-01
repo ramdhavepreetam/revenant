@@ -424,6 +424,40 @@ class ContextEventTests(unittest.TestCase):
         self.assertTrue({e.step for e in folded}.issubset(compact_steps))
 
 
+class InterruptTests(unittest.TestCase):
+    """V5 (ADR-0017): cooperative cancel between steps via should_stop."""
+
+    def test_should_stop_halts_between_steps(self):
+        reg = _registry([])
+        # A script that would loop forever; should_stop cuts it after step 1.
+        loop_msg = {"role": "assistant",
+                    "content": '```action\n{"tool": "read_file", "args": {"path": "a"}}\n```'}
+        calls = {"n": 0}
+
+        def stop():
+            calls["n"] += 1
+            return calls["n"] > 2   # allow a couple steps, then interrupt
+
+        seen = []
+        with mock.patch.object(agent_loop, "call_model_message", return_value=loop_msg):
+            result = AgentLoop(_config(), reg, max_steps=50,
+                               on_event=seen.append).run("go", should_stop=stop)
+        self.assertEqual(result.stopped_reason, "interrupted")
+        self.assertTrue(any(e.kind == "interrupted" for e in seen))
+        self.assertLess(result.steps, 50)  # stopped early, not at the cap
+
+    def test_none_should_stop_is_unchanged(self):
+        reg = _registry([])
+        script = _scripted(
+            {"role": "assistant",
+             "content": '```action\n{"tool": "read_file", "args": {"path": "a"}}\n```'},
+            {"role": "assistant", "content": "done"},
+        )
+        with mock.patch.object(agent_loop, "call_model_message", side_effect=script):
+            result = AgentLoop(_config(), reg, max_steps=5).run("go")  # no should_stop
+        self.assertEqual(result.stopped_reason, "final")
+
+
 if __name__ == "__main__":
     unittest.main()
 

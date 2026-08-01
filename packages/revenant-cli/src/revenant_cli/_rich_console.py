@@ -67,6 +67,8 @@ class RichConsole:
             self._emit(Text(f"{pre}error: {ev.text}", style="bold red"), err=True)
         elif ev.kind == "limit":
             self._emit(Text(f"{pre}[{ev.text}]", style="yellow"), err=True)
+        elif ev.kind == "interrupted":
+            self._emit(Text(f"{pre}[interrupted: {ev.text}]", style="yellow"), err=True)
         elif ev.kind == "compact":
             self._emit(Text(f"{pre}[context: {ev.text}]", style="dim"), err=True)
         elif ev.kind == "agent_start":

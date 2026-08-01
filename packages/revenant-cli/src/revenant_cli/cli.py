@@ -89,6 +89,23 @@ def _color_enabled(args) -> bool:
             and not os.environ.get("NO_COLOR"))
 
 
+def _tui_enabled(args) -> bool:
+    """Whether to launch the full-screen TUI for `chat` (V3, ADR-0017).
+
+    On when: not --no-tui, textual importable, stdout is a TTY, and NO_COLOR unset.
+    `--tui` still requires textual + a TTY (it can't render into a pipe); if forced
+    without them we fall back to the REPL with a note. Env REVENANT_TUI=1 opts in."""
+    if getattr(args, "no_tui", False):
+        return False
+    from revenant_cli.tui import tui_available
+    tty = sys.stdout.isatty()
+    want = getattr(args, "tui", False) or bool(os.environ.get("REVENANT_TUI"))
+    # Default policy: auto-on when available + interactive (like rich), unless the
+    # user is piping or NO_COLOR is set. An explicit --tui also honors TTY/textual.
+    auto = tty and not os.environ.get("NO_COLOR")
+    return tui_available() and tty and (want or auto)
+
+
 def _make_approver(console):
     """A console-backed approval callback (U4). Renders via the console (rich shows
     a real diff / panels; plain reproduces the legacy prompt), blocks on confirm.
@@ -192,6 +209,12 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--skip-preflight", action="store_true",
                    help="Skip the Ollama reachability / model-pulled check.")
     p.add_argument("--no-color", action="store_true")
+    # V3 (ADR-0017): full-screen interactive TUI for `chat`. Auto-on when textual
+    # is installed + TTY; --no-tui forces the plain REPL, --tui forces it on.
+    p.add_argument("--tui", action="store_true",
+                   help="Force the full-screen interactive TUI (chat only).")
+    p.add_argument("--no-tui", action="store_true",
+                   help="Force the plain REPL even if the TUI is available.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -855,6 +878,42 @@ def _cmd_loop_once(args: argparse.Namespace) -> int:
     return 3
 
 
+def _run_chat_tui(args, workspace, config, loop, initial_history) -> "int | None":
+    """Drive the chat session in the Textual TUI (V3–V5). Returns an exit code,
+    or None to signal the caller to fall back to the REPL (textual missing/broke).
+
+    Wires the same session auto-save the REPL uses: a saver closure the app calls
+    after each turn keeps a stable session id for the app's lifetime."""
+    try:
+        from revenant_cli.tui import run_tui
+    except Exception:  # noqa: BLE001 - guarded import failed -> REPL fallback
+        return None
+
+    sid = {"id": getattr(args, "session_id", None) or None}
+
+    def save_turn(goal: str, model: str, messages: list) -> None:
+        sid["id"] = session_store.save_session(
+            workspace, goal=goal, model=model, messages=messages,
+            session_id=sid["id"],
+        ) or sid["id"]
+
+    try:
+        rc = run_tui(
+            loop=loop, workspace=workspace, model=config.model,
+            mode=_mode_label(args), session_saver=save_turn,
+            history=initial_history,
+        )
+    except Exception as exc:  # noqa: BLE001 - a TUI crash shouldn't kill the CLI
+        print(f"{_color(False)['reset']}TUI error ({exc}); falling back to REPL.",
+              file=sys.stderr)
+        return None
+    finally:
+        _close_mcp(loop)
+    if sid["id"]:
+        print(f"session saved: {sid['id']} (revenant resume {sid['id']})")
+    return rc
+
+
 def cmd_chat(args: argparse.Namespace, input_fn=input,
              initial_history: list[dict] | None = None) -> int:
     """Interactive multi-turn REPL.
@@ -872,6 +931,14 @@ def cmd_chat(args: argparse.Namespace, input_fn=input,
         return 2
     workspace, config, rec, loop, color = built
     c = color
+
+    # V3 (ADR-0017): launch the full-screen TUI when available + interactive,
+    # unless --no-tui. Falls back to the REPL below on any failure or when off.
+    if _tui_enabled(args):
+        rc = _run_chat_tui(args, workspace, config, loop, initial_history)
+        if rc is not None:
+            return rc  # None means "TUI unavailable/failed — fall through to REPL"
+
     console = _loop_console(loop)
     console.session_header(model=config.model, workspace=workspace,
                            mode=_mode_label(args), capacity=rec.note,
@@ -1013,31 +1080,35 @@ def _print_skill_list(loop, color) -> None:
               f"{color['dim']}— {s.description}{color['reset']}")
 
 
-def _skill_repl_goal(loop, line: str, color) -> str | None:
+def _skill_repl_goal(loop, line: str, color, emit=None) -> str | None:
     """Handle `/skill <name>` in the REPL: return the skill body as the turn goal.
 
     Injects the skill's instructions into the loop's system preamble (progressive
     disclosure — the body loads only now) and scopes the registry to the skill's
     declared tools. Returns the body to run as this turn's goal, or None if the
-    skill name is missing/unknown (a message is printed).
-    """
+    skill name is missing/unknown (a message is emitted).
+
+    `emit(text)` is the message sink (default: plain `print`). The TUI passes its
+    own sink so status lines land in the activity log, not stdout (which the TUI
+    owns) — keeping this one loader shared between the REPL and the TUI."""
+    say = emit or (lambda t: print(t))
     parts = line.split(maxsplit=1)
     if len(parts) < 2 or not parts[1].strip():
-        print(f"{color['dim']}usage: /skill <name>  (see /skills){color['reset']}")
+        say(f"{color['dim']}usage: /skill <name>  (see /skills){color['reset']}")
         return None
     name = parts[1].strip().lstrip("/")
     skills = getattr(loop, "_skills", {}) or {}
     skill = skills.get(name)
     if skill is None:
         known = ", ".join(sorted(skills)) or "(none)"
-        print(f"{color['dim']}unknown skill {name!r}. Available: {known}{color['reset']}")
+        say(f"{color['dim']}unknown skill {name!r}. Available: {known}{color['reset']}")
         return None
     # Load the body into the active preamble and scope the tools for this skill.
     base = getattr(loop, "_base_preamble", loop.system_preamble)
     loop.system_preamble = compose_skill_body(base, skill)
     if skill.tools:
         loop.registry = scope_registry(loop.registry, skill)
-    print(f"{color['dim']}▶ skill '{skill.name}' loaded{color['reset']}")
+    say(f"{color['dim']}▶ skill '{skill.name}' loaded{color['reset']}")
     return skill.body
 
 
