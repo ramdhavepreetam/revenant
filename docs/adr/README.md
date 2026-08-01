@@ -118,7 +118,8 @@
 | [0016](0016-cli-ux-console-and-setup.md) | **Make the CLI usable** (U-series: setup UX + rich console) | 0.4.0 | Implemented |
 | [0017](0017-interactive-tui.md) | **Claude-Code-like interactive terminal** (V-series: Textual TUI, slash palette, multi-agent + context view) | 0.5.0 | Implemented (released v0.5.0) |
 | [0018](0018-w-series-strategy.md) | **Faster, deeper, measurable** (W-series strategy: streaming + capability + quality) | 0.6.0 | Accepted |
-| [0019](0019-w-series-phase-a-measure-and-stream.md) | W-series Phase A — measure (eval metrics/gate) + stream (token events, live render) | W0/W1/W2 | Accepted (W0 in progress) |
+| [0019](0019-w-series-phase-a-measure-and-stream.md) | W-series Phase A — measure (eval metrics/gate) + stream (token events, live render) | W0/W1/W2 | Implemented |
+| [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Accepted (W3 in progress) |
 
 ---
 
