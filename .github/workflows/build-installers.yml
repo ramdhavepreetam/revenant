@@ -37,9 +37,16 @@ jobs:
       - name: Build the executable
         run: pyinstaller packaging/revenant.spec --distpath dist_bin --workpath build_bin --noconfirm
 
-      - name: Smoke-test (--help needs no Ollama)
+      - name: Smoke-test the raw binary (no Ollama needed)
         shell: bash
-        run: ./dist_bin/${{ matrix.bin }} --help
+        run: |
+          # Assert on real output, not just exit 0 — a broken build can still
+          # exit 0 from argparse. Check a subcommand AND a 0.3.0 feature flag.
+          out=$(./dist_bin/${{ matrix.bin }} --help)
+          echo "$out"
+          echo "$out" | grep -q "loop" || { echo "::error::--help missing 'loop' subcommand"; exit 1; }
+          ./dist_bin/${{ matrix.bin }} run --help | grep -q -- "--plan" \
+            || { echo "::error::run --help missing '--plan' (build not current?)"; exit 1; }
 
       # --- macOS: wrap into a .dmg ---
       - name: Package macOS .dmg
@@ -60,6 +67,29 @@ jobs:
           choco install innosetup --no-progress -y
           New-Item -ItemType Directory -Force -Path dist_installers | Out-Null
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\revenant.iss
+
+      # --- Windows GATE: silently INSTALL from the .exe users download, then run
+      # the INSTALLED binary. This proves the packaged installer works end-to-end
+      # (not just the raw binary), and fails the build if it doesn't. ---
+      - name: Verify the Windows installer installs + runs
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $setup = "dist_installers\Revenant-windows-x64-setup.exe"
+          Write-Host "Installing silently: $setup"
+          $p = Start-Process -FilePath $setup `
+                 -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" `
+                 -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Write-Error "installer exited $($p.ExitCode)"; exit 1 }
+          $exe = Join-Path $Env:ProgramFiles "Revenant\revenant.exe"
+          if (-not (Test-Path $exe)) { Write-Error "installed exe not found at $exe"; exit 1 }
+          Write-Host "Running the installed binary: $exe"
+          $help = & $exe run --help 2>&1 | Out-String
+          Write-Host $help
+          if ($help -notmatch "--plan") {
+            Write-Error "installed revenant.exe run --help missing '--plan'"; exit 1
+          }
+          Write-Host "OK: Windows installer installs and the installed binary runs."
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
