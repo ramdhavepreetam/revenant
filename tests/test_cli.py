@@ -224,7 +224,7 @@ def _agent_args(workspace, *, read_only):
     return argparse.Namespace(
         workspace=str(workspace), base_url="", model="", max_steps=0,
         max_context_tokens=0, no_native_tools=False, read_only=read_only,
-        yolo=False, no_color=True,
+        yolo=False, no_color=True, skip_preflight=True,
     )
 
 
@@ -920,3 +920,55 @@ def test_run_planned_threads_history(monkeypatch):
     cli._run_planned(loop, "g", cli._color(False))
     # Second step ran (history threading verified by both steps executing).
     assert loop.calls == ["a", "b"]
+
+
+# --- doctor + models commands (U2, ADR-0016) --------------------------------
+
+def _doctor_args(workspace, base_url="", model=""):
+    return argparse.Namespace(workspace=str(workspace), base_url=base_url,
+                              model=model, no_color=True)
+
+
+def test_cmd_models_lists_pulled(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli.preflight, "list_local_models",
+                        lambda *a, **k: ["gemma:latest", "qwen2.5-coder:7b"])
+    rc = cli.cmd_models(_doctor_args(tmp_path))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "gemma:latest" in out and "qwen2.5-coder:7b" in out
+
+
+def test_cmd_models_unreachable(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli.preflight, "list_local_models", lambda *a, **k: None)
+    rc = cli.cmd_models(_doctor_args(tmp_path))
+    assert rc == 1
+    assert "ollama serve" in capsys.readouterr().err
+
+
+def test_cmd_doctor_healthy(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli.preflight, "list_local_models",
+                        lambda *a, **k: ["qwen2.5-coder:7b"])
+    rc = cli.cmd_doctor(_doctor_args(tmp_path, model="qwen2.5-coder:7b"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Ollama reachable" in out and "ready to run" in out
+
+
+def test_cmd_doctor_model_missing(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli.preflight, "list_local_models", lambda *a, **k: ["gemma:latest"])
+    rc = cli.cmd_doctor(_doctor_args(tmp_path, model="qwen2.5-coder:7b"))
+    assert rc == 1
+    assert "ollama pull qwen2.5-coder:7b" in capsys.readouterr().out
+
+
+def test_cmd_doctor_unreachable(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli.preflight, "list_local_models", lambda *a, **k: None)
+    rc = cli.cmd_doctor(_doctor_args(tmp_path))
+    assert rc == 1
+    assert "ollama serve" in capsys.readouterr().out
+
+
+def test_doctor_models_in_parser():
+    p = cli.build_parser()
+    assert p.parse_args(["doctor", "--no-color"]).command == "doctor"
+    assert p.parse_args(["models"]).command == "models"

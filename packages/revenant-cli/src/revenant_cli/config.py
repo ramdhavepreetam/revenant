@@ -67,6 +67,41 @@ def user_config_path() -> Path:
     return Path(base) / "revenant" / "config.toml"
 
 
+def write_model_choice(model: str, scope: str = "user",
+                       workspace: "Path | None" = None) -> Path:
+    """Persist `model = "..."` to a config file so a picked model sticks (U2).
+
+    scope="user" → ~/.config/revenant/config.toml; scope="project" →
+    <workspace>/.revenant.toml. A minimal single-scalar upsert (read text, replace
+    or append the top-level `model = "..."` line, write back) — deliberately
+    avoids a TOML-writer dependency. Returns the path written. Raises OSError only
+    if the write itself fails.
+    """
+    if scope == "project":
+        target = (workspace or Path.cwd()) / PROJECT_FILENAME
+    else:
+        target = user_config_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+
+    new_line = f'model = "{model}"'
+    # Replace an existing top-level `model = ...` line, else append.
+    import re as _re
+    pattern = _re.compile(r'^\s*model\s*=.*$', _re.M)
+    if pattern.search(text):
+        text = pattern.sub(new_line, text, count=1)
+    else:
+        if text and not text.endswith("\n"):
+            text += "\n"
+        text += new_line + "\n"
+    target.write_text(text, encoding="utf-8")
+    return target
+
+
 def load_config(workspace: Path) -> dict[str, Any]:
     """Merge user then project config (project wins). Returns recognized keys only.
 

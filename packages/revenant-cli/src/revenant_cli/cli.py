@@ -14,6 +14,7 @@ Offline: talks only to the local model server (Ollama by default). No cloud.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -43,9 +44,9 @@ from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
-    context_config,
+    context_config, write_model_choice,
 )
-from revenant_cli import session_store
+from revenant_cli import session_store, preflight
 from revenant_cli.git_checkpoint import GitCheckpointer, is_git_repo
 from revenant_cli.verify_hook import build_verifier, make_verify_hook
 from revenant_cli.context_hook import make_context_hook, compose_after_tool_hooks
@@ -93,7 +94,7 @@ def make_printer(color: dict):
         elif ev.kind == "final":
             print(f"\n{c['green']}{c['bold']}{ev.text}{c['reset']}")
         elif ev.kind == "error":
-            print(f"{c['red']}error: {ev.text}{c['reset']}", file=sys.stderr)
+            print(f"{c['red']}error: {_actionable(ev.text)}{c['reset']}", file=sys.stderr)
         elif ev.kind == "limit":
             print(f"{c['yellow']}[{ev.text}]{c['reset']}", file=sys.stderr)
         elif ev.kind == "compact":
@@ -150,10 +151,36 @@ def build_config(profiles: dict, base_url: str, model: str | None) -> ChatConfig
     return config
 
 
-_SUBCOMMANDS = ("run", "chat", "loop", "undo", "mcp", "skills", "config", "resume")
+_SUBCOMMANDS = ("run", "chat", "loop", "undo", "mcp", "skills", "doctor",
+                "models", "config", "resume")
 
 
 _DEFAULT_BASE_URL = "http://localhost:11434"
+
+
+def _normalize_base_url(url: str) -> str:
+    """Ollama's OLLAMA_HOST is often a bare `host:port` with no scheme; add one."""
+    url = (url or "").strip()
+    if url and "://" not in url:
+        url = "http://" + url
+    return url or _DEFAULT_BASE_URL
+
+
+def _default_base_url() -> str:
+    """Base URL default: OLLAMA_HOST env if set, else localhost. (Flag/config still
+    win via resolve(); this only supplies the default they fall back to.)"""
+    return _normalize_base_url(os.environ.get("OLLAMA_HOST") or _DEFAULT_BASE_URL)
+
+
+def _actionable(text: str) -> str:
+    """Append a next-step hint to a raw model error (mid-run failures; the
+    pre-flight covers most cases before a run starts)."""
+    low = text.lower()
+    if "could not connect" in low or "connection refused" in low:
+        return text + "\n  → Is Ollama running? Start it with:  ollama serve"
+    if "http 404" in low or "not found" in low:
+        return text + "\n  → The model may not be pulled. Run:  ollama pull <model>"
+    return text
 
 
 def _add_common_flags(p: argparse.ArgumentParser) -> None:
@@ -175,6 +202,8 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
                    help="Auto-approve mutating tools (skips the y/N prompt; footgun guards still apply).")
     p.add_argument("--no-graph", action="store_true",
                    help="Skip building the code graph (defn_of/who_calls/… tools).")
+    p.add_argument("--skip-preflight", action="store_true",
+                   help="Skip the Ollama reachability / model-pulled check.")
     p.add_argument("--no-color", action="store_true")
 
 
@@ -277,6 +306,18 @@ def build_parser() -> argparse.ArgumentParser:
                           help="Session to resume (default: the most recent).")
     _add_common_flags(p_resume)
 
+    # U2 (ADR-0016): setup diagnostics + model discovery.
+    p_doctor = sub.add_parser("doctor", help="Check Ollama + model setup and show resolved config.")
+    p_doctor.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
+    p_doctor.add_argument("--base-url", default="", help="Model server URL.")
+    p_doctor.add_argument("--model", default="", help="Model to check (default: resolved).")
+    p_doctor.add_argument("--no-color", action="store_true")
+
+    p_models = sub.add_parser("models", help="List models pulled on the Ollama server.")
+    p_models.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
+    p_models.add_argument("--base-url", default="", help="Model server URL.")
+    p_models.add_argument("--no-color", action="store_true")
+
     # Skeleton subcommands wired in later slices.
     sub.add_parser("config", help="Show/edit configuration (coming soon).")
     return parser
@@ -296,6 +337,39 @@ def _normalize_argv(argv: list[str]) -> list[str]:
     return ["run", *argv]
 
 
+def _offer_model_picker(pf: "preflight.PreflightResult", config, color) -> "str | None":
+    """After a failed pre-flight, let the user pick a pulled model (U2).
+
+    Returns the chosen model (and updates `config.model` + persists it) to
+    proceed, or None to abort. Only offers a picker when Ollama IS reachable, some
+    models ARE pulled, and stdin is a TTY — otherwise there's nothing to pick, so
+    hard-fail (None). The printed message from `check()` already told the user what
+    to do (`ollama serve` / `ollama pull`).
+    """
+    if not (pf.reachable and pf.available and sys.stdin.isatty()):
+        return None
+    print(f"\n{color['bold']}Pick a pulled model to use:{color['reset']}")
+    for i, name in enumerate(pf.available, 1):
+        print(f"  {color['cyan']}{i}{color['reset']}) {name}")
+    try:
+        raw = input(f"{color['bold']}Number (or Enter to cancel): {color['reset']}").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
+    if not raw.isdigit() or not (1 <= int(raw) <= len(pf.available)):
+        print(f"{color['dim']}cancelled.{color['reset']}")
+        return None
+    chosen = pf.available[int(raw) - 1]
+    config.model = chosen
+    # Persist to the user config so the next run doesn't ask again.
+    try:
+        path = write_model_choice(chosen, scope="user")
+        print(f"{color['dim']}saved model={chosen} to {path}{color['reset']}")
+    except OSError:
+        print(f"{color['dim']}(using {chosen} for this run; could not save config){color['reset']}")
+    return chosen
+
+
 def _build_agent(args: argparse.Namespace):
     """Assemble (config, registry, loop knobs, color) shared by run and chat.
 
@@ -306,9 +380,10 @@ def _build_agent(args: argparse.Namespace):
         print(f"error: workspace is not a directory: {workspace}", file=sys.stderr)
         return None
 
-    # Layer in config (flag > project .revenant.toml > user config > default).
+    # Layer in config (flag > project .revenant.toml > user config > OLLAMA_HOST
+    # env > default).
     cfg = load_config(workspace)
-    base_url = resolve("base_url", args.base_url, cfg, _DEFAULT_BASE_URL)
+    base_url = _normalize_base_url(resolve("base_url", args.base_url, cfg, _default_base_url()))
     model = resolve("model", args.model, cfg, "")
     read_only = resolve("read_only", args.read_only, cfg, False)
     yolo = resolve("yolo", args.yolo, cfg, False)
@@ -318,6 +393,18 @@ def _build_agent(args: argparse.Namespace):
     color = _color(sys.stdout.isatty() and not args.no_color)
     profiles = load_profiles(default_data_dir() / "profiles.json")
     config = build_config(profiles, base_url, model or None)
+
+    # U1 (ADR-0016): pre-flight — is Ollama up and the model pulled? Hard-fail
+    # here with an actionable message instead of a cryptic error deep in the
+    # first model call. `--skip-preflight` bypasses. Offers an interactive picker
+    # (U2) when a real model is simply not pulled and stdin is a TTY.
+    if not getattr(args, "skip_preflight", False):
+        pf = preflight.check(config.base_url, config.model)
+        if not pf.ok:
+            print(f"{color['red']}{pf.message}{color['reset']}", file=sys.stderr)
+            picked = _offer_model_picker(pf, config, color)
+            if picked is None:
+                return None  # callers map None -> exit 2
 
     # A small/fast model for LLM-backed context compaction (F5). Resolved from the
     # 'summary' role; None if unmapped, in which case compaction uses the heuristic.
@@ -977,6 +1064,66 @@ def cmd_skills(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_endpoint(args: argparse.Namespace):
+    """Resolve (base_url, model, cfg) the same way `_build_agent` does, so
+    `doctor`/`models` report exactly what a run would use (no drift)."""
+    workspace = Path(args.workspace).resolve()
+    cfg = load_config(workspace)
+    base_url = _normalize_base_url(
+        resolve("base_url", getattr(args, "base_url", ""), cfg, _default_base_url()))
+    model = resolve("model", getattr(args, "model", ""), cfg, "")
+    profiles = load_profiles(default_data_dir() / "profiles.json")
+    config = build_config(profiles, base_url, model or None)
+    return config.base_url, config.model, cfg, workspace
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    """Check Ollama reachability + model + show resolved config (U2)."""
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    c = color
+    base_url, model, _cfg, workspace = _resolve_endpoint(args)
+
+    print(f"{c['bold']}Revenant doctor{c['reset']}")
+    print(f"  workspace : {workspace}")
+    print(f"  base_url  : {base_url}"
+          + (f"  {c['dim']}(OLLAMA_HOST={os.environ['OLLAMA_HOST']}){c['reset']}"
+             if os.environ.get('OLLAMA_HOST') else ""))
+    print(f"  model     : {model}")
+
+    pf = preflight.check(base_url, model)
+    if not pf.reachable:
+        print(f"\n{c['red']}✗ {pf.message}{c['reset']}")
+        return 1
+    print(f"\n{c['green']}✓ Ollama reachable{c['reset']} — {len(pf.available)} model(s) pulled:")
+    for name in pf.available:
+        mark = f" {c['green']}← in use{c['reset']}" if name == model else ""
+        print(f"    {name}{mark}")
+    if pf.model_present:
+        print(f"\n{c['green']}✓ model {model!r} is pulled — you're ready to run.{c['reset']}")
+        return 0
+    print(f"\n{c['yellow']}✗ {pf.message}{c['reset']}")
+    return 1
+
+
+def cmd_models(args: argparse.Namespace) -> int:
+    """List models pulled on the Ollama server (U2)."""
+    color = _color(sys.stdout.isatty() and not args.no_color)
+    c = color
+    base_url, model, _cfg, _ws = _resolve_endpoint(args)
+    available = preflight.list_local_models(base_url)
+    if available is None:
+        print(f"{c['red']}Ollama isn't reachable at {base_url} — start it with "
+              f"`ollama serve`.{c['reset']}", file=sys.stderr)
+        return 1
+    if not available:
+        print(f"{c['dim']}No models pulled. Get one with: ollama pull {model or 'qwen2.5-coder:7b'}{c['reset']}")
+        return 0
+    for name in available:
+        mark = f" {c['green']}← in use (code role){c['reset']}" if name == model else ""
+        print(f"{name}{mark}")
+    return 0
+
+
 def cmd_mcp(args: argparse.Namespace) -> int:
     """Inspect configured MCP servers and their tools (F11.4)."""
     workspace = Path(args.workspace).resolve()
@@ -1056,6 +1203,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_mcp(args)
     if args.command == "skills":
         return cmd_skills(args)
+    if args.command == "doctor":
+        return cmd_doctor(args)
+    if args.command == "models":
+        return cmd_models(args)
     if args.command == "resume":
         return cmd_resume(args)
     if args.command == "config":

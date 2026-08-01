@@ -195,3 +195,31 @@ def test_context_config_ignores_malformed_section():
     c = context_config(cfg)
     assert c["inject_on_edit"] is True
     assert c["max_callers"] == 5
+
+
+# --- write_model_choice (U2, ADR-0016) --------------------------------------
+
+from revenant_cli.config import write_model_choice, PROJECT_FILENAME
+
+
+def test_write_model_choice_project_roundtrips(tmp_path):
+    path = write_model_choice("qwen2.5-coder:7b", scope="project", workspace=tmp_path)
+    assert path == tmp_path / PROJECT_FILENAME
+    merged = load_config(tmp_path)
+    assert merged.get("model") == "qwen2.5-coder:7b"
+
+
+def test_write_model_choice_upserts_existing(tmp_path):
+    (tmp_path / PROJECT_FILENAME).write_text('model = "old"\nmax_steps = 5\n')
+    write_model_choice("new-model", scope="project", workspace=tmp_path)
+    text = (tmp_path / PROJECT_FILENAME).read_text()
+    assert 'model = "new-model"' in text
+    assert "old" not in text
+    assert "max_steps = 5" in text  # other keys preserved
+
+
+def test_write_model_choice_appends_when_absent(tmp_path):
+    (tmp_path / PROJECT_FILENAME).write_text("max_steps = 5\n")
+    write_model_choice("m", scope="project", workspace=tmp_path)
+    text = (tmp_path / PROJECT_FILENAME).read_text()
+    assert "max_steps = 5" in text and 'model = "m"' in text
