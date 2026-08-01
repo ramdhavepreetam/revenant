@@ -147,7 +147,7 @@ max_repair_attempts = 3
 On each edit the harness byte-compiles changed Python and runs your configured
 checks; a failure is fed back with the exact error, and the model repairs it. If
 it still can't pass after `max_repair_attempts`, the edit is reverted (via undo)
-and the model is told to stop. See [configuration](../reference/config.md#verify--repair).
+and the model is told to stop. See [configuration](../reference/config.md#verify-repair).
 
 ## Undo — always reversible
 
