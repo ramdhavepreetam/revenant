@@ -1,6 +1,6 @@
 site_name: Revenant
 site_description: Revenant — a local, offline coding-agent CLI powered by your own Ollama models. No cloud, no telemetry, no API keys.
-site_url: https://ramdhavepreetam.github.io/revenant-docs/
+site_url: https://ramdhavepreetam.github.io/revenant/
 repo_url: https://github.com/ramdhavepreetam/revenant
 repo_name: ramdhavepreetam/revenant
 copyright: Copyright &copy; Preetam Ramdhave — Revenant is offline and on-prem by design.

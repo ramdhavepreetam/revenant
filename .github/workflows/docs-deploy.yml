@@ -1,13 +1,10 @@
 name: Deploy docs
 
-# Builds the MkDocs site and publishes it to the SEPARATE public docs repo
-# (ramdhavepreetam/revenant-docs, served at the GitHub Pages URL). Runs on pushes
-# to master that touch the docs, and can be run manually.
+# Builds the MkDocs site and publishes it to THIS repo's GitHub Pages
+# (served at https://ramdhavepreetam.github.io/revenant/). Uses the built-in
+# GITHUB_TOKEN via the official Pages actions — no PAT or cross-repo secret.
 #
-# Setup (one-time): this needs write access to the revenant-docs repo, which the
-# default GITHUB_TOKEN does not have. Create a secret named DOCS_DEPLOY_TOKEN — a
-# fine-grained PAT (or classic PAT with `repo`) that can push to revenant-docs —
-# and the deploy step below uses it. Without the secret the job fails clearly.
+# Requires Pages to be set to "GitHub Actions" as its source (Settings → Pages).
 on:
   push:
     branches: ["master"]
@@ -17,34 +14,41 @@ on:
       - ".github/workflows/docs-deploy.yml"
   workflow_dispatch: {}
 
+# Least-privilege permissions the Pages deploy needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deploy; let an in-progress run finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # gh-deploy needs history to commit to the pages branch
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install MkDocs
         run: pip install mkdocs-material
-
       - name: Build (strict — fails on a broken link/nav)
         run: mkdocs build --strict
+      - name: Upload the built site as a Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
 
-      - name: Deploy to revenant-docs (gh-pages)
-        env:
-          TOKEN: ${{ secrets.DOCS_DEPLOY_TOKEN }}
-        run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::DOCS_DEPLOY_TOKEN secret is not set — cannot push to revenant-docs."
-            echo "Create a PAT with write access to ramdhavepreetam/revenant-docs and add it as the DOCS_DEPLOY_TOKEN secret."
-            exit 1
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote add docs "https://x-access-token:${TOKEN}@github.com/ramdhavepreetam/revenant-docs.git"
-          mkdocs gh-deploy --remote-name docs --remote-branch gh-pages --force --no-history
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
