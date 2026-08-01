@@ -6,8 +6,8 @@
 #   pyinstaller packaging/revenant.spec
 #   -> dist/revenant   (macOS/Linux)   or   dist/revenant.exe  (Windows)
 #
-# The CLI is pure standard library, so the bundle is small. It still needs Ollama
-# running on the target machine at runtime (the LLM is not bundled).
+# The CLI is stdlib-only except for the OPTIONAL `rich` console. It still needs
+# Ollama running on the target machine at runtime (the LLM is not bundled).
 from PyInstaller.utils.hooks import collect_submodules
 
 hidden = (
@@ -15,6 +15,14 @@ hidden = (
     + collect_submodules("nerva_agent")
     + collect_submodules("revenant_cli")
 )
+
+# Bundle `rich` when it's installed in the build env (the installer build does
+# `pip install -e ...[rich]`), so the frozen binary ships the polished console.
+# Guarded: if rich isn't present, the binary cleanly falls back to plain-ANSI.
+try:
+    hidden += collect_submodules("rich")
+except Exception:
+    pass
 
 import os
 _HERE = os.path.dirname(os.path.abspath(SPEC))
