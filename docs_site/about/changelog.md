@@ -5,6 +5,15 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **`revenant --version`** — prints the installed version (read from package
+  metadata) and exits. Also shown in `--help`.
+
+---
+
 ## [0.6.0] — 2026-08-01: faster, deeper, measurable (W-series)
 
 The **W-series**: the agent gets **faster to watch**, **deeper in what it can

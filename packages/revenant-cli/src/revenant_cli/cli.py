@@ -225,10 +225,27 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
                    help="Force the plain REPL even if the TUI is available.")
 
 
+def _revenant_version() -> str:
+    """The installed revenant-cli version, from package metadata.
+
+    Reads the distribution's own metadata (works for a normal or editable
+    install); falls back to "unknown" if the package isn't installed (e.g. run
+    straight from a source checkout with no metadata) so `--version` never
+    crashes.
+    """
+    from importlib.metadata import version, PackageNotFoundError
+    try:
+        return version("revenant-cli")
+    except PackageNotFoundError:
+        return "unknown"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="revenant", description="Local coding agent (offline, Ollama-backed)."
     )
+    parser.add_argument("--version", action="version",
+                        version=f"revenant {_revenant_version()}")
     sub = parser.add_subparsers(dest="command")
 
     p_run = sub.add_parser("run", help="Run a single goal to completion (one-shot).")
@@ -364,7 +381,7 @@ def _normalize_argv(argv: list[str]) -> list[str]:
     if not argv:
         return argv
     first = argv[0]
-    if first in _SUBCOMMANDS or first in ("-h", "--help"):
+    if first in _SUBCOMMANDS or first in ("-h", "--help", "--version"):
         return argv
     return ["run", *argv]
 

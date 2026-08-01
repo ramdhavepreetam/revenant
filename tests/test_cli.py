@@ -35,6 +35,26 @@ def test_help_flag_is_untouched():
     assert cli._normalize_argv(["-h"]) == ["-h"]
 
 
+def test_version_flag_is_untouched():
+    # --version must NOT be rewritten into an implicit `run` goal.
+    assert cli._normalize_argv(["--version"]) == ["--version"]
+
+
+def test_version_flag_prints_version_and_exits(capsys):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--version"])
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert out.startswith("revenant ")
+    # A resolvable version (installed) or the graceful "unknown" fallback.
+    assert out.split()[1]  # non-empty version token
+
+
+def test_revenant_version_returns_a_string():
+    v = cli._revenant_version()
+    assert isinstance(v, str) and v
+
+
 def test_empty_argv():
     assert cli._normalize_argv([]) == []
 
