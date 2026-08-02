@@ -280,3 +280,38 @@ def test_write_two_servers_both_readable(tmp_path):
                      scope="project", workspace=tmp_path)
     names = {s.name for s in mcp_server_specs(load_config(tmp_path))}
     assert {"a", "b"} <= names
+
+
+# --- write_scalar (config set) ----------------------------------------------
+
+from revenant_cli.config import write_scalar
+
+
+def test_write_scalar_string_roundtrips(tmp_path):
+    write_scalar("model", "qwen2.5:14b", scope="project", workspace=tmp_path)
+    assert load_config(tmp_path)["model"] == "qwen2.5:14b"
+
+
+def test_write_scalar_int_and_bool(tmp_path):
+    write_scalar("max_steps", 25, scope="project", workspace=tmp_path)
+    write_scalar("yolo", True, scope="project", workspace=tmp_path)
+    cfg = load_config(tmp_path)
+    assert cfg["max_steps"] == 25 and cfg["yolo"] is True
+
+
+def test_write_scalar_upserts_existing_and_preserves_others(tmp_path):
+    write_scalar("model", "a", scope="project", workspace=tmp_path)
+    write_scalar("max_steps", 5, scope="project", workspace=tmp_path)
+    write_scalar("model", "b", scope="project", workspace=tmp_path)   # overwrite
+    cfg = load_config(tmp_path)
+    assert cfg["model"] == "b" and cfg["max_steps"] == 5
+
+
+def test_write_scalar_rejects_unknown_key(tmp_path):
+    with pytest.raises(ValueError):
+        write_scalar("bogus", "x", scope="project", workspace=tmp_path)
+
+
+def test_write_model_choice_still_works(tmp_path):
+    write_model_choice("m2", scope="project", workspace=tmp_path)
+    assert load_config(tmp_path)["model"] == "m2"

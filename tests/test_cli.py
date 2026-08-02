@@ -1112,6 +1112,94 @@ def test_doctor_models_in_parser():
     assert p.parse_args(["models"]).command == "models"
 
 
+# --- config subcommand (show/set) -------------------------------------------
+
+def test_config_set_parser():
+    p = cli.build_parser()
+    a = p.parse_args(cli._normalize_argv(["config", "set", "model=qwen2.5:7b", "--project"]))
+    assert a.command == "config" and a.config_action == "set"
+    assert a.assignment == "model=qwen2.5:7b" and a.project is True
+
+
+def test_config_set_then_show_reflects_it(tmp_path, capsys):
+    rc = cli.cmd_config(argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, config_action="set",
+        assignment="model=qwen2.5:14b", project=True))
+    assert rc == 0
+    capsys.readouterr()
+    rc = cli.cmd_config(argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, config_action="show"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "qwen2.5:14b" in out and "model" in out
+
+
+def test_config_set_unknown_key_errors(tmp_path, capsys):
+    rc = cli.cmd_config(argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, config_action="set",
+        assignment="bogus=x", project=True))
+    assert rc == 2
+    assert "unknown key" in capsys.readouterr().err
+
+
+def test_config_set_bad_assignment_errors(tmp_path, capsys):
+    rc = cli.cmd_config(argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, config_action="set",
+        assignment="no-equals-sign", project=True))
+    assert rc == 2
+
+
+def test_config_set_coerces_int(tmp_path):
+    from revenant_cli.config import load_config
+    cli.cmd_config(argparse.Namespace(
+        workspace=str(tmp_path), no_color=True, config_action="set",
+        assignment="max_steps=30", project=True))
+    assert load_config(tmp_path)["max_steps"] == 30
+
+
+def test_config_no_longer_a_stub(capsys):
+    # `main(["config", "show"])` must not print the old "not implemented" message.
+    import io, contextlib
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err):
+        cli.main(["config", "show", "--workspace", "."])
+    assert "not implemented" not in err.getvalue()
+
+
+# --- setup / first-run polish -----------------------------------------------
+
+def test_best_pulled_model_prefers_coder():
+    assert cli._best_pulled_model(["gemma:latest", "qwen2.5-coder:7b", "qwen2.5:14b"]) == "qwen2.5-coder:7b"
+    assert cli._best_pulled_model(["gemma:latest", "qwen2.5:14b"]) == "qwen2.5:14b"  # qwen next
+    assert cli._best_pulled_model(["llama3:8b", "mistral:7b"]) == "llama3:8b"        # else first
+
+
+def test_picker_auto_selects_when_non_interactive(monkeypatch, tmp_path, capsys):
+    from revenant_cli import preflight
+    # Non-TTY + reachable + models pulled -> auto-pick (no hard-fail).
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False, raising=False)
+    monkeypatch.setattr(cli, "write_model_choice", lambda m, scope="user": tmp_path / "cfg")
+    pf = preflight.PreflightResult(ok=False, reachable=True, model_present=False,
+                                   available=["gemma:latest", "qwen2.5-coder:7b"])
+    config = type("C", (), {"model": "qwen2.5-coder:14b"})()
+    chosen = cli._offer_model_picker(pf, config, cli._color(False))
+    assert chosen == "qwen2.5-coder:7b"     # preferred coder model
+    assert config.model == "qwen2.5-coder:7b"
+
+
+def test_picker_returns_none_when_nothing_pulled(monkeypatch):
+    from revenant_cli import preflight
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False, raising=False)
+    pf = preflight.PreflightResult(ok=False, reachable=True, model_present=False, available=[])
+    assert cli._offer_model_picker(pf, type("C", (), {"model": "x"})(), cli._color(False)) is None
+
+
+def test_picker_returns_none_when_server_down(monkeypatch):
+    from revenant_cli import preflight
+    pf = preflight.PreflightResult(ok=False, reachable=False, model_present=False, available=[])
+    assert cli._offer_model_picker(pf, type("C", (), {"model": "x"})(), cli._color(False)) is None
+
+
 # --- V3 (ADR-0017): TUI enablement + REPL fallback ---------------------------
 
 def _tui_args(**kw):

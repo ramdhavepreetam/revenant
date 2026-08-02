@@ -220,6 +220,58 @@ def test_shift_tab_is_a_noop_in_read_only():
     _run(go())
 
 
+# --- /model (in-session switch) + /mode -------------------------------------
+
+class _ConfigLoop(_FakeLoop):
+    """A fake loop that carries a ChatConfig-like .config for /model tests."""
+    def __init__(self, emit=None):
+        super().__init__(emit)
+        self.config = type("C", (), {"model": "qwen2.5:7b", "base_url": "http://x"})()
+        self.auto_approve = False
+
+
+def test_slash_model_switches_the_running_model():
+    loop = _ConfigLoop([])
+
+    async def go():
+        app = _app(loop, mode="approval-gated")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._handle_slash("/model qwen2.5:14b")
+            await pilot.pause()
+            assert loop.config.model == "qwen2.5:14b"   # loop actually switched
+            assert app.rv_model == "qwen2.5:14b"
+            assert app.query_one(StatusBar)._model == "qwen2.5:14b"
+    _run(go())
+
+
+def test_slash_model_no_arg_shows_current():
+    loop = _ConfigLoop([])
+
+    async def go():
+        app = _app(loop, mode="approval-gated")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._handle_slash("/model")             # no arg -> show, don't change
+            await pilot.pause()
+            assert loop.config.model == "qwen2.5:7b"
+    _run(go())
+
+
+def test_slash_mode_cycles_like_shift_tab():
+    loop = _ConfigLoop([])
+
+    async def go():
+        app = _app(loop, mode="approval-gated")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._handle_slash("/mode")
+            await pilot.pause()
+            assert loop.auto_approve is True
+            assert app.query_one(ModeBar).mode == "yolo"
+    _run(go())
+
+
 def test_agent_start_increments_subagent_count():
     events = [AgentEvent("agent_start", text="sub goal", agent="fix-tests", step=1),
               AgentEvent("agent_end", text="Sub-agent completed", agent="fix-tests"),

@@ -45,8 +45,9 @@ from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
-    context_config, write_model_choice, write_mcp_server,
+    context_config, write_model_choice, write_mcp_server, write_scalar,
 )
+from revenant_cli.config import _SCALAR_KEYS
 from revenant_cli import session_store, preflight
 from revenant_cli.console import make_console
 from revenant_cli.git_checkpoint import GitCheckpointer, is_git_repo
@@ -367,8 +368,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_models.add_argument("--base-url", default="", help="Model server URL.")
     p_models.add_argument("--no-color", action="store_true")
 
-    # Skeleton subcommands wired in later slices.
-    sub.add_parser("config", help="Show/edit configuration (coming soon).")
+    p_config = sub.add_parser("config", help="Show or set configuration values.")
+    p_config.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
+    p_config.add_argument("--no-color", action="store_true")
+    config_sub = p_config.add_subparsers(dest="config_action")
+    p_config_show = config_sub.add_parser("show", help="Print the resolved configuration.")
+    p_config_show.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    p_config_show.add_argument("--no-color", action="store_true", help=argparse.SUPPRESS)
+    p_config_set = config_sub.add_parser("set", help="Set a value: `config set model=qwen2.5:7b`.")
+    p_config_set.add_argument("assignment", help="KEY=VALUE (e.g. model=qwen2.5:7b).")
+    p_config_set.add_argument("--project", action="store_true",
+                              help="Write to project .revenant.toml (default: user config).")
+    p_config_set.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    p_config_set.add_argument("--no-color", action="store_true", help=argparse.SUPPRESS)
     return parser
 
 
@@ -388,18 +400,51 @@ def _normalize_argv(argv: list[str]) -> list[str]:
     return ["run", *argv]
 
 
-def _offer_model_picker(pf: "preflight.PreflightResult", config, color) -> "str | None":
-    """After a failed pre-flight, let the user pick a pulled model (U2).
+def _best_pulled_model(available: "list[str]") -> str:
+    """Pick a sensible default from pulled models: prefer a coder model, then a
+    qwen, else the first. Used for the non-interactive auto-pick."""
+    for pref in ("coder", "qwen"):
+        for name in available:
+            if pref in name.lower():
+                return name
+    return available[0]
 
-    Returns the chosen model (and updates `config.model` + persists it) to
-    proceed, or None to abort. Only offers a picker when Ollama IS reachable, some
-    models ARE pulled, and stdin is a TTY — otherwise there's nothing to pick, so
-    hard-fail (None). The printed message from `check()` already told the user what
-    to do (`ollama serve` / `ollama pull`).
+
+def _persist_model(chosen: str, config, color) -> None:
+    config.model = chosen
+    try:
+        path = write_model_choice(chosen, scope="user")
+        print(f"{color['dim']}saved model={chosen} to {path} (change it with "
+              f"`revenant config set model=…`){color['reset']}")
+    except OSError:
+        print(f"{color['dim']}(using {chosen} for this run; could not save config){color['reset']}")
+
+
+def _offer_model_picker(pf: "preflight.PreflightResult", config, color) -> "str | None":
+    """After a failed pre-flight, resolve a pulled model to proceed (U2, polished).
+
+    - Interactive TTY: show a numbered picker; the chosen model is persisted so the
+      next run doesn't ask again.
+    - Non-interactive (piped / CI) but a server IS reachable with models pulled:
+      auto-pick a sensible model (prefer a coder model) and persist it, rather than
+      hard-failing on a merely-unpulled default.
+    - Nothing pulled / server down: return None (caller hard-fails with the
+      actionable message `check()` already printed).
     """
-    if not (pf.reachable and pf.available and sys.stdin.isatty()):
+    if not (pf.reachable and pf.available):
         return None
-    print(f"\n{color['bold']}Pick a pulled model to use:{color['reset']}")
+    configured = getattr(config, "model", "") or "the default"
+
+    if not sys.stdin.isatty():
+        chosen = _best_pulled_model(pf.available)
+        print(f"{color['dim']}model {configured!r} isn't pulled; auto-selecting "
+              f"{chosen!r} from your pulled models.{color['reset']}")
+        _persist_model(chosen, config, color)
+        return chosen
+
+    print(f"\n{color['bold']}Your configured model {configured!r} isn't pulled. "
+          f"Pick one of your {len(pf.available)} pulled models "
+          f"(saved for next time):{color['reset']}")
     for i, name in enumerate(pf.available, 1):
         print(f"  {color['cyan']}{i}{color['reset']}) {name}")
     try:
@@ -411,13 +456,7 @@ def _offer_model_picker(pf: "preflight.PreflightResult", config, color) -> "str 
         print(f"{color['dim']}cancelled.{color['reset']}")
         return None
     chosen = pf.available[int(raw) - 1]
-    config.model = chosen
-    # Persist to the user config so the next run doesn't ask again.
-    try:
-        path = write_model_choice(chosen, scope="user")
-        print(f"{color['dim']}saved model={chosen} to {path}{color['reset']}")
-    except OSError:
-        print(f"{color['dim']}(using {chosen} for this run; could not save config){color['reset']}")
+    _persist_model(chosen, config, color)
     return chosen
 
 
@@ -1310,6 +1349,60 @@ def cmd_models(args: argparse.Namespace) -> int:
     return 0
 
 
+def _coerce_scalar(key: str, raw: str):
+    """Coerce a `config set` string value to the type the key expects."""
+    if key in ("read_only", "yolo"):
+        return raw.strip().lower() in ("true", "1", "yes", "on")
+    if key in ("max_steps", "max_context_tokens"):
+        try:
+            return int(raw)
+        except ValueError:
+            raise ValueError(f"{key} expects an integer, got {raw!r}")
+    return raw
+
+
+def cmd_config(args: argparse.Namespace) -> int:
+    """Show or set configuration (replaces the stub)."""
+    color = _color(sys.stdout.isatty() and not getattr(args, "no_color", False))
+    c = color
+    workspace = Path(args.workspace).resolve()
+    action = getattr(args, "config_action", None) or "show"
+
+    if action == "set":
+        assignment = args.assignment
+        if "=" not in assignment:
+            print(f"{c['red']}usage: config set KEY=VALUE (e.g. model=qwen2.5:7b){c['reset']}",
+                  file=sys.stderr)
+            return 2
+        key, raw = assignment.split("=", 1)
+        key, raw = key.strip(), raw.strip()
+        if key not in _SCALAR_KEYS:
+            print(f"{c['red']}unknown key {key!r}. Known: {', '.join(_SCALAR_KEYS)}{c['reset']}",
+                  file=sys.stderr)
+            return 2
+        try:
+            value = _coerce_scalar(key, raw)
+            path = write_scalar(key, value, scope="project" if args.project else "user",
+                                workspace=workspace)
+        except (ValueError, OSError) as exc:
+            print(f"{c['red']}{exc}{c['reset']}", file=sys.stderr)
+            return 2
+        print(f"{c['bold']}✓{c['reset']} set {key} = {value!r} in {path}")
+        return 0
+
+    # show: print each scalar's resolved value + the effective model/base_url.
+    cfg = load_config(workspace)
+    base_url, model, _cfg, _ws = _resolve_endpoint(args)
+    print(f"{c['bold']}Revenant config{c['reset']}  {c['dim']}(workspace {workspace}){c['reset']}")
+    for key in _SCALAR_KEYS:
+        val = resolve(key, "", cfg, "(unset)")
+        src = "project" if key in cfg.get("_raw_project", {}) else (
+            "user" if key in cfg.get("_raw_user", {}) else "default")
+        print(f"  {key:<20} {val!r}  {c['dim']}({src}){c['reset']}")
+    print(f"  {c['dim']}→ effective model={model!r} base_url={base_url!r}{c['reset']}")
+    return 0
+
+
 def cmd_mcp(args: argparse.Namespace) -> int:
     """Inspect configured MCP servers and their tools (F11.4)."""
     workspace = Path(args.workspace).resolve()
@@ -1416,9 +1509,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "resume":
         return cmd_resume(args)
     if args.command == "config":
-        print(f"'{args.command}' is not implemented yet — coming in a later release.",
-              file=sys.stderr)
-        return 2
+        return cmd_config(args)
     # No subcommand at all: show help.
     parser.print_help()
     return 2

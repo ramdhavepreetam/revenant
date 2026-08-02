@@ -145,7 +145,15 @@ class RevenantApp(App):
         elif name == "/skills":
             self._handle_slash("/help")  # skills appear in the same list
         elif name == "/model":
-            self._log(AgentEvent("assistant", text=f"model: {self.rv_model}"))
+            arg = line[len(name):].strip()
+            if arg:
+                self._switch_model(arg)
+            else:
+                self._log(AgentEvent("assistant", text=f"model: {self.rv_model}  "
+                                     "(use /model <name> to switch)"))
+        elif name == "/mode":
+            # Discoverable alias for the shift+tab toggle.
+            self.action_cycle_mode()
         elif name == "/context":
             g = self.query_one(ContextGauge)
             self._log(AgentEvent("assistant",
@@ -155,6 +163,24 @@ class RevenantApp(App):
             self._log(AgentEvent("assistant", text=f"sub-agents this session: {seen}"))
         elif name == "/skill":
             self._log(AgentEvent("error", text="usage: /skill <name>  (see /skills)"))
+
+    def _switch_model(self, name: str) -> None:
+        """Switch the running model live (no restart). The tool registry is
+        model-independent, so we only swap the loop's ChatConfig.model + refresh
+        the StatusBar. Best-effort: an unresolvable name still sets the string so
+        the next call surfaces any model error as a normal observation."""
+        try:
+            self.rv_loop.config.model = name
+        except Exception as exc:  # noqa: BLE001 - never crash the UI on a bad name
+            self._log(AgentEvent("error", text=f"could not switch model: {exc}"))
+            return
+        self.rv_model = name
+        try:
+            self.query_one(StatusBar)._model = name
+            self.query_one(StatusBar).refresh()
+        except Exception:  # noqa: BLE001 - status refresh is cosmetic
+            pass
+        self._log(AgentEvent("assistant", text=f"model → {name}"))
 
     def _run_skill(self, name: str, line: str) -> None:
         # Reuse the CLI's skill loader so behavior matches the REPL exactly, but
