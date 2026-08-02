@@ -5,7 +5,7 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased]
+## [0.6.1] — 2026-08-01: patch
 
 ### Added
 
