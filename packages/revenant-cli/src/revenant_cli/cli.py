@@ -373,13 +373,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _normalize_argv(argv: list[str]) -> list[str]:
-    """Back-compat: bare `revenant "<goal>"` still works.
+    """Back-compat + convenience.
 
-    If the first token isn't a known subcommand (and isn't a help/option flag),
-    treat the invocation as an implicit `run` so existing usage keeps working.
+    - Bare `revenant` (no args at all) opens interactive chat (the TUI when
+      available, else the REPL) — the friendliest default.
+    - `revenant "<goal>"` still runs one-shot: if the first token isn't a known
+      subcommand (and isn't a help/option flag), it's treated as an implicit `run`.
     """
     if not argv:
-        return argv
+        return ["chat"]
     first = argv[0]
     if first in _SUBCOMMANDS or first in ("-h", "--help", "--version"):
         return argv

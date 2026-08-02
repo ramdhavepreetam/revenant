@@ -31,7 +31,9 @@ from nerva_agent.agent_loop import AgentEvent
 
 from revenant_cli.tui.commands import SlashRegistry
 from revenant_cli.tui.screens import ApprovalScreen, PaletteScreen
-from revenant_cli.tui.widgets import ActivityLog, ContextGauge, StatusBar, StreamLine
+from revenant_cli.tui.widgets import (
+    ActivityLog, ContextGauge, ModeBar, StatusBar, StreamLine,
+)
 
 
 class RevenantApp(App):
@@ -43,6 +45,7 @@ class RevenantApp(App):
     #gauge  { height: 1; padding: 0 1; }
     ActivityLog { height: 1fr; border: round $primary-darken-2; padding: 0 1; }
     #stream { height: auto; padding: 0 1; }
+    #modebar { height: 1; padding: 0 1; dock: bottom; background: $panel; }
     #prompt { dock: bottom; }
     """
 
@@ -50,6 +53,9 @@ class RevenantApp(App):
         Binding("ctrl+c", "interrupt", "Interrupt/quit", priority=True),
         Binding("ctrl+d", "quit", "Quit", priority=True),
         Binding("ctrl+l", "clear_log", "Clear log"),
+        # shift+tab cycles the approval mode (approval-gated <-> yolo). priority so
+        # it fires even while the Input has focus.
+        Binding("shift+tab", "cycle_mode", "Cycle mode", priority=True),
     ]
 
     def __init__(self, *, loop, workspace, model: str, mode: str,
@@ -75,9 +81,11 @@ class RevenantApp(App):
         yield ActivityLog(id="log")
         yield StreamLine(id="stream")   # W2: live token line, above the input
         yield Input(placeholder="Ask revenant…  (type / for commands)", id="prompt")
+        yield ModeBar(id="modebar")     # approval-mode line below the input
 
     def on_mount(self) -> None:
         self.query_one("#prompt", Input).focus()
+        self.query_one(ModeBar).mode = self.rv_mode   # seed the bottom mode line
         log = self.query_one(ActivityLog)
         log.append(AgentEvent("assistant", text="Ready. Type a goal, or / for commands."))
 
@@ -244,3 +252,23 @@ class RevenantApp(App):
 
     def action_clear_log(self) -> None:
         self.query_one(ActivityLog).clear()
+
+    def action_cycle_mode(self) -> None:
+        """shift+tab: toggle the approval mode approval-gated <-> yolo, live.
+
+        Read-only is set at launch (it removes edit/bash tools at build time), so
+        it can't flip mid-session — cycling from it is a no-op with a note. The
+        toggle just flips the loop's auto_approve and re-labels the StatusBar +
+        ModeBar so the change is immediately visible.
+        """
+        if self.rv_mode == "read-only":
+            self._log(AgentEvent("assistant",
+                                 text="read-only is set at launch (relaunch without --read-only to edit)."))
+            return
+        # approval-gated <-> yolo
+        auto = not getattr(self.rv_loop, "auto_approve", False)
+        self.rv_loop.auto_approve = auto
+        self.rv_mode = "yolo" if auto else "approval-gated"
+        self.query_one(StatusBar).mode = self.rv_mode
+        self.query_one(ModeBar).mode = self.rv_mode
+        self._log(AgentEvent("assistant", text=f"mode → {self.rv_mode}"))
