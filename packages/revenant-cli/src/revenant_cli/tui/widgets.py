@@ -134,6 +134,26 @@ class ContextGauge(Static):
         )
 
 
+class ModeBar(Static):
+    """The always-visible approval-mode line below the input (shift+tab to cycle).
+
+    Renders e.g. `mode: approval-gated   ⇧⇥ switch` so the current mode is visible
+    without opening the status bar, and the shortcut is discoverable. A reactive
+    `mode` re-renders on change.
+    """
+
+    mode = reactive("")
+
+    _STYLE = {"yolo": "yellow", "read-only": "cyan", "approval-gated": "green"}
+
+    def render(self) -> Text:
+        style = self._STYLE.get(self.mode, "dim")
+        return Text.assemble(
+            ("mode: ", "dim"), (self.mode or "—", f"bold {style}"),
+            ("   ⇧⇥ switch", "dim"),
+        )
+
+
 class StatusBar(Static):
     """model · workspace · mode · sub-agent count, plus the context gauge line."""
 

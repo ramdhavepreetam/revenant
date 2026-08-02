@@ -5,6 +5,20 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Bare `revenant` opens chat** — running `revenant` with no arguments now starts
+  interactive chat (the TUI when available, else the REPL). `revenant "<goal>"`
+  still runs one-shot.
+- **Shift+Tab toggles the approval mode in the TUI** — cycle between
+  `approval-gated` (asks before edits) and `yolo` (auto-approve) live, without
+  restarting. The current mode is shown on a dedicated line **below the input**.
+  (Read-only stays a launch flag — it's enforced by removing edit tools at start.)
+
+---
+
 ## [0.6.1] — 2026-08-01: patch
 
 ### Added

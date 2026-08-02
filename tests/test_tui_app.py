@@ -157,6 +157,69 @@ def test_subagent_token_does_not_feed_root_stream_line():
     _run(go())
 
 
+# --- shift+tab mode toggle + ModeBar ----------------------------------------
+
+from revenant_cli.tui.widgets import ModeBar  # noqa: E402
+
+
+def test_modebar_seeded_from_launch_mode():
+    async def go():
+        app = _app(_FakeLoop([]), mode="approval-gated")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            assert app.query_one(ModeBar).mode == "approval-gated"
+    _run(go())
+
+
+def test_shift_tab_cycles_approval_gated_to_yolo():
+    loop = _FakeLoop([])
+    loop.auto_approve = False
+
+    async def go():
+        app = _app(loop, mode="approval-gated")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.press("shift+tab")
+            await pilot.pause()
+            assert loop.auto_approve is True          # loop actually switched
+            assert app.rv_mode == "yolo"
+            assert app.query_one(ModeBar).mode == "yolo"
+            assert app.query_one(StatusBar).mode == "yolo"
+    _run(go())
+
+
+def test_shift_tab_toggles_back_to_approval_gated():
+    loop = _FakeLoop([])
+    loop.auto_approve = True
+
+    async def go():
+        app = _app(loop, mode="yolo")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.press("shift+tab")
+            await pilot.pause()
+            assert loop.auto_approve is False
+            assert app.query_one(ModeBar).mode == "approval-gated"
+    _run(go())
+
+
+def test_shift_tab_is_a_noop_in_read_only():
+    loop = _FakeLoop([])
+    loop.auto_approve = False
+
+    async def go():
+        app = _app(loop, mode="read-only")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.press("shift+tab")
+            await pilot.pause()
+            # read-only can't flip live: mode + loop unchanged.
+            assert app.rv_mode == "read-only"
+            assert loop.auto_approve is False
+            assert app.query_one(ModeBar).mode == "read-only"
+    _run(go())
+
+
 def test_agent_start_increments_subagent_count():
     events = [AgentEvent("agent_start", text="sub goal", agent="fix-tests", step=1),
               AgentEvent("agent_end", text="Sub-agent completed", agent="fix-tests"),

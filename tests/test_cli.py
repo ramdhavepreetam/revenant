@@ -17,6 +17,11 @@ from revenant_cli.checkpoint import Checkpointer
 
 # --- argv normalization / back-compat ---------------------------------------
 
+def test_bare_no_args_opens_chat():
+    # `revenant` with nothing after it opens interactive chat (TUI/REPL).
+    assert cli._normalize_argv([]) == ["chat"]
+
+
 def test_bare_goal_becomes_implicit_run():
     assert cli._normalize_argv(["summarize core/"]) == ["run", "summarize core/"]
 
@@ -56,7 +61,8 @@ def test_revenant_version_returns_a_string():
 
 
 def test_empty_argv():
-    assert cli._normalize_argv([]) == []
+    # Empty argv opens interactive chat (was a no-op before; changed by design).
+    assert cli._normalize_argv([]) == ["chat"]
 
 
 # --- parser wiring -----------------------------------------------------------
