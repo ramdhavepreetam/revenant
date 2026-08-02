@@ -16,6 +16,18 @@ All notable changes to Revenant are documented here. This project follows
   `approval-gated` (asks before edits) and `yolo` (auto-approve) live, without
   restarting. The current mode is shown on a dedicated line **below the input**.
   (Read-only stays a launch flag — it's enforced by removing edit tools at start.)
+- **`revenant config show` / `config set`** — inspect the resolved configuration
+  (with each value's source) and set values without hand-editing TOML:
+  `revenant config set model=qwen2.5:7b` (`--project` for the repo config). No more
+  hitting the model picker every run.
+- **In-session model switch** — `/model <name>` in the TUI switches the running
+  model live (no restart); `/model` with no argument shows the current one.
+- **`/mode` command** — a discoverable palette entry that cycles the approval mode
+  (the same action as Shift+Tab).
+- **Friendlier first-run setup** — when your configured model isn't pulled, the
+  picker message is clearer and remembers your choice; a non-interactive run
+  (piped/CI) auto-selects a sensible pulled model (preferring a coder model)
+  instead of failing.
 
 ---
 

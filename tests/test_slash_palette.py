@@ -26,9 +26,16 @@ class _FakeLoop:
 def test_builtins_present_with_summaries():
     reg = SlashRegistry.from_loop(_FakeLoop())
     names = {c.name for c in reg.all()}
-    assert {"/help", "/skills", "/skill", "/exit", "/context", "/agents"} <= names
+    assert {"/help", "/skills", "/skill", "/exit", "/context", "/agents",
+            "/model", "/mode"} <= names
     # every command carries a non-empty summary (that's the discoverability point).
     assert all(c.summary for c in reg.all())
+
+
+def test_model_command_has_arg_hint():
+    reg = SlashRegistry.from_loop(_FakeLoop())
+    model = next(c for c in reg.all() if c.name == "/model")
+    assert model.arg_hint == "<name>"   # palette shows `/model <name>`
 
 
 def test_skills_become_commands():

@@ -67,16 +67,28 @@ def user_config_path() -> Path:
     return Path(base) / "revenant" / "config.toml"
 
 
-def write_model_choice(model: str, scope: str = "user",
-                       workspace: "Path | None" = None) -> Path:
-    """Persist `model = "..."` to a config file so a picked model sticks (U2).
+def _render_toml_scalar(value: Any) -> str:
+    """Render a Python scalar as a TOML value (str/bool/int only — our scalars)."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    return '"' + str(value).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def write_scalar(key: str, value: Any, scope: str = "user",
+                 workspace: "Path | None" = None) -> Path:
+    """Upsert a top-level `key = value` in a config file (generalizes U2's model
+    write; used by `config set`).
 
     scope="user" → ~/.config/revenant/config.toml; scope="project" →
     <workspace>/.revenant.toml. A minimal single-scalar upsert (read text, replace
-    or append the top-level `model = "..."` line, write back) — deliberately
-    avoids a TOML-writer dependency. Returns the path written. Raises OSError only
-    if the write itself fails.
+    or append the top-level `key = ...` line, write back) — deliberately avoids a
+    TOML-writer dependency. Returns the path written. Raises OSError on a failed
+    write; ValueError on an unknown key.
     """
+    if key not in _SCALAR_KEYS:
+        raise ValueError(f"unknown config key {key!r}. Known: {', '.join(_SCALAR_KEYS)}")
     if scope == "project":
         target = (workspace or Path.cwd()) / PROJECT_FILENAME
     else:
@@ -88,10 +100,10 @@ def write_model_choice(model: str, scope: str = "user",
     except OSError:
         text = ""
 
-    new_line = f'model = "{model}"'
-    # Replace an existing top-level `model = ...` line, else append.
+    new_line = f"{key} = {_render_toml_scalar(value)}"
+    # Replace an existing top-level `key = ...` line, else append.
     import re as _re
-    pattern = _re.compile(r'^\s*model\s*=.*$', _re.M)
+    pattern = _re.compile(rf'^\s*{_re.escape(key)}\s*=.*$', _re.M)
     if pattern.search(text):
         text = pattern.sub(new_line, text, count=1)
     else:
@@ -100,6 +112,14 @@ def write_model_choice(model: str, scope: str = "user",
         text += new_line + "\n"
     target.write_text(text, encoding="utf-8")
     return target
+
+
+def write_model_choice(model: str, scope: str = "user",
+                       workspace: "Path | None" = None) -> Path:
+    """Persist `model = "..."` to a config file so a picked model sticks (U2).
+
+    Thin wrapper over `write_scalar` (kept for the U2 call sites)."""
+    return write_scalar("model", model, scope=scope, workspace=workspace)
 
 
 def _toml_str(value: str) -> str:
