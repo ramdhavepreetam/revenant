@@ -5,7 +5,11 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased]
+## [0.7.0] — 2026-08-02: usability
+
+A friction-reducing pass driven by real first-run feedback: the CLI starts where
+you want, config is editable without touching TOML, and model/mode are switchable
+without restarting. Backward-compatible with 0.6.x.
 
 ### Added
 
