@@ -138,6 +138,20 @@ def test_mcp_specs_skips_entry_without_name(capsys):
 from revenant_cli.config import verify_config
 
 
+def test_memory_config_defaults_on():
+    from revenant_cli.config import memory_config
+    m = memory_config({"_raw_project": {}, "_raw_user": {}})
+    assert m["enabled"] is True and m["max_recall"] == 5 and m["suggest"] is True
+
+
+def test_memory_config_parses_and_overrides():
+    from revenant_cli.config import memory_config
+    cfg = {"_raw_user": {"memory": {"max_recall": 3}},
+           "_raw_project": {"memory": {"enabled": False, "suggest": False}}}
+    m = memory_config(cfg)
+    assert m["enabled"] is False and m["suggest"] is False and m["max_recall"] == 3
+
+
 def test_verify_config_defaults_off():
     v = verify_config({"_raw_project": {}, "_raw_user": {}})
     assert v["enabled"] is False

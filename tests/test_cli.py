@@ -1166,6 +1166,170 @@ def test_config_no_longer_a_stub(capsys):
     assert "not implemented" not in err.getvalue()
 
 
+# --- M2 (ADR-0022): auto-recall into the preamble ---------------------------
+
+def _mem_loop(store, base="BASE PREAMBLE"):
+    return type("L", (), {"_base_preamble": base, "_memory": store,
+                          "system_preamble": base})()
+
+
+def test_recall_block_formats_hits():
+    from nerva_agent.memory_store import MemoryStore
+    s = MemoryStore(":memory:")
+    s.remember("this project uses pytest")
+    block = cli._recall_block(s, "how to run tests with pytest", 5)
+    assert "Project memory" in block and "pytest" in block
+
+
+def test_recall_block_empty_when_no_hits_or_no_store():
+    from nerva_agent.memory_store import MemoryStore
+    assert cli._recall_block(None, "x", 5) == ""
+    assert cli._recall_block(MemoryStore(":memory:"), "nothing here", 5) == ""
+
+
+def test_apply_memory_recall_injects_and_is_byte_parity_when_empty():
+    from nerva_agent.memory_store import MemoryStore
+    s = MemoryStore(":memory:")
+    s.remember("editing config.py breaks the loader — use write_scalar")
+    loop = _mem_loop(s)
+    cli._apply_memory_recall(loop, "change config.py", 5)
+    assert "write_scalar" in loop.system_preamble and loop.system_preamble.startswith("BASE PREAMBLE")
+
+    empty = _mem_loop(MemoryStore(":memory:"))
+    cli._apply_memory_recall(empty, "anything", 5)
+    assert empty.system_preamble == "BASE PREAMBLE"   # byte-identical
+
+
+def test_apply_memory_recall_is_idempotent_across_turns():
+    from nerva_agent.memory_store import MemoryStore
+    s = MemoryStore(":memory:")
+    s.remember("fact about pytest")
+    loop = _mem_loop(s)
+    cli._apply_memory_recall(loop, "pytest", 5)
+    once = loop.system_preamble
+    cli._apply_memory_recall(loop, "pytest", 5)   # again — must not stack
+    assert loop.system_preamble == once
+
+
+def test_apply_memory_recall_noop_without_store():
+    loop = type("L", (), {"_base_preamble": "BASE", "system_preamble": "BASE"})()
+    cli._apply_memory_recall(loop, "x", 5)   # no _memory attr -> no-op, no crash
+    assert loop.system_preamble == "BASE"
+
+
+# --- M3 (ADR-0022): gated end-of-run memory suggestions ---------------------
+
+def _suggest_setup(monkeypatch, store, answer="did the thing", suggest_text="- uses pytest\n- API in packages/api"):
+    """Wire a fake model (returns suggest_text) + a final result + a mem loop."""
+    monkeypatch.setattr("nerva_core.local_llm_writer.call_model", lambda cfg, msgs: suggest_text)
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True, raising=False)
+    loop = type("L", (), {"_memory": store, "config": type("C", (), {})()})()
+    result = type("R", (), {"stopped_reason": "final", "answer": answer})()
+    args = argparse.Namespace(no_memory=False, no_memory_suggest=False, no_color=True)
+    return loop, result, args
+
+
+def test_suggest_saves_only_confirmed_facts(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store)
+    answers = iter(["y", "n"])   # confirm the first, decline the second
+    monkeypatch.setattr("builtins.input", lambda *a: next(answers))
+    cli._maybe_suggest_memories(loop, args, "run the tests", result, None)
+    saved = [m.content for m in store.list_all()]
+    assert saved == ["uses pytest"]   # only the confirmed one
+
+
+def test_suggest_skips_when_non_interactive(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store)
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False, raising=False)  # piped/CI
+    cli._maybe_suggest_memories(loop, args, "g", result, None)
+    assert store.count() == 0   # never writes unattended
+
+
+def test_suggest_skips_when_flag_set(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store)
+    args.no_memory_suggest = True
+    monkeypatch.setattr("builtins.input", lambda *a: "y")
+    cli._maybe_suggest_memories(loop, args, "g", result, None)
+    assert store.count() == 0
+
+
+def test_suggest_skips_when_run_not_final(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store)
+    result.stopped_reason = "max_steps"   # didn't finish
+    monkeypatch.setattr("builtins.input", lambda *a: "y")
+    cli._maybe_suggest_memories(loop, args, "g", result, None)
+    assert store.count() == 0
+
+
+def test_suggest_handles_none_from_model(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store, suggest_text="NONE")
+    monkeypatch.setattr("builtins.input", lambda *a: "y")
+    cli._maybe_suggest_memories(loop, args, "g", result, None)
+    assert store.count() == 0   # nothing proposed -> nothing to confirm
+
+
+# --- M4 (ADR-0022): memory subcommand ---------------------------------------
+
+def test_memory_parser():
+    p = cli.build_parser()
+    a = p.parse_args(cli._normalize_argv(["memory", "forget", "3"]))
+    assert a.command == "memory" and a.memory_action == "forget" and a.id == 3
+
+
+def _seed_memory(ws):
+    from nerva_agent.memory_store import MemoryStore
+    s = MemoryStore(f"{ws}/.aibot/memory.db")
+    s.remember("uses pytest"); s.remember("API in packages/api")
+    s.close()
+
+
+def test_memory_list(tmp_path, capsys):
+    _seed_memory(tmp_path)
+    rc = cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="list"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "uses pytest" in out and "packages/api" in out
+
+
+def test_memory_forget(tmp_path, capsys):
+    _seed_memory(tmp_path)
+    rc = cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="forget", id=1))
+    assert rc == 0
+    # #1 is gone, #2 remains
+    capsys.readouterr()
+    cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="list"))
+    assert "uses pytest" not in capsys.readouterr().out
+
+
+def test_memory_forget_unknown_id(tmp_path, capsys):
+    _seed_memory(tmp_path)
+    rc = cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="forget", id=999))
+    assert rc == 2
+
+
+def test_memory_clear(tmp_path, capsys):
+    _seed_memory(tmp_path)
+    cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="clear"))
+    capsys.readouterr()
+    cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="list"))
+    assert "no project memories" in capsys.readouterr().out
+
+
+def test_memory_empty_message(tmp_path, capsys):
+    rc = cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="list"))
+    assert rc == 0 and "no project memories" in capsys.readouterr().out
+
+
 # --- setup / first-run polish -----------------------------------------------
 
 def test_best_pulled_model_prefers_coder():

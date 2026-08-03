@@ -38,6 +38,7 @@ BUILTIN_COMMANDS: tuple[SlashCommand, ...] = (
     SlashCommand("/mode", "Toggle approval mode (approval-gated ↔ yolo)"),
     SlashCommand("/context", "Show current context usage vs. budget"),
     SlashCommand("/agents", "Show active/most-recent sub-agents"),
+    SlashCommand("/memory", "Show what the project remembers across runs"),
     SlashCommand("/reset", "Clear the conversation context"),
     SlashCommand("/clear", "Clear the activity log"),
     SlashCommand("/exit", "Quit revenant"),

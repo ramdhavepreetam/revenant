@@ -45,7 +45,7 @@ from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
-    context_config, write_model_choice, write_mcp_server, write_scalar,
+    context_config, memory_config, write_model_choice, write_mcp_server, write_scalar,
 )
 from revenant_cli.config import _SCALAR_KEYS
 from revenant_cli import session_store, preflight
@@ -157,7 +157,7 @@ def build_config(profiles: dict, base_url: str, model: str | None) -> ChatConfig
 
 
 _SUBCOMMANDS = ("run", "chat", "loop", "undo", "mcp", "skills", "doctor",
-                "models", "config", "resume")
+                "models", "config", "resume", "memory")
 
 
 _DEFAULT_BASE_URL = "http://localhost:11434"
@@ -215,6 +215,11 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--no-graph-cache", action="store_true",
                    help="Rebuild the code graph from scratch (ignore the cached "
                         ".aibot/code_graph.json; no persistence this run).")
+    p.add_argument("--no-memory", action="store_true",
+                   help="Disable cross-session project memory (remember/recall + "
+                        "auto-recall) for this run.")
+    p.add_argument("--no-memory-suggest", action="store_true",
+                   help="Don't propose durable facts to remember at the end of a run.")
     p.add_argument("--skip-preflight", action="store_true",
                    help="Skip the Ollama reachability / model-pulled check.")
     p.add_argument("--no-color", action="store_true")
@@ -355,6 +360,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_resume.add_argument("session_id", nargs="?",
                           help="Session to resume (default: the most recent).")
     _add_common_flags(p_resume)
+
+    # M4 (ADR-0022): inspect/prune the project's cross-session memory.
+    p_memory = sub.add_parser("memory", help="List/prune project memory the agent remembers.")
+    p_memory.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
+    p_memory.add_argument("--no-color", action="store_true")
+    memory_sub = p_memory.add_subparsers(dest="memory_action")
+    memory_sub.add_parser("list", help="List stored memories (default).")
+    p_mem_show = memory_sub.add_parser("show", help="Show one memory by id.")
+    p_mem_show.add_argument("id", type=int)
+    p_mem_forget = memory_sub.add_parser("forget", help="Delete one memory by id.")
+    p_mem_forget.add_argument("id", type=int)
+    memory_sub.add_parser("clear", help="Delete ALL stored memories for this project.")
 
     # U2 (ADR-0016): setup diagnostics + model discovery.
     p_doctor = sub.add_parser("doctor", help="Check Ollama + model setup and show resolved config.")
@@ -563,6 +580,18 @@ def _build_agent(args: argparse.Namespace):
                   f"{st['files']} files{color['reset']}")
         except Exception as exc:  # noqa: BLE001 - indexing must never block a run
             print(f"{color['dim']}graph: skipped ({exc}){color['reset']}")
+
+    # M1 (ADR-0022): cross-session memory — remember/recall tools over a stdlib
+    # SQLite store under .aibot/memory.db. Read-only w.r.t. the workspace, so in
+    # every mode. --no-memory disables it; a store that can't open degrades to a
+    # null store (tools just report "nothing saved / no matches").
+    mem_store = None
+    if not getattr(args, "no_memory", False):
+        from nerva_agent.memory_store import MemoryStore
+        from nerva_agent.memory_tools import build_memory_tools
+        mem_store = MemoryStore(workspace / ".aibot" / "memory.db")
+        tools += build_memory_tools(mem_store)
+
     registry = ToolRegistry(tools)
 
     # F6 (tier a): ground the agent on the project's own instruction file if present.
@@ -647,6 +676,9 @@ def _build_agent(args: argparse.Namespace):
     loop._checkpointer = checkpointer
     # Stash the console so command handlers can render the header + spinner (U4).
     loop._console = console
+    # Stash the memory store so run-start recall (M2) + end-of-run suggestions (M3)
+    # + the /memory command can reach it.
+    loop._memory = mem_store
     # V2 (ADR-0017): now that the loop's on_event exists, expose it to the
     # spawn tool's late-bound parent sink so sub-agent events surface here.
     if not read_only:
@@ -738,6 +770,118 @@ def _mode_label(args: argparse.Namespace) -> str:
     return "read-only" if args.read_only else ("yolo" if args.yolo else "approval-gated")
 
 
+def _recall_block(store, goal: str, limit: int) -> str:
+    """Format the memories most relevant to `goal` as a preamble block (M2,
+    ADR-0022). Empty string when there's no store or no hit — so the preamble is
+    byte-identical to today when memory is empty/absent."""
+    if store is None or limit <= 0 or not (goal or "").strip():
+        return ""
+    try:
+        hits = store.recall(goal, limit=limit)
+    except Exception:  # noqa: BLE001 - recall must never break a run
+        hits = []
+    if not hits:
+        return ""
+    lines = [f"- {h.content}" for h in hits]
+    return ("Project memory (recalled from earlier runs — trust these unless the "
+            "code contradicts them):\n" + "\n".join(lines))
+
+
+def _apply_memory_recall(loop, goal: str, max_recall: int) -> None:
+    """Augment the loop's system preamble with memories relevant to `goal`.
+
+    Rebuilds from `loop._base_preamble` each call (idempotent across REPL/TUI
+    turns) so recalled memories reflect the current goal and never stack up.
+    No-op if the loop has no memory store or no preamble to augment.
+    """
+    store = getattr(loop, "_memory", None)
+    if store is None:
+        return
+    base = getattr(loop, "_base_preamble", None)
+    if base is None:
+        base = getattr(loop, "system_preamble", None)
+    if base is None:
+        return
+    block = _recall_block(store, goal, max_recall)
+    loop.system_preamble = f"{base}\n\n{block}" if block else base
+
+
+def _memory_max_recall(args: argparse.Namespace, workspace: Path) -> int:
+    """Resolve the recall count from [memory] config (0 disables)."""
+    try:
+        mc = memory_config(load_config(workspace))
+        return mc["max_recall"] if mc["enabled"] else 0
+    except Exception:  # noqa: BLE001
+        return 5
+
+
+_MEMORY_SUGGEST_PROMPT = (
+    "You just finished this coding task:\n{goal}\n\n"
+    "Result:\n{answer}\n\n"
+    "List up to 3 DURABLE facts about THIS project worth remembering for future "
+    "sessions — stable conventions, where things live, or a pitfall to avoid. "
+    "One per line, each a single terse sentence. Skip anything transient or "
+    "task-specific. If nothing is worth remembering, output NONE.\n"
+    "Facts:"
+)
+
+
+def _parse_suggested_facts(text: str) -> "list[str]":
+    """Parse the model's fact list: non-empty lines, strip list markers, drop a
+    lone NONE, cap at 3, cap length."""
+    if not text or text.strip().upper().startswith("NONE"):
+        return []
+    facts = []
+    for line in text.splitlines():
+        line = line.strip().lstrip("-*•0123456789.) ").strip()
+        if not line or line.upper() == "NONE":
+            continue
+        facts.append(line[:300])
+    return facts[:3]
+
+
+def _maybe_suggest_memories(loop, args, goal, result, console) -> None:
+    """M3 (ADR-0022): after a run, offer to remember durable facts — GATED.
+
+    The model *proposes* facts; each is confirmed before it persists. Skips
+    entirely when: memory/suggest is off, no store, the run didn't finish
+    ('final'), stdin isn't a TTY (never auto-write unattended), or nothing is
+    proposed. One constrained model call, degrades silently on any error.
+    """
+    store = getattr(loop, "_memory", None)
+    if store is None or not store.available:
+        return
+    if getattr(args, "no_memory", False) or getattr(args, "no_memory_suggest", False):
+        return
+    if getattr(result, "stopped_reason", "") != "final":
+        return
+    if not sys.stdin.isatty():
+        return  # never write memory unattended
+    answer = (getattr(result, "answer", "") or "").strip()
+    if not answer:
+        return
+    from nerva_core.local_llm_writer import call_model, LocalLLMError
+    try:
+        text = call_model(loop.config, [{"role": "user", "content":
+            _MEMORY_SUGGEST_PROMPT.format(goal=goal[:500], answer=answer[:1500])}])
+    except (LocalLLMError, Exception):  # noqa: BLE001 - suggestion is best-effort
+        return
+    facts = _parse_suggested_facts(text)
+    if not facts:
+        return
+    c = _color(sys.stdout.isatty() and not getattr(args, "no_color", False))
+    print(f"\n{c['dim']}Learned something worth remembering for next time?{c['reset']}")
+    for fact in facts:
+        try:
+            ans = input(f"  {c['bold']}remember{c['reset']} \"{fact}\"? [y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if ans in ("y", "yes"):
+            mid = store.remember(fact, kind="fact", source="suggested")
+            print(f"    {c['dim']}saved as memory #{mid}{c['reset']}")
+
+
 def _make_plan(loop, goal: str):
     """Ask the model for a step checklist and parse it (H3.1, ADR-0014).
 
@@ -825,10 +969,16 @@ def cmd_run(args: argparse.Namespace) -> int:
         finally:
             _close_mcp(loop)
 
+    # M2 (ADR-0022): recall project memories relevant to this goal into the preamble.
+    if not getattr(args, "no_memory", False):
+        _apply_memory_recall(loop, goal, _memory_max_recall(args, workspace))
+
     try:
         with console.status_spinner("thinking…"):
             result = loop.run(goal)
     finally:
+        # M3 (ADR-0022): after the run, offer to remember durable facts learned.
+        _maybe_suggest_memories(loop, args, goal, result, console)
         _close_mcp(loop)
     if result.stopped_reason == "final":
         return 0
@@ -1117,6 +1267,11 @@ def cmd_chat(args: argparse.Namespace, input_fn=input,
                     continue  # unknown/misused: message already printed
                 line = goal  # fall through to run the skill body as this turn's goal
 
+            # M2: recall memories for this turn's goal (matters most on turn 1,
+            # where the system prompt is built; later turns already carry context).
+            if not history and not getattr(args, "no_memory", False):
+                _apply_memory_recall(loop, line, _memory_max_recall(args, workspace))
+
             with console.status_spinner("thinking…"):
                 result = loop.run(line, history=history or None)
             # Thread the transcript forward so the next turn keeps context.
@@ -1403,6 +1558,48 @@ def cmd_config(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_memory(args: argparse.Namespace) -> int:
+    """List/show/forget/clear the project's cross-session memory (M4, ADR-0022)."""
+    from nerva_agent.memory_store import MemoryStore
+    color = _color(sys.stdout.isatty() and not getattr(args, "no_color", False))
+    c = color
+    workspace = Path(args.workspace).resolve()
+    store = MemoryStore(workspace / ".aibot" / "memory.db")
+    action = getattr(args, "memory_action", None) or "list"
+
+    if action == "forget":
+        ok = store.forget(args.id)
+        print(f"{c['dim']}{'forgot' if ok else 'no'} memory #{args.id}{c['reset']}"
+              if ok else f"{c['red']}no memory #{args.id}{c['reset']}")
+        return 0 if ok else 2
+    if action == "clear":
+        n = store.count()
+        store.clear()
+        print(f"{c['dim']}cleared {n} memories{c['reset']}")
+        return 0
+    if action == "show":
+        hit = next((m for m in store.list_all(limit=10000) if m.id == args.id), None)
+        if hit is None:
+            print(f"{c['red']}no memory #{args.id}{c['reset']}", file=sys.stderr)
+            return 2
+        import datetime as _dt
+        when = _dt.datetime.fromtimestamp(hit.created_at).strftime("%Y-%m-%d %H:%M")
+        print(f"#{hit.id} ({hit.kind}) {c['dim']}{when} · {hit.source or 'agent'}{c['reset']}")
+        print(f"  {hit.content}")
+        return 0
+
+    # list (default)
+    memories = store.list_all()
+    if not memories:
+        print(f"{c['dim']}no project memories yet. The agent saves them with the "
+              f"`remember` tool, or you confirm suggestions after a run.{c['reset']}")
+        return 0
+    print(f"{c['bold']}Project memory{c['reset']} {c['dim']}({len(memories)} · {workspace}){c['reset']}")
+    for m in memories:
+        print(f"  {c['cyan']}#{m.id}{c['reset']} ({m.kind}) {m.content}")
+    return 0
+
+
 def cmd_mcp(args: argparse.Namespace) -> int:
     """Inspect configured MCP servers and their tools (F11.4)."""
     workspace = Path(args.workspace).resolve()
@@ -1510,6 +1707,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_resume(args)
     if args.command == "config":
         return cmd_config(args)
+    if args.command == "memory":
+        return cmd_memory(args)
     # No subcommand at all: show help.
     parser.print_help()
     return 2
