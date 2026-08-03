@@ -5,7 +5,13 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased]
+## [0.9.0] — 2026-08-03: adaptive planning
+
+Multi-step runs get **smarter and more resilient**: plans recover from a stumble
+instead of aborting, and a stronger model can shape the plan while a cheaper one
+does the work. Backward-compatible; single-model behavior is unchanged when the
+routing isn't affordable, and non-`--plan` runs are untouched. Still fully
+offline, still zero new dependencies.
 
 ### Added
 
