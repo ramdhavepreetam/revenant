@@ -5,6 +5,22 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Adaptive planning** — with `--plan`, a step that stumbles no longer aborts the
+  whole run: the agent **retries** it once (with the failure fed back), and if it
+  still can't, **re-plans the remaining steps** and keeps going. Bounded so it
+  always terminates; `--max-replans` to tune.
+- **Phase-aware model routing** — when your machine has room for two models loaded,
+  the plan is drafted by a stronger model (the `language` role) while each step is
+  executed by the cheaper `code` model. Auto-on only when RAM allows; `--no-route-
+  roles` to disable, or configure via a `[routing]` section. Single-model behavior
+  is byte-identical when off or on a small machine.
+
+---
+
 ## [0.8.0] — 2026-08-03: memory
 
 The coding agent gains **persistent, project-level memory** across runs — offline,

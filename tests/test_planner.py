@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import pytest
 
-from nerva_agent.planner import parse_plan, render_plan, Plan, Step, MAX_STEPS
+from nerva_agent.planner import (
+    parse_plan, render_plan, Plan, Step, MAX_STEPS,
+    retry_goal, build_replan_prompt, replan, RETRY_NUDGE, REPLAN_PROMPT,
+)
 
 
 def test_parses_numbered_list():
@@ -55,3 +58,43 @@ def test_render_single_step():
     plan = parse_plan("no list here", "do the thing")
     assert "single step" in render_plan(plan)
     assert "do the thing" in render_plan(plan)
+
+
+# --- P0 (ADR-0023): adaptive planning primitives ----------------------------
+
+def test_retry_goal_includes_reason_and_goal():
+    out = retry_goal("write the tests", "max_steps")
+    assert "write the tests" in out and "max_steps" in out
+
+
+def test_retry_goal_default_reason_when_blank():
+    out = retry_goal("do X", "")
+    assert "do X" in out and "final answer" in out
+
+
+def test_build_replan_prompt_renders_goal_done_failure():
+    out = build_replan_prompt("build X", ["scaffold", "add config"], "import error")
+    assert "build X" in out and "scaffold" in out and "import error" in out
+
+
+def test_build_replan_prompt_handles_empty_done():
+    out = build_replan_prompt("g", [], "boom")
+    assert "nothing yet" in out
+
+
+def test_replan_parses_new_checklist():
+    plan = replan("1. fix imports\n2. re-run tests", "goal")
+    assert not plan.single
+    assert [s.goal for s in plan.steps] == ["fix imports", "re-run tests"]
+
+
+def test_replan_degrades_to_empty_on_junk():
+    # Unparseable -> empty plan (len 0), signalling "keep existing steps" rather
+    # than a bogus single-step plan.
+    plan = replan("sorry, I can't do that", "goal")
+    assert len(plan) == 0 and not plan.single
+
+
+def test_replan_respects_max_steps():
+    text = "\n".join(f"{i}. step {i}" for i in range(1, MAX_STEPS + 5))
+    assert len(replan(text, "g")) == MAX_STEPS

@@ -1002,17 +1002,24 @@ def test_run_plan_flag_parses():
 
 
 class _PlanLoop:
-    """A loop whose run() records goals; model call is patched separately."""
-    def __init__(self, stopped="final"):
+    """A loop whose run() records goals; model call is patched separately.
+
+    `stopped` is the reason returned every call. `script` (optional) overrides it
+    with a per-call sequence of reasons (list), for adaptive-driver tests where a
+    step must fail then succeed.
+    """
+    def __init__(self, stopped="final", script=None):
         self.config = type("C", (), {"model": "m"})()
         self.calls = []
         self._stopped = stopped
+        self._script = list(script) if script else None
         self._mcp_clients = []
     def run(self, goal, history=None):
         self.calls.append(goal)
+        reason = self._script.pop(0) if self._script else self._stopped
         return type("R", (), {
             "messages": (history or []) + [{"role": "user", "content": goal[:20]}],
-            "stopped_reason": self._stopped, "answer": "",
+            "stopped_reason": reason, "answer": "",
         })()
 
 
@@ -1028,15 +1035,85 @@ def test_run_planned_drives_steps_in_order(monkeypatch, capsys):
     assert "plan complete: 3 step(s)" in capsys.readouterr().out
 
 
-def test_run_planned_halts_on_non_final_step(monkeypatch, capsys):
-    loop = _PlanLoop(stopped="max_steps")  # every step hits the cap
-    monkeypatch.setattr(cli, "_make_plan",
-        lambda lp, goal: __import__("nerva_agent.planner", fromlist=["parse_plan"])
-                          .parse_plan("1. one\n2. two", goal))
+def _plan(*steps):
+    """A fake _make_plan returning a checklist of the given step goals."""
+    text = "\n".join(f"{i}. {s}" for i, s in enumerate(steps, 1))
+    from nerva_agent.planner import parse_plan
+    return lambda lp, goal: parse_plan(text, goal)
+
+
+# --- P1 (ADR-0023): adaptive driver -----------------------------------------
+
+def test_run_planned_retries_a_failed_step_then_advances(monkeypatch, capsys):
+    # Step "one" fails once (max_steps) then succeeds on retry; "two" succeeds.
+    loop = _PlanLoop(script=["max_steps", "final", "final"])
+    monkeypatch.setattr(cli, "_make_plan", _plan("one", "two"))
     rc = cli._run_planned(loop, "g", cli._color(False))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "retrying step" in out and "plan complete: 2 step(s)" in out
+    # "one" ran twice (fail + retry), then "two".
+    assert loop.calls[0] == "one" and "one" in loop.calls[1] and loop.calls[2] == "two"
+
+
+def test_run_planned_replans_remaining_when_retry_fails(monkeypatch, capsys):
+    # "one" fails + retry fails -> re-plan returns ["recover"], which succeeds.
+    loop = _PlanLoop(script=["max_steps", "max_steps", "final"])
+    monkeypatch.setattr(cli, "_make_plan", _plan("one", "two"))
+    monkeypatch.setattr(cli, "_plan_call", lambda lp, prompt: "1. recover")
+    rc = cli._run_planned(loop, "g", cli._color(False))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "re-planning remaining steps" in out
+    assert "recover" in loop.calls   # the re-planned step ran
+
+
+def test_run_planned_halts_when_budget_exhausted(monkeypatch, capsys):
+    # Everything fails; retries + re-plans (which keep failing) eventually halt.
+    loop = _PlanLoop(stopped="max_steps")
+    monkeypatch.setattr(cli, "_make_plan", _plan("one", "two"))
+    monkeypatch.setattr(cli, "_plan_call", lambda lp, prompt: "1. still-fails")
+    rc = cli._run_planned(loop, "g", cli._color(False), max_step_retries=1, max_replans=2)
     assert rc == 3
-    assert loop.calls == ["one"]  # halted after the first step didn't finish
-    assert "halting the plan" in capsys.readouterr().out
+    assert "budget spent" in capsys.readouterr().out
+
+
+def test_run_planned_unparseable_replan_keeps_current_steps(monkeypatch, capsys):
+    # Re-plan returns junk -> keep current step, but the re-plan attempt is counted
+    # so a stuck plan still terminates.
+    loop = _PlanLoop(stopped="max_steps")
+    monkeypatch.setattr(cli, "_make_plan", _plan("one"))
+    monkeypatch.setattr(cli, "_plan_call", lambda lp, prompt: "sorry, no")
+    rc = cli._run_planned(loop, "g", cli._color(False), max_step_retries=0, max_replans=1)
+    assert rc == 3
+    assert "unparseable" in capsys.readouterr().out
+
+
+# --- P2 (ADR-0023): phase-aware routing -------------------------------------
+
+def test_planner_config_falls_back_to_loop_config():
+    base = type("C", (), {"model": "qwen2.5:7b"})()
+    loop = type("L", (), {"config": base})()
+    assert cli._planner_config(loop).model == "qwen2.5:7b"
+
+
+def test_planner_config_uses_routed_config_when_set():
+    base = type("C", (), {"model": "qwen2.5:7b"})()
+    strong = type("C", (), {"model": "qwen2.5:14b"})()
+    loop = type("L", (), {"config": base, "_planner_config": strong})()
+    assert cli._planner_config(loop).model == "qwen2.5:14b"
+
+
+def test_make_plan_uses_routed_planner_config(monkeypatch):
+    # _make_plan must call the model with the ROUTED planner config, not loop.config.
+    base = type("C", (), {"model": "qwen2.5:7b"})()
+    strong = type("C", (), {"model": "qwen2.5:14b"})()
+    loop = type("L", (), {"config": base, "_planner_config": strong})()
+    seen = {}
+    monkeypatch.setattr("nerva_core.local_llm_writer.call_model",
+                        lambda cfg, msgs: seen.setdefault("model", cfg.model) or "1. a\n2. b")
+    cli._make_plan(loop, "goal")
+    assert seen["model"] == "qwen2.5:14b"   # planned with the strong model
 
 
 def test_run_planned_single_step_fallback(monkeypatch):

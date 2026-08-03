@@ -16,3 +16,4 @@ site_public/
 # nervapack code-graph data (local, machine-specific, regenerable via `nervapack ingest`)
 .nervapack/
 .nervapack_ingest.log
+lib/

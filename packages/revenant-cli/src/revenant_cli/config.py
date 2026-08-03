@@ -334,6 +334,41 @@ def memory_config(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def routing_config(config: dict[str, Any]) -> dict[str, Any]:
+    """Read the `[routing]` section (P-series, ADR-0023) from the merged config.
+
+    Project overrides user. Returns:
+        {enabled: "auto"|True|False, plan_role: str, max_replans: int,
+         max_step_retries: int}
+    `enabled="auto"` (the default) means route the planning call to a stronger
+    model only when the machine can keep two models resident; True forces it, False
+    disables. A missing section = auto with sensible defaults.
+    """
+    def _section(raw: dict[str, Any]) -> dict:
+        v = raw.get("routing") if isinstance(raw, dict) else None
+        return v if isinstance(v, dict) else {}
+
+    merged: dict[str, Any] = {}
+    for raw in (config.get("_raw_user", {}), config.get("_raw_project", {})):
+        merged.update(_section(raw))
+
+    enabled = merged.get("enabled", "auto")
+    if isinstance(enabled, str):
+        enabled = enabled.strip().lower()
+        if enabled not in ("auto", "true", "false"):
+            enabled = "auto"
+        if enabled != "auto":
+            enabled = (enabled == "true")
+    else:
+        enabled = bool(enabled)
+    return {
+        "enabled": enabled,
+        "plan_role": str(merged.get("plan_role", "language")) or "language",
+        "max_replans": int(merged.get("max_replans", 2) or 0),
+        "max_step_retries": int(merged.get("max_step_retries", 1) or 0),
+    }
+
+
 def resolve(key: str, flag_value: Any, config: dict[str, Any], default: Any) -> Any:
     """Apply precedence for one setting: flag > config > default.
 

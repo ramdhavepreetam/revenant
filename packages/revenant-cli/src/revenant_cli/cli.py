@@ -45,7 +45,8 @@ from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
-    context_config, memory_config, write_model_choice, write_mcp_server, write_scalar,
+    context_config, memory_config, routing_config, write_model_choice,
+    write_mcp_server, write_scalar,
 )
 from revenant_cli.config import _SCALAR_KEYS
 from revenant_cli import session_store, preflight
@@ -220,6 +221,11 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
                         "auto-recall) for this run.")
     p.add_argument("--no-memory-suggest", action="store_true",
                    help="Don't propose durable facts to remember at the end of a run.")
+    p.add_argument("--no-route-roles", action="store_true",
+                   help="Don't route planning to a stronger model (use one model "
+                        "for planning and execution).")
+    p.add_argument("--max-replans", type=int, default=None,
+                   help="Cap re-plans when a --plan step keeps failing (default: 2).")
     p.add_argument("--skip-preflight", action="store_true",
                    help="Skip the Ollama reachability / model-pulled check.")
     p.add_argument("--no-color", action="store_true")
@@ -679,6 +685,22 @@ def _build_agent(args: argparse.Namespace):
     # Stash the memory store so run-start recall (M2) + end-of-run suggestions (M3)
     # + the /memory command can reach it.
     loop._memory = mem_store
+    # P2 (ADR-0023): phase-aware routing — resolve a stronger model for planning
+    # calls when enabled. `enabled="auto"` uses it only when a 2nd model can stay
+    # resident (rec.keep_resident); True forces it; False / --no-route-roles / an
+    # unmapped role → None (planning uses loop.config, today's behavior).
+    loop._planner_config = None
+    rc_cfg = routing_config(cfg)
+    route_on = (rc_cfg["enabled"] is True or
+                (rc_cfg["enabled"] == "auto" and getattr(rec, "keep_resident", False)))
+    if route_on and not getattr(args, "no_route_roles", False):
+        planner_cfg = config_for_role(rc_cfg["plan_role"], config.base_url, profiles)
+        if planner_cfg is not None and planner_cfg.model != config.model:
+            loop._planner_config = planner_cfg
+            print(f"{color['dim']}routing: planner → {planner_cfg.model} "
+                  f"· executor → {config.model}{color['reset']}")
+    # Carry the retry/re-plan budgets from config for the adaptive driver (P1).
+    loop._plan_budgets = (rc_cfg["max_step_retries"], rc_cfg["max_replans"])
     # V2 (ADR-0017): now that the loop's on_event exists, expose it to the
     # spawn tool's late-bound parent sink so sub-agent events surface here.
     if not read_only:
@@ -882,50 +904,110 @@ def _maybe_suggest_memories(loop, args, goal, result, console) -> None:
             print(f"    {c['dim']}saved as memory #{mid}{c['reset']}")
 
 
-def _make_plan(loop, goal: str):
-    """Ask the model for a step checklist and parse it (H3.1, ADR-0014).
+def _planner_config(loop):
+    """The ChatConfig for planning calls (P2, ADR-0023).
 
-    Uses the same loop's model config for one constrained call. Any failure
-    degrades to a single-step plan (the whole goal) — never worse than today.
+    When role routing is enabled (a stronger planner model is affordable), use
+    `config_for_role(<plan_role>, …)`; otherwise the loop's own config (the code
+    model), exactly as before. Set on the loop as `loop._planner_config` by
+    `_build_agent`; falls back to `loop.config` when unset/unmapped.
+    """
+    return getattr(loop, "_planner_config", None) or loop.config
+
+
+def _plan_call(loop, prompt_text: str) -> str:
+    """One constrained model call for planning/re-planning. Never raises — returns
+    "" on any failure so the caller degrades gracefully."""
+    from nerva_core.local_llm_writer import call_model, LocalLLMError
+    try:
+        return call_model(_planner_config(loop), [{"role": "user", "content": prompt_text}])
+    except (LocalLLMError, Exception):  # noqa: BLE001 - never fail planning
+        return ""
+
+
+def _make_plan(loop, goal: str):
+    """Ask the model for a step checklist and parse it (H3.1, ADR-0014; routed P2).
+
+    Uses the planner config (routed to a stronger model when affordable) for one
+    constrained call. Any failure degrades to a single-step plan (the whole goal)
+    — never worse than today.
     """
     from nerva_agent.planner import parse_plan, PLANNING_PROMPT
-    from nerva_core.local_llm_writer import call_model, LocalLLMError
-
-    prompt = [{"role": "user", "content": PLANNING_PROMPT.format(goal=goal)}]
-    try:
-        text = call_model(loop.config, prompt)
-    except (LocalLLMError, Exception):  # noqa: BLE001 - never fail planning
-        text = ""
+    text = _plan_call(loop, PLANNING_PROMPT.format(goal=goal))
     return parse_plan(text, goal)
 
 
-def _run_planned(loop, goal: str, color) -> int:
-    """Decompose the goal and drive each step, threading history (H3.2, ADR-0014).
+def _run_planned(loop, goal: str, color, *, max_step_retries: int = 1,
+                 max_replans: int = 2) -> int:
+    """Decompose the goal and drive each step ADAPTIVELY (H3.2 + P1, ADR-0023).
 
-    Each step runs through the same loop (so H1 verify + H2 context hooks apply);
-    only the transcript is threaded forward, keeping the model focused on one
-    small step at a time. Stops early if a step doesn't reach a final answer.
+    Each step runs through the same loop (H1 verify + H2 context hooks apply);
+    the transcript is threaded forward. On a step that doesn't reach 'final', the
+    harness recovers instead of aborting: retry the step once with the failure fed
+    back, then (if still failing) re-plan the REMAINING work and continue. Bounded
+    by `max_step_retries`, `max_replans`, and the planner's MAX_STEPS so it always
+    terminates; exhausting the budget halts gracefully (exit 3).
     """
-    from nerva_agent.planner import render_plan
+    from nerva_agent.planner import (
+        render_plan, retry_goal, build_replan_prompt, replan as _replan_parse,
+    )
 
     plan = _make_plan(loop, goal)
     print(f"{color['dim']}{render_plan(plan)}{color['reset']}")
     if plan.single:
-        # Nothing to decompose — behave like a normal single-goal run.
         result = loop.run(goal)
         return 0 if result.stopped_reason == "final" else 3
 
+    remaining = list(plan.steps)          # work queue; re-planning rewrites the tail
+    done: list[str] = []                  # completed step descriptions (for re-plan)
     history: list[dict] = []
-    for step in plan.steps:
-        print(f"{color['bold']}[step {step.index}/{len(plan)}]{color['reset']} "
+    replans_left = max_replans
+    total_done = 0
+
+    while remaining:
+        step = remaining.pop(0)
+        idx = total_done + 1
+        print(f"{color['bold']}[step {idx}]{color['reset']} "
               f"{color['dim']}{step.goal}{color['reset']}")
         result = loop.run(step.goal, history=history or None)
         history = result.messages
-        if result.stopped_reason != "final":
-            print(f"{color['dim']}step {step.index} stopped ({result.stopped_reason}); "
-                  f"halting the plan.{color['reset']}")
+        if result.stopped_reason == "final":
+            done.append(step.goal); total_done += 1
+            continue
+
+        # Retry the step once, feeding the failure back.
+        recovered = False
+        for _ in range(max(0, max_step_retries)):
+            print(f"{color['dim']}  retrying step ({result.stopped_reason})…{color['reset']}")
+            result = loop.run(retry_goal(step.goal, result.stopped_reason),
+                              history=history or None)
+            history = result.messages
+            if result.stopped_reason == "final":
+                done.append(step.goal); total_done += 1
+                recovered = True
+                break
+        if recovered:
+            continue
+
+        # Still failing → re-plan the remaining work (bounded).
+        if replans_left <= 0:
+            print(f"{color['dim']}step stopped ({result.stopped_reason}); re-plan "
+                  f"budget spent — halting.{color['reset']}")
             return 3
-    print(f"{color['dim']}plan complete: {len(plan)} step(s).{color['reset']}")
+        replans_left -= 1
+        print(f"{color['dim']}  re-planning remaining steps…{color['reset']}")
+        text = _plan_call(loop, build_replan_prompt(goal, done, result.stopped_reason))
+        new_plan = _replan_parse(text, goal)
+        if len(new_plan) == 0:
+            # Couldn't parse a new plan → keep the current remaining steps but
+            # count the re-plan attempt, so a stuck plan still terminates.
+            remaining.insert(0, step)
+            print(f"{color['dim']}  (re-plan unparseable; keeping current steps){color['reset']}")
+            continue
+        remaining = list(new_plan.steps)   # replace the tail with the fresh plan
+        print(f"{color['dim']}  {render_plan(new_plan)}{color['reset']}")
+
+    print(f"{color['dim']}plan complete: {total_done} step(s).{color['reset']}")
     return 0
 
 
@@ -964,8 +1046,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     # H3 (ADR-0014): --plan decomposes the goal into small, verified steps so the
     # model only reasons about one at a time. Without it, a normal single run.
     if getattr(args, "plan", False):
+        retries, replans = getattr(loop, "_plan_budgets", (1, 2))
+        if getattr(args, "max_replans", None) is not None:
+            replans = args.max_replans
         try:
-            return _run_planned(loop, goal, color)
+            return _run_planned(loop, goal, color,
+                                max_step_retries=retries, max_replans=replans)
         finally:
             _close_mcp(loop)
 
