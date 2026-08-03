@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-02 · **Tests:** 684 green · **Latest release: v0.7.0 on PyPI** (`pip install -U "revenant-cli[tui]"`) · **W-series (0.6.0) COMPLETE + RELEASED** 🎉 ([0018](0018-w-series-strategy.md)): Phase A [0019](0019-w-series-phase-a-measure-and-stream.md) · Phase B [0020](0020-w-series-phase-b-deeper-capability.md) · Phase C [0021](0021-w-series-phase-c-reach.md). Then **v0.7.0 — usability** (bare `revenant`→chat · shift+tab mode toggle · `config show`/`set` · in-session `/model` + `/mode` · friendlier setup). All on PyPI + [GitHub Releases](https://github.com/ramdhavepreetam/revenant/releases) with installers. **▶ Next: 3-phase post-W plan — (1) polish ✅ shipped in 0.7.0, (2) cross-session memory, (3) smarter planning/routing.**
+**Last updated:** 2026-08-03 · **Tests:** 722 green · **Latest release: v0.8.0 on PyPI** (`pip install -U "revenant-cli[tui]"`) · Shipped: W-series (0.6.0) · v0.7.0 usability · **v0.8.0 — cross-session memory** (M-series [0022](0022-cross-session-memory.md): the coding agent remembers project facts across runs, offline, zero new deps). All on PyPI + [GitHub Releases](https://github.com/ramdhavepreetam/revenant/releases) with installers. **▶ Post-W 3-phase plan — (1) polish ✅ 0.7.0 · (2) cross-session memory ✅ 0.8.0 · (3) smarter planning/routing ⏭ next.**
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
