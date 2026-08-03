@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-03 · **Tests:** 739 green · **Latest release: v0.9.1 on PyPI** (`pip install -U "revenant-cli[tui]"`) · Shipped: W-series (0.6.0) · v0.7.0 usability · v0.8.0 memory · **v0.9.0 — adaptive planning + routing** (P-series [0023](0023-adaptive-planning-and-routing.md): --plan runs retry→re-plan on a stumble; strong-planner/cheap-executor when RAM allows; offline, zero new deps). All on PyPI + [GitHub Releases](https://github.com/ramdhavepreetam/revenant/releases) with installers. **▶ Post-W 3-phase plan COMPLETE — (1) polish ✅0.7.0 · (2) memory ✅0.8.0 · (3) planning/routing ✅0.9.0. Roadmap at open runway.**
+**Last updated:** 2026-08-03 · **Tests:** 744 green · **Latest release: v0.9.2 on PyPI** (`pip install -U "revenant-cli[tui]"`) · Shipped: W-series (0.6.0) · v0.7.0 usability · v0.8.0 memory · **v0.9.0 — adaptive planning + routing** (P-series [0023](0023-adaptive-planning-and-routing.md): --plan runs retry→re-plan on a stumble; strong-planner/cheap-executor when RAM allows; offline, zero new deps). All on PyPI + [GitHub Releases](https://github.com/ramdhavepreetam/revenant/releases) with installers. **▶ Post-W 3-phase plan COMPLETE — (1) polish ✅0.7.0 · (2) memory ✅0.8.0 · (3) planning/routing ✅0.9.0. Roadmap at open runway.**
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
