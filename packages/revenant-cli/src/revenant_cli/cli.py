@@ -215,6 +215,11 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--no-graph-cache", action="store_true",
                    help="Rebuild the code graph from scratch (ignore the cached "
                         ".aibot/code_graph.json; no persistence this run).")
+    p.add_argument("--no-memory", action="store_true",
+                   help="Disable cross-session project memory (remember/recall + "
+                        "auto-recall) for this run.")
+    p.add_argument("--no-memory-suggest", action="store_true",
+                   help="Don't propose durable facts to remember at the end of a run.")
     p.add_argument("--skip-preflight", action="store_true",
                    help="Skip the Ollama reachability / model-pulled check.")
     p.add_argument("--no-color", action="store_true")
@@ -563,6 +568,18 @@ def _build_agent(args: argparse.Namespace):
                   f"{st['files']} files{color['reset']}")
         except Exception as exc:  # noqa: BLE001 - indexing must never block a run
             print(f"{color['dim']}graph: skipped ({exc}){color['reset']}")
+
+    # M1 (ADR-0022): cross-session memory — remember/recall tools over a stdlib
+    # SQLite store under .aibot/memory.db. Read-only w.r.t. the workspace, so in
+    # every mode. --no-memory disables it; a store that can't open degrades to a
+    # null store (tools just report "nothing saved / no matches").
+    mem_store = None
+    if not getattr(args, "no_memory", False):
+        from nerva_agent.memory_store import MemoryStore
+        from nerva_agent.memory_tools import build_memory_tools
+        mem_store = MemoryStore(workspace / ".aibot" / "memory.db")
+        tools += build_memory_tools(mem_store)
+
     registry = ToolRegistry(tools)
 
     # F6 (tier a): ground the agent on the project's own instruction file if present.
@@ -647,6 +664,9 @@ def _build_agent(args: argparse.Namespace):
     loop._checkpointer = checkpointer
     # Stash the console so command handlers can render the header + spinner (U4).
     loop._console = console
+    # Stash the memory store so run-start recall (M2) + end-of-run suggestions (M3)
+    # + the /memory command can reach it.
+    loop._memory = mem_store
     # V2 (ADR-0017): now that the loop's on_event exists, expose it to the
     # spawn tool's late-bound parent sink so sub-agent events surface here.
     if not read_only:
