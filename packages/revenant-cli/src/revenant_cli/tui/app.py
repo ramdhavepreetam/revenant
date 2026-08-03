@@ -206,6 +206,11 @@ class RevenantApp(App):
 
     @work(thread=True, exclusive=True)
     def _run_worker(self, goal: str) -> None:
+        # M2 (ADR-0022): recall project memories into the preamble on the first
+        # turn (the system prompt is built once; later turns carry context).
+        if not self.rv_history and getattr(self.rv_loop, "_memory", None) is not None:
+            from revenant_cli.cli import _apply_memory_recall
+            _apply_memory_recall(self.rv_loop, goal, 5)
         result = self.rv_loop.run(
             goal, history=self.rv_history or None,
             should_stop=self.rv_stop_flag.is_set,

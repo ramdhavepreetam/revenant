@@ -311,6 +311,29 @@ def context_config(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def memory_config(config: dict[str, Any]) -> dict[str, Any]:
+    """Read the `[memory]` section (M-series, ADR-0022) from the merged config.
+
+    Project overrides user. Returns:
+        {enabled: bool, max_recall: int, suggest: bool}
+    A missing section means memory is ON with sensible defaults (auto-recall +
+    end-of-run suggestions) — additive and gated, so no surprise behavior.
+    """
+    def _section(raw: dict[str, Any]) -> dict:
+        v = raw.get("memory") if isinstance(raw, dict) else None
+        return v if isinstance(v, dict) else {}
+
+    merged: dict[str, Any] = {}
+    for raw in (config.get("_raw_user", {}), config.get("_raw_project", {})):
+        merged.update(_section(raw))
+
+    return {
+        "enabled": bool(merged.get("enabled", True)),
+        "max_recall": int(merged.get("max_recall", 5) or 0),
+        "suggest": bool(merged.get("suggest", True)),
+    }
+
+
 def resolve(key: str, flag_value: Any, config: dict[str, Any], default: Any) -> Any:
     """Apply precedence for one setting: flag > config > default.
 

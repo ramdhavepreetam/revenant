@@ -1166,6 +1166,57 @@ def test_config_no_longer_a_stub(capsys):
     assert "not implemented" not in err.getvalue()
 
 
+# --- M2 (ADR-0022): auto-recall into the preamble ---------------------------
+
+def _mem_loop(store, base="BASE PREAMBLE"):
+    return type("L", (), {"_base_preamble": base, "_memory": store,
+                          "system_preamble": base})()
+
+
+def test_recall_block_formats_hits():
+    from nerva_agent.memory_store import MemoryStore
+    s = MemoryStore(":memory:")
+    s.remember("this project uses pytest")
+    block = cli._recall_block(s, "how to run tests with pytest", 5)
+    assert "Project memory" in block and "pytest" in block
+
+
+def test_recall_block_empty_when_no_hits_or_no_store():
+    from nerva_agent.memory_store import MemoryStore
+    assert cli._recall_block(None, "x", 5) == ""
+    assert cli._recall_block(MemoryStore(":memory:"), "nothing here", 5) == ""
+
+
+def test_apply_memory_recall_injects_and_is_byte_parity_when_empty():
+    from nerva_agent.memory_store import MemoryStore
+    s = MemoryStore(":memory:")
+    s.remember("editing config.py breaks the loader — use write_scalar")
+    loop = _mem_loop(s)
+    cli._apply_memory_recall(loop, "change config.py", 5)
+    assert "write_scalar" in loop.system_preamble and loop.system_preamble.startswith("BASE PREAMBLE")
+
+    empty = _mem_loop(MemoryStore(":memory:"))
+    cli._apply_memory_recall(empty, "anything", 5)
+    assert empty.system_preamble == "BASE PREAMBLE"   # byte-identical
+
+
+def test_apply_memory_recall_is_idempotent_across_turns():
+    from nerva_agent.memory_store import MemoryStore
+    s = MemoryStore(":memory:")
+    s.remember("fact about pytest")
+    loop = _mem_loop(s)
+    cli._apply_memory_recall(loop, "pytest", 5)
+    once = loop.system_preamble
+    cli._apply_memory_recall(loop, "pytest", 5)   # again — must not stack
+    assert loop.system_preamble == once
+
+
+def test_apply_memory_recall_noop_without_store():
+    loop = type("L", (), {"_base_preamble": "BASE", "system_preamble": "BASE"})()
+    cli._apply_memory_recall(loop, "x", 5)   # no _memory attr -> no-op, no crash
+    assert loop.system_preamble == "BASE"
+
+
 # --- setup / first-run polish -----------------------------------------------
 
 def test_best_pulled_model_prefers_coder():

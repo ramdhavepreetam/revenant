@@ -45,7 +45,7 @@ from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
-    context_config, write_model_choice, write_mcp_server, write_scalar,
+    context_config, memory_config, write_model_choice, write_mcp_server, write_scalar,
 )
 from revenant_cli.config import _SCALAR_KEYS
 from revenant_cli import session_store, preflight
@@ -758,6 +758,57 @@ def _mode_label(args: argparse.Namespace) -> str:
     return "read-only" if args.read_only else ("yolo" if args.yolo else "approval-gated")
 
 
+def _recall_block(store, goal: str, limit: int) -> str:
+    """Format the memories most relevant to `goal` as a preamble block (M2,
+    ADR-0022). Empty string when there's no store or no hit — so the preamble is
+    byte-identical to today when memory is empty/absent."""
+    if store is None or limit <= 0 or not (goal or "").strip():
+        return ""
+    try:
+        hits = store.recall(goal, limit=limit)
+    except Exception:  # noqa: BLE001 - recall must never break a run
+        hits = []
+    if not hits:
+        return ""
+    lines = [f"- {h.content}" for h in hits]
+    return ("Project memory (recalled from earlier runs — trust these unless the "
+            "code contradicts them):\n" + "\n".join(lines))
+
+
+def _apply_memory_recall(loop, goal: str, max_recall: int) -> None:
+    """Augment the loop's system preamble with memories relevant to `goal`.
+
+    Rebuilds from `loop._base_preamble` each call (idempotent across REPL/TUI
+    turns) so recalled memories reflect the current goal and never stack up.
+    No-op if the loop has no memory store or no preamble to augment.
+    """
+    store = getattr(loop, "_memory", None)
+    if store is None:
+        return
+    base = getattr(loop, "_base_preamble", None)
+    if base is None:
+        base = getattr(loop, "system_preamble", None)
+    if base is None:
+        return
+    block = _recall_block(store, goal, max_recall)
+    loop.system_preamble = f"{base}\n\n{block}" if block else base
+
+
+def _memory_max_recall(args: argparse.Namespace, workspace: Path) -> int:
+    """Resolve the recall count from [memory] config (0 disables)."""
+    try:
+        mc = memory_config(load_config(workspace))
+        return mc["max_recall"] if mc["enabled"] else 0
+    except Exception:  # noqa: BLE001
+        return 5
+
+
+def _maybe_suggest_memories(loop, args, goal, result, console) -> None:
+    """M3 hook (filled in the M3 slice): offer to remember durable facts. A no-op
+    placeholder for now so M2 can land independently."""
+    return None
+
+
 def _make_plan(loop, goal: str):
     """Ask the model for a step checklist and parse it (H3.1, ADR-0014).
 
@@ -845,10 +896,16 @@ def cmd_run(args: argparse.Namespace) -> int:
         finally:
             _close_mcp(loop)
 
+    # M2 (ADR-0022): recall project memories relevant to this goal into the preamble.
+    if not getattr(args, "no_memory", False):
+        _apply_memory_recall(loop, goal, _memory_max_recall(args, workspace))
+
     try:
         with console.status_spinner("thinking…"):
             result = loop.run(goal)
     finally:
+        # M3 (ADR-0022): after the run, offer to remember durable facts learned.
+        _maybe_suggest_memories(loop, args, goal, result, console)
         _close_mcp(loop)
     if result.stopped_reason == "final":
         return 0
@@ -1136,6 +1193,11 @@ def cmd_chat(args: argparse.Namespace, input_fn=input,
                 if goal is None:
                     continue  # unknown/misused: message already printed
                 line = goal  # fall through to run the skill body as this turn's goal
+
+            # M2: recall memories for this turn's goal (matters most on turn 1,
+            # where the system prompt is built; later turns already carry context).
+            if not history and not getattr(args, "no_memory", False):
+                _apply_memory_recall(loop, line, _memory_max_recall(args, workspace))
 
             with console.status_spinner("thinking…"):
                 result = loop.run(line, history=history or None)
