@@ -882,50 +882,110 @@ def _maybe_suggest_memories(loop, args, goal, result, console) -> None:
             print(f"    {c['dim']}saved as memory #{mid}{c['reset']}")
 
 
-def _make_plan(loop, goal: str):
-    """Ask the model for a step checklist and parse it (H3.1, ADR-0014).
+def _planner_config(loop):
+    """The ChatConfig for planning calls (P2, ADR-0023).
 
-    Uses the same loop's model config for one constrained call. Any failure
-    degrades to a single-step plan (the whole goal) — never worse than today.
+    When role routing is enabled (a stronger planner model is affordable), use
+    `config_for_role(<plan_role>, …)`; otherwise the loop's own config (the code
+    model), exactly as before. Set on the loop as `loop._planner_config` by
+    `_build_agent`; falls back to `loop.config` when unset/unmapped.
+    """
+    return getattr(loop, "_planner_config", None) or loop.config
+
+
+def _plan_call(loop, prompt_text: str) -> str:
+    """One constrained model call for planning/re-planning. Never raises — returns
+    "" on any failure so the caller degrades gracefully."""
+    from nerva_core.local_llm_writer import call_model, LocalLLMError
+    try:
+        return call_model(_planner_config(loop), [{"role": "user", "content": prompt_text}])
+    except (LocalLLMError, Exception):  # noqa: BLE001 - never fail planning
+        return ""
+
+
+def _make_plan(loop, goal: str):
+    """Ask the model for a step checklist and parse it (H3.1, ADR-0014; routed P2).
+
+    Uses the planner config (routed to a stronger model when affordable) for one
+    constrained call. Any failure degrades to a single-step plan (the whole goal)
+    — never worse than today.
     """
     from nerva_agent.planner import parse_plan, PLANNING_PROMPT
-    from nerva_core.local_llm_writer import call_model, LocalLLMError
-
-    prompt = [{"role": "user", "content": PLANNING_PROMPT.format(goal=goal)}]
-    try:
-        text = call_model(loop.config, prompt)
-    except (LocalLLMError, Exception):  # noqa: BLE001 - never fail planning
-        text = ""
+    text = _plan_call(loop, PLANNING_PROMPT.format(goal=goal))
     return parse_plan(text, goal)
 
 
-def _run_planned(loop, goal: str, color) -> int:
-    """Decompose the goal and drive each step, threading history (H3.2, ADR-0014).
+def _run_planned(loop, goal: str, color, *, max_step_retries: int = 1,
+                 max_replans: int = 2) -> int:
+    """Decompose the goal and drive each step ADAPTIVELY (H3.2 + P1, ADR-0023).
 
-    Each step runs through the same loop (so H1 verify + H2 context hooks apply);
-    only the transcript is threaded forward, keeping the model focused on one
-    small step at a time. Stops early if a step doesn't reach a final answer.
+    Each step runs through the same loop (H1 verify + H2 context hooks apply);
+    the transcript is threaded forward. On a step that doesn't reach 'final', the
+    harness recovers instead of aborting: retry the step once with the failure fed
+    back, then (if still failing) re-plan the REMAINING work and continue. Bounded
+    by `max_step_retries`, `max_replans`, and the planner's MAX_STEPS so it always
+    terminates; exhausting the budget halts gracefully (exit 3).
     """
-    from nerva_agent.planner import render_plan
+    from nerva_agent.planner import (
+        render_plan, retry_goal, build_replan_prompt, replan as _replan_parse,
+    )
 
     plan = _make_plan(loop, goal)
     print(f"{color['dim']}{render_plan(plan)}{color['reset']}")
     if plan.single:
-        # Nothing to decompose — behave like a normal single-goal run.
         result = loop.run(goal)
         return 0 if result.stopped_reason == "final" else 3
 
+    remaining = list(plan.steps)          # work queue; re-planning rewrites the tail
+    done: list[str] = []                  # completed step descriptions (for re-plan)
     history: list[dict] = []
-    for step in plan.steps:
-        print(f"{color['bold']}[step {step.index}/{len(plan)}]{color['reset']} "
+    replans_left = max_replans
+    total_done = 0
+
+    while remaining:
+        step = remaining.pop(0)
+        idx = total_done + 1
+        print(f"{color['bold']}[step {idx}]{color['reset']} "
               f"{color['dim']}{step.goal}{color['reset']}")
         result = loop.run(step.goal, history=history or None)
         history = result.messages
-        if result.stopped_reason != "final":
-            print(f"{color['dim']}step {step.index} stopped ({result.stopped_reason}); "
-                  f"halting the plan.{color['reset']}")
+        if result.stopped_reason == "final":
+            done.append(step.goal); total_done += 1
+            continue
+
+        # Retry the step once, feeding the failure back.
+        recovered = False
+        for _ in range(max(0, max_step_retries)):
+            print(f"{color['dim']}  retrying step ({result.stopped_reason})…{color['reset']}")
+            result = loop.run(retry_goal(step.goal, result.stopped_reason),
+                              history=history or None)
+            history = result.messages
+            if result.stopped_reason == "final":
+                done.append(step.goal); total_done += 1
+                recovered = True
+                break
+        if recovered:
+            continue
+
+        # Still failing → re-plan the remaining work (bounded).
+        if replans_left <= 0:
+            print(f"{color['dim']}step stopped ({result.stopped_reason}); re-plan "
+                  f"budget spent — halting.{color['reset']}")
             return 3
-    print(f"{color['dim']}plan complete: {len(plan)} step(s).{color['reset']}")
+        replans_left -= 1
+        print(f"{color['dim']}  re-planning remaining steps…{color['reset']}")
+        text = _plan_call(loop, build_replan_prompt(goal, done, result.stopped_reason))
+        new_plan = _replan_parse(text, goal)
+        if len(new_plan) == 0:
+            # Couldn't parse a new plan → keep the current remaining steps but
+            # count the re-plan attempt, so a stuck plan still terminates.
+            remaining.insert(0, step)
+            print(f"{color['dim']}  (re-plan unparseable; keeping current steps){color['reset']}")
+            continue
+        remaining = list(new_plan.steps)   # replace the tail with the fresh plan
+        print(f"{color['dim']}  {render_plan(new_plan)}{color['reset']}")
+
+    print(f"{color['dim']}plan complete: {total_done} step(s).{color['reset']}")
     return 0
 
 
