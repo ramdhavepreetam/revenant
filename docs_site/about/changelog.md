@@ -5,6 +5,17 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [0.9.1] — 2026-08-03: patch
+
+### Fixed
+
+- **TUI layout** — the chat activity view no longer gets squeezed ("smushed"
+  toward the bottom) as the agent streams output. The live token line now takes
+  space only while it's actively streaming and is capped, so the activity log
+  keeps its full height. The README also lists the full current feature set.
+
+---
+
 ## [0.9.0] — 2026-08-03: adaptive planning
 
 Multi-step runs get **smarter and more resilient**: plans recover from a stumble

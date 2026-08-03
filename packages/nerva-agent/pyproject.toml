@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nerva-agent"
-version = "0.9.0"
+version = "0.9.1"
 description = "Local tool-calling agent engine: a model-agnostic loop over local LLMs (the Revenant harness)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Preetam Ramdhave" }]
 keywords = ["llm", "agent", "tool-calling", "ollama", "local", "offline"]
-dependencies = ["nerva-core>=0.9.0"]
+dependencies = ["nerva-core>=0.9.1"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: MIT License",
