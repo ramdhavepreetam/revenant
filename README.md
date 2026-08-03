@@ -38,19 +38,42 @@ bundle the TUI).
 ## Use
 
 ```bash
+revenant                          # bare command opens interactive chat
+revenant chat                     # same, explicitly
+revenant "where is auth handled?" # one-shot run
 revenant --read-only "summarize what packages/nerva-agent does"
-revenant --workspace ~/proj "where is auth handled?"
-revenant chat                     # interactive TUI (type / for commands, ctrl-c to interrupt)
+revenant --workspace ~/proj "fix the failing test" --plan
 ```
 
-With `[tui]` installed, `revenant chat` opens a full-screen terminal: a live
-activity view, a discoverable slash-command palette, a context-size gauge,
-sub-agents shown in nested lanes, and in-app diff approvals. Without it (or with
-`--no-tui`), it falls back to the plain REPL.
+With `[tui]` installed, `revenant chat` (or bare `revenant`) opens a full-screen
+terminal: **token-by-token streaming**, a live activity view, a discoverable
+slash-command palette (`/`), a context-size gauge, sub-agents in nested lanes,
+in-app diff approvals, and a mode line you toggle with **Shift+Tab**
+(approval-gated ↔ yolo). Without it (or `--no-tui`), it falls back to the plain
+REPL. Needs [Ollama](https://ollama.com) with a model pulled.
 
-Needs [Ollama](https://ollama.com) running with a model pulled
-(`ollama pull qwen2.5-coder:7b`). Full docs:
-<https://ramdhavepreetam.github.io/revenant/>.
+## Features
+
+- **Streaming TUI** — the assistant's reply streams live; interrupt a run with
+  `ctrl-c` without quitting; switch model in-session (`/model`), cycle approval
+  mode (`/mode` or Shift+Tab).
+- **Editable config, no TOML wrangling** — `revenant config show` /
+  `config set model=qwen2.5:7b`; friendly first-run model picker that remembers
+  your choice.
+- **Cross-session memory** — the agent remembers durable project facts across
+  runs (offline, stdlib SQLite/FTS5, **zero extra deps**); inspect with
+  `revenant memory list` / `/memory`.
+- **Adaptive planning** (`--plan`) — a step that stumbles is retried, then the
+  remaining steps re-planned, instead of aborting the run.
+- **Phase-aware routing** — a stronger model drafts the plan while a cheaper one
+  executes each step, when your machine has RAM for both.
+- **Deep code tools** — a code graph (`defn_of` / `who_calls` / `impact_of`),
+  atomic multi-file edits (`apply_edits`), verify→repair on edits, git-native undo.
+- **Extensible & autonomous** — MCP servers (stdio or HTTP/SSE, `mcp add`),
+  reusable skills, sub-agents, and bounded autonomous loops (`loop --until…`,
+  `--every`, `--watch`).
+
+Full docs: <https://ramdhavepreetam.github.io/revenant/>.
 
 ## Develop
 

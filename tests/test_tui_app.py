@@ -70,6 +70,36 @@ def test_app_mounts_with_core_widgets():
     _run(go())
 
 
+def test_layout_stable_the_log_does_not_shrink_on_content():
+    """Regression: the activity log must keep its full height as content arrives —
+    the StreamLine must not steal rows in the steady state ('smushing' bug)."""
+    from revenant_cli.tui.widgets import StreamLine
+
+    async def go():
+        app = _app(_FakeLoop())
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            log = app.query_one(ActivityLog)
+            stream = app.query_one(StreamLine)
+            idle_h = log.size.height
+            assert idle_h > 5                     # log fills most of the screen
+            assert stream.display is False         # stream line hidden when idle
+            # Plain content (no streaming) must NOT shrink the log.
+            for i in range(30):
+                app._apply_event(AgentEvent("observation", text=f"line {i}"))
+            await pilot.pause()
+            assert log.size.height == idle_h
+            # Streaming shows a CAPPED line; the log recovers when it clears.
+            for t in ["hi "] * 12:
+                app._apply_event(AgentEvent("token", text=t))
+            await pilot.pause()
+            assert stream.size.height <= 4          # capped, can't push the layout
+            app._apply_event(AgentEvent("final", text="hi hi hi"))
+            await pilot.pause()
+            assert stream.display is False and log.size.height == idle_h
+    _run(go())
+
+
 def test_submitting_a_goal_runs_the_loop_and_streams():
     events = [
         AgentEvent("action", tool="read_file", args={"path": "a.py"}, step=1),
