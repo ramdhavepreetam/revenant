@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "revenant-cli"
-version = "0.7.0"
+version = "0.8.0"
 description = "Revenant — a local, offline coding-agent CLI powered by your own Ollama models."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Preetam Ramdhave" }]
 keywords = ["cli", "coding-agent", "llm", "ollama", "local", "offline", "revenant"]
-dependencies = ["nerva-core>=0.7.0", "nerva-agent>=0.7.0"]
+dependencies = ["nerva-core>=0.8.0", "nerva-agent>=0.8.0"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
