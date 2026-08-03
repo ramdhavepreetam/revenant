@@ -5,6 +5,23 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Cross-session memory** — the coding agent now remembers durable facts about a
+  project across runs (conventions, where things live, pitfalls to avoid), stored
+  under `.aibot/memory.db`. Fully offline, **zero new dependencies** (stdlib SQLite
+  + FTS5). Relevant memories are recalled into the agent's context at the start of
+  a later run.
+  - The agent has `remember` / `recall` tools it uses mid-task.
+  - After a run, it may **propose** a few durable facts — each is **confirmed
+    before it's saved** (never auto-written; nothing persists without a yes).
+  - `revenant memory list / show <id> / forget <id> / clear` to inspect and prune
+    it; `/memory` in the TUI. `--no-memory` / `--no-memory-suggest` to disable.
+
+---
+
 ## [0.7.0] — 2026-08-02: usability
 
 A friction-reducing pass driven by real first-run feedback: the CLI starts where
