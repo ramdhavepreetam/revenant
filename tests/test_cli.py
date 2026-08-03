@@ -1217,6 +1217,67 @@ def test_apply_memory_recall_noop_without_store():
     assert loop.system_preamble == "BASE"
 
 
+# --- M3 (ADR-0022): gated end-of-run memory suggestions ---------------------
+
+def _suggest_setup(monkeypatch, store, answer="did the thing", suggest_text="- uses pytest\n- API in packages/api"):
+    """Wire a fake model (returns suggest_text) + a final result + a mem loop."""
+    monkeypatch.setattr("nerva_core.local_llm_writer.call_model", lambda cfg, msgs: suggest_text)
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True, raising=False)
+    loop = type("L", (), {"_memory": store, "config": type("C", (), {})()})()
+    result = type("R", (), {"stopped_reason": "final", "answer": answer})()
+    args = argparse.Namespace(no_memory=False, no_memory_suggest=False, no_color=True)
+    return loop, result, args
+
+
+def test_suggest_saves_only_confirmed_facts(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store)
+    answers = iter(["y", "n"])   # confirm the first, decline the second
+    monkeypatch.setattr("builtins.input", lambda *a: next(answers))
+    cli._maybe_suggest_memories(loop, args, "run the tests", result, None)
+    saved = [m.content for m in store.list_all()]
+    assert saved == ["uses pytest"]   # only the confirmed one
+
+
+def test_suggest_skips_when_non_interactive(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store)
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False, raising=False)  # piped/CI
+    cli._maybe_suggest_memories(loop, args, "g", result, None)
+    assert store.count() == 0   # never writes unattended
+
+
+def test_suggest_skips_when_flag_set(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store)
+    args.no_memory_suggest = True
+    monkeypatch.setattr("builtins.input", lambda *a: "y")
+    cli._maybe_suggest_memories(loop, args, "g", result, None)
+    assert store.count() == 0
+
+
+def test_suggest_skips_when_run_not_final(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store)
+    result.stopped_reason = "max_steps"   # didn't finish
+    monkeypatch.setattr("builtins.input", lambda *a: "y")
+    cli._maybe_suggest_memories(loop, args, "g", result, None)
+    assert store.count() == 0
+
+
+def test_suggest_handles_none_from_model(monkeypatch):
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    loop, result, args = _suggest_setup(monkeypatch, store, suggest_text="NONE")
+    monkeypatch.setattr("builtins.input", lambda *a: "y")
+    cli._maybe_suggest_memories(loop, args, "g", result, None)
+    assert store.count() == 0   # nothing proposed -> nothing to confirm
+
+
 # --- setup / first-run polish -----------------------------------------------
 
 def test_best_pulled_model_prefers_coder():

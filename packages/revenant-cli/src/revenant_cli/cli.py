@@ -803,10 +803,71 @@ def _memory_max_recall(args: argparse.Namespace, workspace: Path) -> int:
         return 5
 
 
+_MEMORY_SUGGEST_PROMPT = (
+    "You just finished this coding task:\n{goal}\n\n"
+    "Result:\n{answer}\n\n"
+    "List up to 3 DURABLE facts about THIS project worth remembering for future "
+    "sessions — stable conventions, where things live, or a pitfall to avoid. "
+    "One per line, each a single terse sentence. Skip anything transient or "
+    "task-specific. If nothing is worth remembering, output NONE.\n"
+    "Facts:"
+)
+
+
+def _parse_suggested_facts(text: str) -> "list[str]":
+    """Parse the model's fact list: non-empty lines, strip list markers, drop a
+    lone NONE, cap at 3, cap length."""
+    if not text or text.strip().upper().startswith("NONE"):
+        return []
+    facts = []
+    for line in text.splitlines():
+        line = line.strip().lstrip("-*•0123456789.) ").strip()
+        if not line or line.upper() == "NONE":
+            continue
+        facts.append(line[:300])
+    return facts[:3]
+
+
 def _maybe_suggest_memories(loop, args, goal, result, console) -> None:
-    """M3 hook (filled in the M3 slice): offer to remember durable facts. A no-op
-    placeholder for now so M2 can land independently."""
-    return None
+    """M3 (ADR-0022): after a run, offer to remember durable facts — GATED.
+
+    The model *proposes* facts; each is confirmed before it persists. Skips
+    entirely when: memory/suggest is off, no store, the run didn't finish
+    ('final'), stdin isn't a TTY (never auto-write unattended), or nothing is
+    proposed. One constrained model call, degrades silently on any error.
+    """
+    store = getattr(loop, "_memory", None)
+    if store is None or not store.available:
+        return
+    if getattr(args, "no_memory", False) or getattr(args, "no_memory_suggest", False):
+        return
+    if getattr(result, "stopped_reason", "") != "final":
+        return
+    if not sys.stdin.isatty():
+        return  # never write memory unattended
+    answer = (getattr(result, "answer", "") or "").strip()
+    if not answer:
+        return
+    from nerva_core.local_llm_writer import call_model, LocalLLMError
+    try:
+        text = call_model(loop.config, [{"role": "user", "content":
+            _MEMORY_SUGGEST_PROMPT.format(goal=goal[:500], answer=answer[:1500])}])
+    except (LocalLLMError, Exception):  # noqa: BLE001 - suggestion is best-effort
+        return
+    facts = _parse_suggested_facts(text)
+    if not facts:
+        return
+    c = _color(sys.stdout.isatty() and not getattr(args, "no_color", False))
+    print(f"\n{c['dim']}Learned something worth remembering for next time?{c['reset']}")
+    for fact in facts:
+        try:
+            ans = input(f"  {c['bold']}remember{c['reset']} \"{fact}\"? [y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if ans in ("y", "yes"):
+            mid = store.remember(fact, kind="fact", source="suggested")
+            print(f"    {c['dim']}saved as memory #{mid}{c['reset']}")
 
 
 def _make_plan(loop, goal: str):
