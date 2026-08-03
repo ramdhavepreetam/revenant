@@ -126,7 +126,7 @@
 | [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Implemented |
 | [0021](0021-w-series-phase-c-reach.md) | W-series Phase C — reach (role-routed sub-agents; mcp add + HTTP/SSE transport) | W5/W6 | Implemented |
 | [0022](0022-cross-session-memory.md) | **Cross-session memory** (M-series: stdlib SQLite/FTS5 store; gated hybrid capture) | 0.8.0 | Implemented |
-| [0023](0023-adaptive-planning-and-routing.md) | **Adaptive planning + phase-aware routing** (P-series: retry→re-plan; strong-planner/cheap-executor) | 0.9.0 | Accepted (P0 in progress) |
+| [0023](0023-adaptive-planning-and-routing.md) | **Adaptive planning + phase-aware routing** (P-series: retry→re-plan; strong-planner/cheap-executor) | 0.9.0 | Implemented |
 
 ---
 

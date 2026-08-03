@@ -45,7 +45,8 @@ from nerva_agent.subagent import build_spawn_tool
 
 from revenant_cli.config import (
     load_config, resolve, mcp_server_specs, user_config_path, verify_config,
-    context_config, memory_config, write_model_choice, write_mcp_server, write_scalar,
+    context_config, memory_config, routing_config, write_model_choice,
+    write_mcp_server, write_scalar,
 )
 from revenant_cli.config import _SCALAR_KEYS
 from revenant_cli import session_store, preflight
@@ -220,6 +221,11 @@ def _add_common_flags(p: argparse.ArgumentParser) -> None:
                         "auto-recall) for this run.")
     p.add_argument("--no-memory-suggest", action="store_true",
                    help="Don't propose durable facts to remember at the end of a run.")
+    p.add_argument("--no-route-roles", action="store_true",
+                   help="Don't route planning to a stronger model (use one model "
+                        "for planning and execution).")
+    p.add_argument("--max-replans", type=int, default=None,
+                   help="Cap re-plans when a --plan step keeps failing (default: 2).")
     p.add_argument("--skip-preflight", action="store_true",
                    help="Skip the Ollama reachability / model-pulled check.")
     p.add_argument("--no-color", action="store_true")
@@ -679,6 +685,22 @@ def _build_agent(args: argparse.Namespace):
     # Stash the memory store so run-start recall (M2) + end-of-run suggestions (M3)
     # + the /memory command can reach it.
     loop._memory = mem_store
+    # P2 (ADR-0023): phase-aware routing — resolve a stronger model for planning
+    # calls when enabled. `enabled="auto"` uses it only when a 2nd model can stay
+    # resident (rec.keep_resident); True forces it; False / --no-route-roles / an
+    # unmapped role → None (planning uses loop.config, today's behavior).
+    loop._planner_config = None
+    rc_cfg = routing_config(cfg)
+    route_on = (rc_cfg["enabled"] is True or
+                (rc_cfg["enabled"] == "auto" and getattr(rec, "keep_resident", False)))
+    if route_on and not getattr(args, "no_route_roles", False):
+        planner_cfg = config_for_role(rc_cfg["plan_role"], config.base_url, profiles)
+        if planner_cfg is not None and planner_cfg.model != config.model:
+            loop._planner_config = planner_cfg
+            print(f"{color['dim']}routing: planner → {planner_cfg.model} "
+                  f"· executor → {config.model}{color['reset']}")
+    # Carry the retry/re-plan budgets from config for the adaptive driver (P1).
+    loop._plan_budgets = (rc_cfg["max_step_retries"], rc_cfg["max_replans"])
     # V2 (ADR-0017): now that the loop's on_event exists, expose it to the
     # spawn tool's late-bound parent sink so sub-agent events surface here.
     if not read_only:
@@ -1024,8 +1046,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     # H3 (ADR-0014): --plan decomposes the goal into small, verified steps so the
     # model only reasons about one at a time. Without it, a normal single run.
     if getattr(args, "plan", False):
+        retries, replans = getattr(loop, "_plan_budgets", (1, 2))
+        if getattr(args, "max_replans", None) is not None:
+            replans = args.max_replans
         try:
-            return _run_planned(loop, goal, color)
+            return _run_planned(loop, goal, color,
+                                max_step_retries=retries, max_replans=replans)
         finally:
             _close_mcp(loop)
 

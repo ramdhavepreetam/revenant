@@ -152,6 +152,28 @@ def test_memory_config_parses_and_overrides():
     assert m["enabled"] is False and m["suggest"] is False and m["max_recall"] == 3
 
 
+def test_routing_config_defaults_auto():
+    from revenant_cli.config import routing_config
+    r = routing_config({"_raw_project": {}, "_raw_user": {}})
+    assert r["enabled"] == "auto" and r["plan_role"] == "language"
+    assert r["max_replans"] == 2 and r["max_step_retries"] == 1
+
+
+def test_routing_config_enabled_string_coercion():
+    from revenant_cli.config import routing_config
+    assert routing_config({"_raw_project": {"routing": {"enabled": "false"}}, "_raw_user": {}})["enabled"] is False
+    assert routing_config({"_raw_project": {"routing": {"enabled": "true"}}, "_raw_user": {}})["enabled"] is True
+    assert routing_config({"_raw_project": {"routing": {"enabled": "auto"}}, "_raw_user": {}})["enabled"] == "auto"
+
+
+def test_routing_config_overrides():
+    from revenant_cli.config import routing_config
+    cfg = {"_raw_user": {"routing": {"plan_role": "code"}},
+           "_raw_project": {"routing": {"max_replans": 5}}}
+    r = routing_config(cfg)
+    assert r["plan_role"] == "code" and r["max_replans"] == 5
+
+
 def test_verify_config_defaults_off():
     v = verify_config({"_raw_project": {}, "_raw_user": {}})
     assert v["enabled"] is False

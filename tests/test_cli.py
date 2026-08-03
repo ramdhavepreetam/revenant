@@ -1089,6 +1089,33 @@ def test_run_planned_unparseable_replan_keeps_current_steps(monkeypatch, capsys)
     assert "unparseable" in capsys.readouterr().out
 
 
+# --- P2 (ADR-0023): phase-aware routing -------------------------------------
+
+def test_planner_config_falls_back_to_loop_config():
+    base = type("C", (), {"model": "qwen2.5:7b"})()
+    loop = type("L", (), {"config": base})()
+    assert cli._planner_config(loop).model == "qwen2.5:7b"
+
+
+def test_planner_config_uses_routed_config_when_set():
+    base = type("C", (), {"model": "qwen2.5:7b"})()
+    strong = type("C", (), {"model": "qwen2.5:14b"})()
+    loop = type("L", (), {"config": base, "_planner_config": strong})()
+    assert cli._planner_config(loop).model == "qwen2.5:14b"
+
+
+def test_make_plan_uses_routed_planner_config(monkeypatch):
+    # _make_plan must call the model with the ROUTED planner config, not loop.config.
+    base = type("C", (), {"model": "qwen2.5:7b"})()
+    strong = type("C", (), {"model": "qwen2.5:14b"})()
+    loop = type("L", (), {"config": base, "_planner_config": strong})()
+    seen = {}
+    monkeypatch.setattr("nerva_core.local_llm_writer.call_model",
+                        lambda cfg, msgs: seen.setdefault("model", cfg.model) or "1. a\n2. b")
+    cli._make_plan(loop, "goal")
+    assert seen["model"] == "qwen2.5:14b"   # planned with the strong model
+
+
 def test_run_planned_single_step_fallback(monkeypatch):
     loop = _PlanLoop(stopped="final")
     # Planner returns prose -> single-step plan (whole goal).

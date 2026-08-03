@@ -1,6 +1,6 @@
 # ADR-0023 — Adaptive planning + phase-aware routing (P-series)
 
-- **Status:** Accepted — implementation starting with P0
+- **Status:** Implemented — P0/P1/P2 all done
 - **Phase:** P-series (0.9.0) · **P-slices:** P0 adaptive planner primitives ·
   P1 adaptive driver (retry → re-plan) · P2 phase-aware model routing
 - **Date proposed:** 2026-08-03 · **Date implemented:** —
@@ -113,3 +113,22 @@ Budgets guarantee termination. A run without `--plan` is completely untouched.
   first). Decisions confirmed with the user: retry-then-re-plan on step failure;
   strong-planner/cheap-executor routing auto-on only when `keep_resident`.
   Implementation begins with P0.
+- 2026-08-03 — **P0/P1/P2 Implemented — the P-series is complete.**
+  - **P0** (`planner.py`, pure): `RETRY_NUDGE`/`retry_goal`, `REPLAN_PROMPT`/
+    `build_replan_prompt`, and `replan()` (reuses `parse_plan`; degrades to an
+    EMPTY plan on junk → the driver keeps its current steps). 7 tests.
+  - **P1** (`cli.py` `_run_planned`): replaced the for-loop hard-halt with an
+    adaptive work-queue — on a non-final step, retry once (`max_step_retries`) with
+    the nudge, then re-plan the remaining work (`max_replans`) and continue;
+    budgets + `MAX_STEPS` guarantee termination, exhaustion halts (exit 3).
+    Refactored the plan call into `_plan_call`/`_planner_config` (shared, the P2
+    seam). 4 driver tests; old hard-halt test updated.
+  - **P2** (`cli.py`, `config.py`): `routing_config` reader (`[routing]`:
+    enabled=auto/plan_role/max_replans/max_step_retries); `_build_agent` sets
+    `loop._planner_config` from `config_for_role(plan_role, …)` when routing is on
+    (auto ⇒ only when `rec.keep_resident`) — planning uses the stronger model,
+    execution keeps the code model. `--no-route-roles`/`--max-replans`. Byte-
+    identical when off/low-RAM/unmapped. 6 tests.
+  - **No new dependency.** Suite **722 → 738**. Verified end-to-end (model-free):
+    a plan whose step stumbles retries, then re-plans the remainder, and completes
+    (exit 0) — a run that pre-P1 would have aborted. **Ships in 0.9.0.**
