@@ -5,7 +5,11 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased]
+## [0.9.2] — 2026-08-03: TUI polish
+
+A round of TUI fixes and conveniences from real usage: a clean layout in small
+terminals, a discoverable model picker, copy-to-clipboard, and a higher default
+step budget so tasks finish. Backward-compatible.
 
 ### Added
 
