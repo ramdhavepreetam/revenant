@@ -1,6 +1,6 @@
 # ADR-0022 — Cross-session memory for the coding agent (M-series)
 
-- **Status:** Accepted — implementation starting with M0
+- **Status:** Implemented — M0–M4 all done
 - **Phase:** M-series (0.8.0) · **M-slices:** M0 the store · M1 remember/recall
   tools · M2 auto-recall into the preamble · M3 gated end-of-run suggestions ·
   M4 `memory` subcommand + `/memory`
@@ -139,3 +139,23 @@ additive; base `pip install revenant-cli` still pulls **nothing**.
   first, per the series workflow). Backend + capture decisions analyzed with the
   user against real dependency weights (chromadb ~150–200MB vs stdlib FTS5, 0MB)
   and ADR-0011 (gated capture over aggressive auto). Implementation begins with M0.
+- 2026-08-03 — **M0–M4 Implemented — the M-series is complete.**
+  - **M0** `memory_store.py`: `MemoryStore` over stdlib `sqlite3` + FTS5 at
+    `.aibot/memory.db`. remember/recall/list_all/forget/clear/count; a safe FTS5
+    query builder (quotes tokens so paths/`foo.bar` can't be read as operators) +
+    LIKE fallback; exact-content dedup; an unopenable DB → null store (never
+    raises). 12 tests.
+  - **M1** `memory_tools.py`: `remember`/`recall` Tools, `mutating=False` (own
+    memory, not the workspace → no approval gate). Wired into `_build_agent`
+    (every mode); `--no-memory` disables; store stashed on `loop._memory`. 7 tests.
+  - **M2** auto-recall: `_recall_block`/`_apply_memory_recall` fold goal-relevant
+    memories into the preamble (cmd_run + REPL turn-1 + TUI worker turn-1);
+    byte-identical when empty/absent. `memory_config` reader. 8 tests.
+  - **M3** gated suggestions: `_maybe_suggest_memories` — one constrained model
+    call proposes ≤3 facts, each **confirmed** before it persists; skips when
+    off/non-final/non-TTY. Nothing auto-writes. 5 tests.
+  - **M4** surface: `revenant memory list/show/forget/clear` + TUI `/memory`.
+    10 tests.
+  - **No new dependency** (verified: `nerva-core` deps still `[]`); pure stdlib.
+    Suite **684 → 722**. Verified end-to-end: a fact remembered in run 1 persists
+    to disk and auto-recalls into a fresh run 2's system prompt. **Ships in 0.8.0.**

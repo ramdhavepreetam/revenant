@@ -125,7 +125,7 @@
 | [0019](0019-w-series-phase-a-measure-and-stream.md) | W-series Phase A — measure (eval metrics/gate) + stream (token events, live render) | W0/W1/W2 | Implemented |
 | [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Implemented |
 | [0021](0021-w-series-phase-c-reach.md) | W-series Phase C — reach (role-routed sub-agents; mcp add + HTTP/SSE transport) | W5/W6 | Implemented |
-| [0022](0022-cross-session-memory.md) | **Cross-session memory** (M-series: stdlib SQLite/FTS5 store; gated hybrid capture) | 0.8.0 | Accepted (M0 in progress) |
+| [0022](0022-cross-session-memory.md) | **Cross-session memory** (M-series: stdlib SQLite/FTS5 store; gated hybrid capture) | 0.8.0 | Implemented |
 
 ---
 

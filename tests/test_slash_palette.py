@@ -27,7 +27,7 @@ def test_builtins_present_with_summaries():
     reg = SlashRegistry.from_loop(_FakeLoop())
     names = {c.name for c in reg.all()}
     assert {"/help", "/skills", "/skill", "/exit", "/context", "/agents",
-            "/model", "/mode"} <= names
+            "/model", "/mode", "/memory"} <= names
     # every command carries a non-empty summary (that's the discoverability point).
     assert all(c.summary for c in reg.all())
 

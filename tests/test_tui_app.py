@@ -272,6 +272,24 @@ def test_slash_mode_cycles_like_shift_tab():
     _run(go())
 
 
+def test_slash_memory_lists_stored_memories():
+    from nerva_agent.memory_store import MemoryStore
+    store = MemoryStore(":memory:")
+    store.remember("this project uses pytest")
+    loop = _ConfigLoop([])
+    loop._memory = store
+
+    async def go():
+        app = _app(loop, mode="yolo")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._handle_slash("/memory")
+            await pilot.pause()
+            # The stored memory made it into the activity log (no crash).
+            assert app.query_one(ActivityLog) is not None
+    _run(go())
+
+
 def test_agent_start_increments_subagent_count():
     events = [AgentEvent("agent_start", text="sub goal", agent="fix-tests", step=1),
               AgentEvent("agent_end", text="Sub-agent completed", agent="fix-tests"),

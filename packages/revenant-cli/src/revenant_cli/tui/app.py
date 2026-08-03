@@ -161,6 +161,15 @@ class RevenantApp(App):
         elif name == "/agents":
             seen = ", ".join(sorted(self.rv_agents_seen)) or "(none yet)"
             self._log(AgentEvent("assistant", text=f"sub-agents this session: {seen}"))
+        elif name == "/memory":
+            store = getattr(self.rv_loop, "_memory", None)
+            mems = store.list_all(limit=20) if store is not None else []
+            if not mems:
+                self._log(AgentEvent("assistant", text="project memory: (empty)"))
+            else:
+                self._log(AgentEvent("assistant", text=f"project memory ({len(mems)}):"))
+                for m in mems:
+                    self._log(AgentEvent("assistant", text=f"  #{m.id} ({m.kind}) {m.content}"))
         elif name == "/skill":
             self._log(AgentEvent("error", text="usage: /skill <name>  (see /skills)"))
 

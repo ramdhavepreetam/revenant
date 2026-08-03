@@ -157,7 +157,7 @@ def build_config(profiles: dict, base_url: str, model: str | None) -> ChatConfig
 
 
 _SUBCOMMANDS = ("run", "chat", "loop", "undo", "mcp", "skills", "doctor",
-                "models", "config", "resume")
+                "models", "config", "resume", "memory")
 
 
 _DEFAULT_BASE_URL = "http://localhost:11434"
@@ -360,6 +360,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_resume.add_argument("session_id", nargs="?",
                           help="Session to resume (default: the most recent).")
     _add_common_flags(p_resume)
+
+    # M4 (ADR-0022): inspect/prune the project's cross-session memory.
+    p_memory = sub.add_parser("memory", help="List/prune project memory the agent remembers.")
+    p_memory.add_argument("--workspace", default=".", help="Repo root (default: cwd).")
+    p_memory.add_argument("--no-color", action="store_true")
+    memory_sub = p_memory.add_subparsers(dest="memory_action")
+    memory_sub.add_parser("list", help="List stored memories (default).")
+    p_mem_show = memory_sub.add_parser("show", help="Show one memory by id.")
+    p_mem_show.add_argument("id", type=int)
+    p_mem_forget = memory_sub.add_parser("forget", help="Delete one memory by id.")
+    p_mem_forget.add_argument("id", type=int)
+    memory_sub.add_parser("clear", help="Delete ALL stored memories for this project.")
 
     # U2 (ADR-0016): setup diagnostics + model discovery.
     p_doctor = sub.add_parser("doctor", help="Check Ollama + model setup and show resolved config.")
@@ -1546,6 +1558,48 @@ def cmd_config(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_memory(args: argparse.Namespace) -> int:
+    """List/show/forget/clear the project's cross-session memory (M4, ADR-0022)."""
+    from nerva_agent.memory_store import MemoryStore
+    color = _color(sys.stdout.isatty() and not getattr(args, "no_color", False))
+    c = color
+    workspace = Path(args.workspace).resolve()
+    store = MemoryStore(workspace / ".aibot" / "memory.db")
+    action = getattr(args, "memory_action", None) or "list"
+
+    if action == "forget":
+        ok = store.forget(args.id)
+        print(f"{c['dim']}{'forgot' if ok else 'no'} memory #{args.id}{c['reset']}"
+              if ok else f"{c['red']}no memory #{args.id}{c['reset']}")
+        return 0 if ok else 2
+    if action == "clear":
+        n = store.count()
+        store.clear()
+        print(f"{c['dim']}cleared {n} memories{c['reset']}")
+        return 0
+    if action == "show":
+        hit = next((m for m in store.list_all(limit=10000) if m.id == args.id), None)
+        if hit is None:
+            print(f"{c['red']}no memory #{args.id}{c['reset']}", file=sys.stderr)
+            return 2
+        import datetime as _dt
+        when = _dt.datetime.fromtimestamp(hit.created_at).strftime("%Y-%m-%d %H:%M")
+        print(f"#{hit.id} ({hit.kind}) {c['dim']}{when} · {hit.source or 'agent'}{c['reset']}")
+        print(f"  {hit.content}")
+        return 0
+
+    # list (default)
+    memories = store.list_all()
+    if not memories:
+        print(f"{c['dim']}no project memories yet. The agent saves them with the "
+              f"`remember` tool, or you confirm suggestions after a run.{c['reset']}")
+        return 0
+    print(f"{c['bold']}Project memory{c['reset']} {c['dim']}({len(memories)} · {workspace}){c['reset']}")
+    for m in memories:
+        print(f"  {c['cyan']}#{m.id}{c['reset']} ({m.kind}) {m.content}")
+    return 0
+
+
 def cmd_mcp(args: argparse.Namespace) -> int:
     """Inspect configured MCP servers and their tools (F11.4)."""
     workspace = Path(args.workspace).resolve()
@@ -1653,6 +1707,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_resume(args)
     if args.command == "config":
         return cmd_config(args)
+    if args.command == "memory":
+        return cmd_memory(args)
     # No subcommand at all: show help.
     parser.print_help()
     return 2

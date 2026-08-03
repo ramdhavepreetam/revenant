@@ -1278,6 +1278,58 @@ def test_suggest_handles_none_from_model(monkeypatch):
     assert store.count() == 0   # nothing proposed -> nothing to confirm
 
 
+# --- M4 (ADR-0022): memory subcommand ---------------------------------------
+
+def test_memory_parser():
+    p = cli.build_parser()
+    a = p.parse_args(cli._normalize_argv(["memory", "forget", "3"]))
+    assert a.command == "memory" and a.memory_action == "forget" and a.id == 3
+
+
+def _seed_memory(ws):
+    from nerva_agent.memory_store import MemoryStore
+    s = MemoryStore(f"{ws}/.aibot/memory.db")
+    s.remember("uses pytest"); s.remember("API in packages/api")
+    s.close()
+
+
+def test_memory_list(tmp_path, capsys):
+    _seed_memory(tmp_path)
+    rc = cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="list"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "uses pytest" in out and "packages/api" in out
+
+
+def test_memory_forget(tmp_path, capsys):
+    _seed_memory(tmp_path)
+    rc = cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="forget", id=1))
+    assert rc == 0
+    # #1 is gone, #2 remains
+    capsys.readouterr()
+    cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="list"))
+    assert "uses pytest" not in capsys.readouterr().out
+
+
+def test_memory_forget_unknown_id(tmp_path, capsys):
+    _seed_memory(tmp_path)
+    rc = cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="forget", id=999))
+    assert rc == 2
+
+
+def test_memory_clear(tmp_path, capsys):
+    _seed_memory(tmp_path)
+    cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="clear"))
+    capsys.readouterr()
+    cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="list"))
+    assert "no project memories" in capsys.readouterr().out
+
+
+def test_memory_empty_message(tmp_path, capsys):
+    rc = cli.cmd_memory(argparse.Namespace(workspace=str(tmp_path), no_color=True, memory_action="list"))
+    assert rc == 0 and "no project memories" in capsys.readouterr().out
+
+
 # --- setup / first-run polish -----------------------------------------------
 
 def test_best_pulled_model_prefers_coder():
