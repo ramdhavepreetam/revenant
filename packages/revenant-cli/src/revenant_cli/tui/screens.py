@@ -60,6 +60,55 @@ class PaletteScreen(ModalScreen):
         self.dismiss(None)
 
 
+class ModelPickerScreen(ModalScreen):
+    """A pick-list of pulled Ollama models. Returns the chosen model name or None.
+
+    The model currently in use is marked and pre-highlighted, so switching to a
+    bigger model (e.g. a 14B) is a visible choice, not something you have to know
+    the exact name of.
+    """
+
+    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+    CSS = """
+    ModelPickerScreen { align: center middle; }
+    #modelpick { width: 70%; max-width: 80; height: auto; max-height: 80%;
+                 border: round $primary; background: $panel; }
+    #modelpick-title { padding: 0 1; color: $text-muted; }
+    """
+
+    def __init__(self, models, current: str = "") -> None:
+        super().__init__()
+        self._models = list(models)
+        self._current = current
+
+    def compose(self) -> ComposeResult:
+        opts = []
+        for m in self._models:
+            label = Text()
+            label.append(m, style="bold cyan")
+            if m == self._current:
+                label.append("  ← in use", style="green")
+            opts.append(Option(label, id=m))
+        if not opts:
+            opts = [Option("(no models pulled — run `ollama pull …`)", id="__none__")]
+        with Vertical(id="modelpick"):
+            yield Static("Pick a model  (esc to cancel)", id="modelpick-title")
+            yield OptionList(*opts)
+
+    def on_mount(self) -> None:
+        # Pre-highlight the current model so Enter keeps it (a safe default).
+        if self._current in self._models:
+            self.query_one(OptionList).highlighted = self._models.index(self._current)
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        oid = event.option.id
+        self.dismiss(None if oid in (None, "__none__") else oid)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 class ApprovalScreen(ModalScreen):
     """Approve/deny a mutating tool call. Returns True (approve) or False (deny)."""
 

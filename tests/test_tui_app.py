@@ -285,16 +285,64 @@ def test_slash_model_switches_the_running_model():
     _run(go())
 
 
-def test_slash_model_no_arg_shows_current():
+def test_slash_model_no_arg_opens_picker():
+    from revenant_cli.tui.screens import ModelPickerScreen
+    from unittest import mock
     loop = _ConfigLoop([])
+    loop.config.base_url = "http://x"
 
     async def go():
         app = _app(loop, mode="approval-gated")
         async with app.run_test() as pilot:
             await pilot.pause()
-            app._handle_slash("/model")             # no arg -> show, don't change
+            import revenant_cli.preflight as pf
+            with mock.patch.object(pf, "list_local_models",
+                                   return_value=["qwen2.5:7b", "qwen2.5:14b"]):
+                app._handle_slash("/model")          # no arg -> open picker
+                await pilot.pause()
+                assert isinstance(app.screen, ModelPickerScreen)
+                assert app.screen._models == ["qwen2.5:7b", "qwen2.5:14b"]
+                assert app.screen._current == app.rv_model   # current is marked
+    _run(go())
+
+
+def test_model_picker_selection_switches_model():
+    from revenant_cli.tui.screens import ModelPickerScreen
+    from unittest import mock
+    loop = _ConfigLoop([])
+    loop.config.base_url = "http://x"
+
+    async def go():
+        app = _app(loop, mode="yolo")
+        async with app.run_test() as pilot:
             await pilot.pause()
-            assert loop.config.model == "qwen2.5:7b"
+            import revenant_cli.preflight as pf
+            with mock.patch.object(pf, "list_local_models",
+                                   return_value=["qwen2.5:7b", "qwen2.5:14b"]):
+                app._handle_slash("/model")
+                await pilot.pause()
+                app.screen.dismiss("qwen2.5:14b")     # pick the bigger model
+                await pilot.pause()
+            assert loop.config.model == "qwen2.5:14b"
+            assert app.rv_model == "qwen2.5:14b"
+    _run(go())
+
+
+def test_slash_model_no_models_degrades_to_note():
+    # No reachable server / no models -> a helpful note, not a crash.
+    from unittest import mock
+    loop = _ConfigLoop([])
+    loop.config.base_url = "http://x"
+
+    async def go():
+        app = _app(loop, mode="yolo")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            import revenant_cli.preflight as pf
+            with mock.patch.object(pf, "list_local_models", return_value=[]):
+                app._handle_slash("/model")
+                await pilot.pause()
+            assert loop.config.model == "qwen2.5:7b"   # unchanged, no picker
     _run(go())
 
 

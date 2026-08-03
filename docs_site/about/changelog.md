@@ -9,6 +9,11 @@ All notable changes to Revenant are documented here. This project follows
 
 ### Added
 
+- **Model picker in the TUI** — `/model` with no argument now opens a pick-list of
+  the models pulled on your Ollama server (the one in use is marked); choosing one
+  switches live, no restart. So switching to a bigger model (e.g. a 14B) is a
+  visible choice, not something you have to know the exact name of. `/model <name>`
+  still switches directly.
 - **Copy from the TUI** — `ctrl+y` (or `/copy`) copies the current mouse selection
   to the clipboard, or the whole activity transcript when nothing is selected —
   so you can grab a command, an error, or a path out of the chat view.
