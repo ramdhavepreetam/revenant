@@ -312,6 +312,53 @@ def test_slash_mode_cycles_like_shift_tab():
     _run(go())
 
 
+def test_copy_all_puts_transcript_on_clipboard():
+    async def go():
+        app = _app(_FakeLoop())
+        copied = {}
+        app.copy_to_clipboard = lambda t: copied.__setitem__("text", t)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._apply_event(AgentEvent("observation", text="run_bash(command='ls')"))
+            await pilot.pause()
+            app.action_copy_text()          # no selection -> copy whole transcript
+            await pilot.pause()
+            assert "ls" in copied.get("text", "")
+    _run(go())
+
+
+def test_slash_copy_copies():
+    async def go():
+        app = _app(_FakeLoop())
+        copied = {}
+        app.copy_to_clipboard = lambda t: copied.__setitem__("text", t)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._apply_event(AgentEvent("observation", text="findme"))
+            await pilot.pause()
+            app._handle_slash("/copy")
+            await pilot.pause()
+            assert "findme" in copied.get("text", "")
+    _run(go())
+
+
+def test_copy_prefers_selection_when_present(monkeypatch):
+    async def go():
+        app = _app(_FakeLoop())
+        copied = {}
+        app.copy_to_clipboard = lambda t: copied.__setitem__("text", t)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._apply_event(AgentEvent("observation", text="whole transcript here"))
+            await pilot.pause()
+            # Simulate an active selection.
+            app.screen.get_selected_text = lambda: "just the selected bit"
+            app.action_copy_text()
+            await pilot.pause()
+            assert copied.get("text") == "just the selected bit"
+    _run(go())
+
+
 def test_slash_memory_lists_stored_memories():
     from nerva_agent.memory_store import MemoryStore
     store = MemoryStore(":memory:")

@@ -62,6 +62,8 @@ class RevenantApp(App):
         Binding("ctrl+c", "interrupt", "Interrupt/quit", priority=True),
         Binding("ctrl+d", "quit", "Quit", priority=True),
         Binding("ctrl+l", "clear_log", "Clear log"),
+        # Copy: the current mouse selection if any, else the whole transcript.
+        Binding("ctrl+y", "copy_text", "Copy", priority=True),
         # shift+tab cycles the approval mode (approval-gated <-> yolo). priority so
         # it fires even while the Input has focus.
         Binding("shift+tab", "cycle_mode", "Cycle mode", priority=True),
@@ -171,6 +173,9 @@ class RevenantApp(App):
         elif name == "/mode":
             # Discoverable alias for the shift+tab toggle.
             self.action_cycle_mode()
+        elif name == "/copy":
+            # Copy the selection (if any) or the whole transcript to the clipboard.
+            self.action_copy_text()
         elif name == "/context":
             g = self.query_one(ContextGauge)
             self._log(AgentEvent("assistant",
@@ -309,6 +314,36 @@ class RevenantApp(App):
 
     def action_clear_log(self) -> None:
         self.query_one(ActivityLog).clear()
+
+    def _transcript_text(self) -> str:
+        """The full activity log as plain text (for copy-all)."""
+        log = self.query_one(ActivityLog)
+        lines = getattr(log, "lines", None) or []
+        out = []
+        for ln in lines:
+            # RichLog stores Strip objects; .text is the plain content.
+            out.append(getattr(ln, "text", str(ln)))
+        return "\n".join(out).rstrip()
+
+    def action_copy_text(self) -> None:
+        """Copy the current mouse selection to the clipboard, or — if nothing is
+        selected — the whole activity transcript. (ctrl+y or /copy.)"""
+        selected = ""
+        try:
+            selected = (self.screen.get_selected_text() or "").strip()
+        except Exception:  # noqa: BLE001 - selection API is best-effort
+            selected = ""
+        text = selected or self._transcript_text()
+        if not text:
+            self._log(AgentEvent("assistant", text="(nothing to copy)"))
+            return
+        try:
+            self.copy_to_clipboard(text)
+        except Exception as exc:  # noqa: BLE001 - clipboard can be unavailable
+            self._log(AgentEvent("error", text=f"copy failed: {exc}"))
+            return
+        what = "selection" if selected else f"transcript ({text.count(chr(10)) + 1} lines)"
+        self._log(AgentEvent("assistant", text=f"copied {what} to clipboard"))
 
     def action_cycle_mode(self) -> None:
         """shift+tab: toggle the approval mode approval-gated <-> yolo, live.

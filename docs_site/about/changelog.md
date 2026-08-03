@@ -5,6 +5,31 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Copy from the TUI** — `ctrl+y` (or `/copy`) copies the current mouse selection
+  to the clipboard, or the whole activity transcript when nothing is selected —
+  so you can grab a command, an error, or a path out of the chat view.
+
+### Changed
+
+- **Higher default step budget** — the per-goal step cap now defaults to 25–40
+  (scaled by RAM) instead of 15, so real multi-step tasks (setup → run → debug)
+  finish more often before hitting the cap. Still bounded, and the harness
+  (adaptive re-plan, verify→repair, budgets) keeps runaway loops in check.
+  Override with `--max-steps` or `config set max_steps N`.
+
+### Fixed
+
+- **TUI bottom layout** — the input and status/mode bars no longer overlap or get
+  crushed in a short terminal (e.g. a small editor terminal panel). Each screen
+  edge now stacks its bars in a proper container, so the input always keeps its
+  full height and the mode bar stays on-screen at any terminal size.
+
+---
+
 ## [0.9.1] — 2026-08-03: patch
 
 ### Fixed

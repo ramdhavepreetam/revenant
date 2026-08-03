@@ -114,7 +114,7 @@ class AgentLoop:
         registry: ToolRegistry,
         *,
         system_preamble: str = "",
-        max_steps: int = 15,
+        max_steps: int = 25,
         max_bad_parses: int = 3,
         use_native_tools: bool | None = None,
         on_event: EventSink | None = None,

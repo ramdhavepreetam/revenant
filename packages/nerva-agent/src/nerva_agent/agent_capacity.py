@@ -125,8 +125,11 @@ def recommend(
     else:
         max_context = 2000
 
-    # Step cap: more headroom on bigger machines (they finish long tasks faster).
-    max_steps = 20 if ram >= 32 else (15 if ram >= 16 else 10)
+    # Step cap: enough headroom for real multi-step coding tasks (setup → run →
+    # debug is easily 15+ steps), scaled up on bigger machines. Safe to be generous
+    # — the harness bounds runaway loops (adaptive re-plan, verify→repair, wall/
+    # replan budgets), so the cap only needs to let *productive* work finish.
+    max_steps = 40 if ram >= 32 else (30 if ram >= 16 else 20)
 
     # Keep the most recent N step-pairs verbatim; scale slightly with budget.
     keep_recent_steps = 4 if max_context >= 10000 else 3
