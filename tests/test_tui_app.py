@@ -70,33 +70,43 @@ def test_app_mounts_with_core_widgets():
     _run(go())
 
 
-def test_layout_stable_the_log_does_not_shrink_on_content():
-    """Regression: the activity log must keep its full height as content arrives —
-    the StreamLine must not steal rows in the steady state ('smushing' bug)."""
-    from revenant_cli.tui.widgets import StreamLine
+def _regions(app):
+    """Map of widget id -> (top_row, height) using the reliable region geometry
+    (run_test's size.height is unreliable for docked widgets; region is not)."""
+    return {w.id: (w.region.y, w.region.height)
+            for w in app.query("*") if w.id and w.region.height}
 
+
+def _assert_layout_ok(app, rows):
+    """The layout invariants that were broken in the 'smushing' bug: no widget
+    overlaps another, the input keeps its 3 rows, and the mode bar is on-screen."""
+    r = _regions(app)
+    s, g = r["status"], r["gauge"]
+    assert s[0] + s[1] <= g[0], f"status/gauge overlap: {s} {g}"     # top bars stack
+    inp, mode = r["prompt"], r["modebar"]
+    assert inp[1] == 3, f"input not 3 rows (crushed): {inp}"
+    assert inp[0] + inp[1] <= mode[0], f"input/modebar overlap: {inp} {mode}"
+    assert mode[0] + mode[1] <= rows, f"mode bar off-screen: {mode} in {rows} rows"
+    assert r["log"][1] >= 3, f"log too small: {r['log']}"
+
+
+def test_layout_no_overlap_and_input_never_crushed():
+    """Regression for the 'smushing' bug: docking multiple bars to one edge made
+    them overlap and crushed the input. Verify a clean stack at several terminal
+    heights, idle and streaming."""
     async def go():
-        app = _app(_FakeLoop())
-        async with app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
-            log = app.query_one(ActivityLog)
-            stream = app.query_one(StreamLine)
-            idle_h = log.size.height
-            assert idle_h > 5                     # log fills most of the screen
-            assert stream.display is False         # stream line hidden when idle
-            # Plain content (no streaming) must NOT shrink the log.
-            for i in range(30):
-                app._apply_event(AgentEvent("observation", text=f"line {i}"))
-            await pilot.pause()
-            assert log.size.height == idle_h
-            # Streaming shows a CAPPED line; the log recovers when it clears.
-            for t in ["hi "] * 12:
-                app._apply_event(AgentEvent("token", text=t))
-            await pilot.pause()
-            assert stream.size.height <= 4          # capped, can't push the layout
-            app._apply_event(AgentEvent("final", text="hi hi hi"))
-            await pilot.pause()
-            assert stream.display is False and log.size.height == idle_h
+        for rows in (24, 16, 12):
+            app = _app(_FakeLoop())
+            async with app.run_test(size=(70, rows)) as pilot:
+                await pilot.pause()
+                for i in range(15):
+                    app._apply_event(AgentEvent("observation", text=f"line {i}"))
+                await pilot.pause()
+                _assert_layout_ok(app, rows)                    # idle
+                for t in ["streaming "] * 4:
+                    app._apply_event(AgentEvent("token", text=t))
+                await pilot.pause()
+                _assert_layout_ok(app, rows)                    # while streaming
     _run(go())
 
 

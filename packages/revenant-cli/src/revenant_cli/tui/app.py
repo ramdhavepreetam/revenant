@@ -25,6 +25,7 @@ import threading
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.containers import Vertical
 from textual.widgets import Input
 
 from nerva_agent.agent_loop import AgentEvent
@@ -41,17 +42,20 @@ class RevenantApp(App):
 
     CSS = """
     Screen { layout: vertical; }
-    /* Top chrome: fixed one-line bars, docked to the top so they never move. */
-    #status { dock: top; height: 1; padding: 0 1; background: $panel; }
-    #gauge  { dock: top; height: 1; padding: 0 1; }
-    /* The log fills ALL remaining space between the top and bottom chrome. */
-    ActivityLog { height: 1fr; border: round $primary-darken-2; padding: 0 1; }
-    /* Bottom chrome: fixed-height, docked bottom in yield order (modebar lowest,
-       then prompt, then the live stream line just above the input). Docking them
-       all keeps the log's 1fr height stable — nothing squeezes as content grows. */
-    #modebar { dock: bottom; height: 1; padding: 0 1; background: $panel; }
-    #prompt  { dock: bottom; height: 3; }
-    #stream  { dock: bottom; height: auto; max-height: 4; padding: 0 1; overflow-y: auto; }
+    /* ONE docked container per edge, each a Vertical that STACKS its children (docking
+       multiple widgets to the same edge overlaps them — the old bug). Top holds the
+       status + gauge; bottom holds the (optional) stream line, the input, and the
+       mode bar. Both auto-size to their contents; the log gets everything between. */
+    #topbar    { dock: top; height: auto; }
+    #status    { height: 1; padding: 0 1; background: $panel; }
+    #gauge     { height: 1; padding: 0 1; }
+    #bottombar { dock: bottom; height: auto; }
+    /* stream collapses to 0 rows when hidden (idle), capped to 2 while streaming. */
+    #stream    { height: auto; max-height: 2; padding: 0 1; overflow-y: auto; }
+    #prompt    { height: 3; }
+    #modebar   { height: 1; padding: 0 1; background: $panel; }
+    /* The log fills all remaining space between the two docked bars. */
+    ActivityLog { height: 1fr; min-height: 3; border: round $primary-darken-2; padding: 0 1; }
     """
 
     BINDINGS = [
@@ -80,18 +84,21 @@ class RevenantApp(App):
 
     # --- layout -----------------------------------------------------------
     def compose(self) -> ComposeResult:
-        # Docked widgets stack from their edge inward in yield order: the top bars
-        # first (status above gauge), then the log fills the middle, then the
-        # bottom cluster yielded top-of-cluster first (stream just above the input,
-        # input above the mode line). Docking every bar keeps the log's height
-        # stable so nothing "smushes" as activity streams in.
-        yield StatusBar(model=self.rv_model, workspace=self.rv_workspace,
-                        mode=self.rv_mode, id="status")
-        yield ContextGauge(id="gauge")
-        yield StreamLine(id="stream")   # live token line, just above the input
-        yield Input(placeholder="Ask revenant…  (type / for commands)", id="prompt")
-        yield ModeBar(id="modebar")     # approval-mode line at the very bottom
+        # Top bars dock to the top; the log fills the middle (1fr); the whole
+        # bottom cluster is ONE docked container (auto height) so the input always
+        # keeps its 3 rows and is never crushed — even in a short terminal. The
+        # stream line inside it is tiny and scrolls, so it can't starve the input.
+        # Top bar (stacked): status above the context gauge.
+        with Vertical(id="topbar"):
+            yield StatusBar(model=self.rv_model, workspace=self.rv_workspace,
+                            mode=self.rv_mode, id="status")
+            yield ContextGauge(id="gauge")
         yield ActivityLog(id="log")     # fills all remaining space (1fr)
+        # Bottom bar (stacked, in visual order): live stream line, input, mode line.
+        with Vertical(id="bottombar"):
+            yield StreamLine(id="stream")   # live token line (hidden when idle)
+            yield Input(placeholder="Ask revenant…  (type / for commands)", id="prompt")
+            yield ModeBar(id="modebar")     # approval-mode line at the very bottom
 
     def on_mount(self) -> None:
         self.query_one("#prompt", Input).focus()
