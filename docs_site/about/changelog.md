@@ -5,7 +5,11 @@ All notable changes to Revenant are documented here. This project follows
 
 ---
 
-## [Unreleased]
+## [0.8.0] — 2026-08-03: memory
+
+The coding agent gains **persistent, project-level memory** across runs — offline,
+with **zero new dependencies** (stdlib SQLite + FTS5). Backward-compatible;
+everything is gated and additive.
 
 ### Added
 
