@@ -100,14 +100,21 @@ class StreamLine(Static):
         super().__init__("", **kw)
         self._buf = ""
 
+    def on_mount(self) -> None:
+        # Hidden until it's actually streaming, so it occupies ZERO rows in the
+        # steady state — the activity log keeps its full height, no "smushing".
+        self.display = False
+
     def feed(self, delta: str) -> None:
         self._buf += delta
+        self.display = True                # take space only while streaming
         self.update(Text(self._buf, style="dim"))
 
     def clear_line(self) -> None:
         if self._buf:
             self._buf = ""
             self.update("")
+        self.display = False               # collapse back to zero rows
 
     @property
     def streaming(self) -> bool:
