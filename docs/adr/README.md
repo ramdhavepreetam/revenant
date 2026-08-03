@@ -4,7 +4,7 @@
 > here. It records every architectural decision (ADRs) and the full phase-wise
 > plan in enough detail to pick up implementation without re-deriving context.
 
-**Last updated:** 2026-08-03 · **Tests:** 722 green · **Latest release: v0.8.0 on PyPI** (`pip install -U "revenant-cli[tui]"`) · Shipped: W-series (0.6.0) · v0.7.0 usability · **v0.8.0 — cross-session memory** (M-series [0022](0022-cross-session-memory.md): the coding agent remembers project facts across runs, offline, zero new deps). All on PyPI + [GitHub Releases](https://github.com/ramdhavepreetam/revenant/releases) with installers. **▶ Post-W 3-phase plan — (1) polish ✅ 0.7.0 · (2) cross-session memory ✅ 0.8.0 · (3) smarter planning/routing ⏭ next.**
+**Last updated:** 2026-08-03 · **Tests:** 722 green · **Latest release: v0.8.0 on PyPI** (`pip install -U "revenant-cli[tui]"`) · Shipped: W-series (0.6.0) · v0.7.0 usability · **v0.8.0 — cross-session memory** (M-series [0022](0022-cross-session-memory.md): the coding agent remembers project facts across runs, offline, zero new deps). All on PyPI + [GitHub Releases](https://github.com/ramdhavepreetam/revenant/releases) with installers. **▶ Post-W 3-phase plan — (1) polish ✅ 0.7.0 · (2) cross-session memory ✅ 0.8.0 · (3) smarter planning/routing 🔨 IN PROGRESS** (P-series, [ADR-0023](0023-adaptive-planning-and-routing.md): adaptive retry→re-plan + strong-planner/cheap-executor routing → 0.9.0).**
 **Repo:** local, offline coding-agent CLI over Ollama · packages: `nerva-core ← nerva-agent ← revenant-cli`
 
 ---
@@ -126,6 +126,7 @@
 | [0020](0020-w-series-phase-b-deeper-capability.md) | W-series Phase B — deeper capability (loop --every, graph cache, replace_all, atomic multi-file apply_edits) | W3/W4 | Implemented |
 | [0021](0021-w-series-phase-c-reach.md) | W-series Phase C — reach (role-routed sub-agents; mcp add + HTTP/SSE transport) | W5/W6 | Implemented |
 | [0022](0022-cross-session-memory.md) | **Cross-session memory** (M-series: stdlib SQLite/FTS5 store; gated hybrid capture) | 0.8.0 | Implemented |
+| [0023](0023-adaptive-planning-and-routing.md) | **Adaptive planning + phase-aware routing** (P-series: retry→re-plan; strong-planner/cheap-executor) | 0.9.0 | Accepted (P0 in progress) |
 
 ---
 
