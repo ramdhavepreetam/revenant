@@ -31,7 +31,7 @@ from textual.widgets import Input
 from nerva_agent.agent_loop import AgentEvent
 
 from revenant_cli.tui.commands import SlashRegistry
-from revenant_cli.tui.screens import ApprovalScreen, PaletteScreen
+from revenant_cli.tui.screens import ApprovalScreen, ModelPickerScreen, PaletteScreen
 from revenant_cli.tui.widgets import (
     ActivityLog, ContextGauge, ModeBar, StatusBar, StreamLine,
 )
@@ -168,8 +168,7 @@ class RevenantApp(App):
             if arg:
                 self._switch_model(arg)
             else:
-                self._log(AgentEvent("assistant", text=f"model: {self.rv_model}  "
-                                     "(use /model <name> to switch)"))
+                self._open_model_picker()   # no arg -> pick from pulled models
         elif name == "/mode":
             # Discoverable alias for the shift+tab toggle.
             self.action_cycle_mode()
@@ -194,6 +193,32 @@ class RevenantApp(App):
                     self._log(AgentEvent("assistant", text=f"  #{m.id} ({m.kind}) {m.content}"))
         elif name == "/skill":
             self._log(AgentEvent("error", text="usage: /skill <name>  (see /skills)"))
+
+    def _open_model_picker(self) -> None:
+        """`/model` with no arg: show a pick-list of pulled models to switch to.
+
+        Lists the models on the local Ollama server (best-effort — a picker only
+        makes sense when the server is reachable); selecting one switches live.
+        Degrades to the old 'model: <name>' note when no models can be listed.
+        """
+        models = []
+        try:
+            from revenant_cli import preflight
+            base_url = getattr(self.rv_loop.config, "base_url", "")
+            models = preflight.list_local_models(base_url) or []
+        except Exception:  # noqa: BLE001 - listing is best-effort
+            models = []
+        if not models:
+            self._log(AgentEvent("assistant", text=f"model: {self.rv_model}  "
+                                 "(use /model <name> to switch; no pulled models found)"))
+            return
+
+        def picked(name: "str | None") -> None:
+            if name and name != self.rv_model:
+                self._switch_model(name)
+            self.query_one("#prompt", Input).focus()
+
+        self.push_screen(ModelPickerScreen(models, current=self.rv_model), picked)
 
     def _switch_model(self, name: str) -> None:
         """Switch the running model live (no restart). The tool registry is

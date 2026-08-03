@@ -35,7 +35,7 @@ def test_builtins_present_with_summaries():
 def test_model_command_has_arg_hint():
     reg = SlashRegistry.from_loop(_FakeLoop())
     model = next(c for c in reg.all() if c.name == "/model")
-    assert model.arg_hint == "<name>"   # palette shows `/model <name>`
+    assert model.arg_hint == "[name]"   # optional: /model (picker) or /model <name>
 
 
 def test_skills_become_commands():
