@@ -78,6 +78,17 @@
 - **Deferred backlog** (folded into the W-series where relevant): one-shot `run`
   autosave (P6); persisting the code graph (P7 — now W3); the rest below.
   (P8); persisting the code graph (P7).
+- **Future / discussed (not started):** **MLX + Qwen3-Coder-30B (Apple Silicon).**
+  Run a 30B-class MoE coder locally on 24 GB via Apple's native `mlx-lm` (Metal).
+  Assessed high-feasibility + a clean fit — the model layer is already backend-
+  abstracted (`ChatConfig.backend`), so MLX is a *third backend branch*, not a
+  rewrite. **Path A (start here):** `mlx_lm.server` speaks the OpenAI API Revenant
+  already supports → works with **zero code changes** (just docs + verify + a
+  `revenant mlx` helper). **Path B:** a native `backend="mlx"` extra for KV-cache
+  persistence / quantized KV / `iogpu.wired_limit` control. **Constraint:** `mlx-lm`
+  must be an **optional** `revenant-cli[mlx]` extra (Apple-Silicon-only) — never a
+  required dep (keeps the zero-required-dep, cross-platform invariant). Full
+  analysis in NervaPack memory.
 
 > How to resume: read this banner → open the NEXT phase's ADR → check its
 > "Progress log" (bottom) for any partial work → implement to its test plan.
